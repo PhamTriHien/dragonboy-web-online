@@ -1,0 +1,272 @@
+using System;
+using UnityEngine;
+
+/// <summary>
+/// Bộ quản lý đồ họa Mod: Điều phối độ phân giải cửa sổ, khử răng cưa GPU và 2 chế độ render (Java Gốc vs Bản HD).
+/// </summary>
+public static class ModGraphics
+{
+	// 0: Ultra (mặc định), 1: Medium (xóa hiệu ứng động), 2: Low (xóa bg), 3: Super Low
+	public static int graphicsQuality = 0;
+	public static readonly string[] graphicsNames = new string[4] { "Ultra", "Medium", "Low", "Super Low" };
+
+	// 2 chế độ render: 0: Java Gốc (pixel to + RGB565, lọc Point), 1: Bản HD PC/Android (nguyên độ phân giải, lọc Bilinear)
+	public static int renderMode = 0;
+	public static readonly string[] renderModeNames = new string[2] { "Java Gốc", "Bản HD PC/Android" };
+
+	public static int renderBitDepth
+	{
+		get => renderMode;
+		set => renderMode = (value >= 0 && value < 2) ? value : 0;
+	}
+	public static string[] bitDepthNames => renderModeNames;
+
+	// 0: 1024x600 (Gốc), 1: 1280x720 (HD 16:9), 2: 1600x900 (HD+), 3: 1920x1080 (Full HD)
+	public static int resolutionIndex = 0;
+	public static readonly int[,] resolutionList = new int[4, 2]
+	{
+		{ 1024, 600 },
+		{ 1280, 720 },
+		{ 1600, 900 },
+		{ 1920, 1080 }
+	};
+	public static readonly string[] resolutionNames = new string[4] { "1024x600", "1280x720", "1600x900", "1920x1080" };
+	public static bool isFullscreen = false;
+
+	// Chủ đề Font chữ: 0: NRO Gốc, 1: Tahoma, 2: Segoe UI, 3: Consolas
+	public static int fontTheme = 0;
+	public static readonly string[] fontThemeNames = new string[4] { "NRO Gốc", "Tahoma", "Segoe UI", "Consolas" };
+
+	// Kích thước Font chữ: 0: Nhỏ 85%, 1: Chuẩn 100%, 2: Lớn 110%, 3: To 120%
+	public static int fontSizeIndex = 1;
+	public static readonly string[] fontSizeNames = new string[4] { "Nhỏ 85%", "Chuẩn", "Lớn 110%", "To 120%" };
+	public static readonly float[] fontSizeScales = new float[4] { 0.85f, 1.0f, 1.10f, 1.20f };
+
+	private static int lastScreenWidth = 0;
+	private static int lastScreenHeight = 0;
+	private static bool lastFullscreen = false;
+
+	/// <summary>
+	/// Khởi tạo hệ thống đồ họa, thiết lập khử răng cưa GPU và kích thước cửa sổ.
+	/// </summary>
+	public static void InitGraphics()
+	{
+		try
+		{
+			// Kích hoạt bộ lọc nét đồ họa phần cứng GPU trong Unity, chống nhòe mờ
+			QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+			QualitySettings.antiAliasing = 4;
+			QualitySettings.masterTextureLimit = 0;
+			QualitySettings.vSyncCount = 0;
+
+			// Mặc định game luôn mở ở dạng cửa sổ nhỏ hiển thị giữa màn hình desktop
+			isFullscreen = false;
+			if (resolutionIndex < 0 || resolutionIndex >= resolutionNames.Length)
+			{
+				resolutionIndex = 0;
+			}
+			if (Application.CurrentTabId == 1)
+			{
+				ApplyResolution(resolutionIndex);
+			}
+			ApplyBitDepth();
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Bật hoặc tắt chế độ hiển thị toàn màn hình (Fullscreen).
+	/// </summary>
+	public static void ToggleFullscreen()
+	{
+		try
+		{
+			DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.ToggleFullscreen();
+			isFullscreen = Screen.fullScreen;
+			ModConfig.SaveConfig();
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Áp dụng độ phân giải cửa sổ hiển thị theo chỉ số cấu hình được chọn.
+	/// </summary>
+	public static void ApplyResolution(int index)
+	{
+		try
+		{
+			if (index < 0 || index >= resolutionNames.Length) index = 0;
+			resolutionIndex = index;
+			int w = resolutionList[index, 0];
+			int h = resolutionList[index, 1];
+			Screen.SetResolution(w, h, isFullscreen);
+			ModConfig.SaveConfig();
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của UpdateResolutionWatcher theo chu kỳ khung hình.
+	/// </summary>
+	public static void UpdateResolutionWatcher()
+	{
+		try
+		{
+			if (Screen.width != lastScreenWidth || Screen.height != lastScreenHeight || Screen.fullScreen != lastFullscreen)
+			{
+				lastScreenWidth = Screen.width;
+				lastScreenHeight = Screen.height;
+				lastFullscreen = Screen.fullScreen;
+				isFullscreen = Screen.fullScreen;
+
+				ScaleGUI.WIDTH = Screen.width;
+				ScaleGUI.HEIGHT = Screen.height;
+				if (MotherCanvas.instance != null)
+				{
+					MotherCanvas.instance.checkZoomLevel(Screen.width, Screen.height);
+				}
+				if (GameMidlet.gameCanvas != null)
+				{
+					GameMidlet.gameCanvas.initGameCanvas();
+				}
+				if (GameScr.instance != null && GameCanvas.currentScreen == GameScr.instance && TileMap.tmw > 0 && TileMap.tmh > 0)
+				{
+					GameScr.loadCamera(true, -1, -1);
+				}
+				else
+				{
+					GameScr.gW = GameCanvas.w;
+					GameScr.gH = GameCanvas.h;
+					GameScr.gW2 = GameScr.gW >> 1;
+					GameScr.gH2 = GameScr.gH >> 1;
+					GameScr.gH23 = GameScr.gH * 2 / 3;
+					if (GameScr.cmy < 0)
+					{
+						GameScr.cmy = (GameScr.cmtoY = 0);
+					}
+					if (GameScr.cmx < 0)
+					{
+						GameScr.cmx = (GameScr.cmtoX = 0);
+					}
+				}
+				GameCanvas.getYBackground(GameCanvas.typeBg);
+				if (GameScr.gamePad != null)
+				{
+					GameScr.gamePad.updateZone();
+				}
+				GameScr.setSkillBarPosition();
+			}
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của GetCurrentQualityName.
+	/// </summary>
+	public static string GetCurrentQualityName()
+	{
+		if (graphicsQuality >= 0 && graphicsQuality < graphicsNames.Length)
+		{
+			return graphicsNames[graphicsQuality];
+		}
+		return graphicsNames[0];
+	}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho SetQuality.
+	/// </summary>
+	public static void SetQuality(int quality)
+	{
+		if (quality >= 0 && quality < graphicsNames.Length)
+		{
+			graphicsQuality = quality;
+			ModConfig.SaveConfig();
+		}
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ CycleQuality.
+	/// </summary>
+	public static void CycleQuality()
+	{
+		graphicsQuality = (graphicsQuality + 1) % graphicsNames.Length;
+		ModConfig.SaveConfig();
+	}
+
+	/// <summary>
+	/// Đổi chế độ render (0: Java Gốc, 1: Bản HD PC/Android) và lưu cấu hình. Gọi được từ menu Mod trên mọi nền tảng.
+	/// </summary>
+	public static void SetRenderMode(int mode)
+	{
+		if (mode < 0 || mode >= renderModeNames.Length) mode = 0;
+		renderMode = mode;
+		ApplyRenderMode();
+		ModConfig.SaveConfig();
+	}
+
+	public static void SetBitDepth(int depth) => SetRenderMode(depth);
+
+	/// <summary>
+	/// Truy xuất hệ số tỷ lệ kích thước font chữ hiện tại.
+	/// </summary>
+	public static float GetFontSizeScale()
+	{
+		if (fontSizeIndex >= 0 && fontSizeIndex < fontSizeScales.Length)
+		{
+			return fontSizeScales[fontSizeIndex];
+		}
+		return 1.0f;
+	}
+
+	/// <summary>
+	/// Thiết lập chủ đề font chữ và làm mới bộ đệm đo đạc văn bản.
+	/// </summary>
+	public static void SetFontTheme(int theme)
+	{
+		if (theme < 0 || theme >= fontThemeNames.Length) theme = 0;
+		fontTheme = theme;
+		mFont.InvalidateFontMetrics();
+		ModConfig.SaveConfig();
+	}
+
+	/// <summary>
+	/// Thiết lập mức kích thước font chữ và làm mới bộ đệm đo đạc văn bản.
+	/// </summary>
+	public static void SetFontSize(int index)
+	{
+		if (index < 0 || index >= fontSizeNames.Length) index = 1;
+		fontSizeIndex = index;
+		mFont.InvalidateFontMetrics();
+		ModConfig.SaveConfig();
+	}
+
+	/// <summary>
+	/// Đồng bộ chế độ render xuống nền tảng. Desktop (Raylib) đọc renderMode ở mỗi khung hình trong RenderManager;
+	/// Android cần đổi định dạng Surface phần cứng nên được đẩy chủ động qua GameView.
+	/// </summary>
+	public static void ApplyRenderMode()
+	{
+#if ANDROID || __ANDROID__
+		try
+		{
+			Type gameViewType = Type.GetType("DragonBoy_Android_Host.GameView, DragonBoy_Android");
+			if (gameViewType != null)
+			{
+				var method = gameViewType.GetMethod("ApplyHardwareBitDepth", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				method?.Invoke(null, new object[] { renderMode });
+			}
+		}
+		catch { }
+#endif
+	}
+
+	public static void ApplyBitDepth() => ApplyRenderMode();
+}

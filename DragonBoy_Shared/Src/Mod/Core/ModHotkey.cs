@@ -1,0 +1,145 @@
+using System;
+using UnityEngine;
+
+/// <summary>
+/// CLASS ModHotkey: Định nghĩa và điều phối logic trong hệ thống game.
+/// </summary>
+public static class ModHotkey
+{
+	/// <summary>
+	/// Cập nhật trạng thái logic của UpdateHotkeys theo chu kỳ khung hình.
+	/// </summary>
+	public static void UpdateHotkeys()
+	{
+		try
+		{
+			// Phím F11 hoặc Alt + Enter: Bật / Tắt Toàn Màn Hình (Fullscreen) ở mọi nơi
+			if (Input.GetKeyDown(KeyCode.F11) || ((Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)) && Input.GetKeyDown(KeyCode.Return)))
+			{
+				ModGraphics.ToggleFullscreen();
+			}
+
+			// Phím F10: Chuyển đổi chế độ Render (0: Java Gốc / 1: HD PC-Android) ở mọi tab và mọi màn hình
+			if (Input.GetKeyDown(KeyCode.F10))
+			{
+				ModGraphics.renderMode = (ModGraphics.renderMode == 0) ? 1 : 0;
+				ModMenu.SaveConfig();
+				string modeStr = (ModGraphics.renderMode == 0)
+					? "Chế độ Render: 1. Java Gốc (16-bit RGB565 + Pixel Sắc Nét)"
+					: "Chế độ Render: 2. Bản HD PC/Android (32-bit + Khử Răng Cưa)";
+				if (GameScr.info1 != null && ModMenu.IsInGame())
+				{
+					GameScr.info1.addInfo(modeStr, 0);
+				}
+			}
+
+			if (!ModMenu.IsInGame())
+			{
+				return;
+			}
+
+			// Kiểm tra phím tắt PC khi không trong khung chat
+			if (ChatTextField.gI() != null && ChatTextField.gI().isShow)
+			{
+				return;
+			}
+
+			// Phím ~ (BackQuote) hoặc F2: Bật/Tắt Mod Menu
+			if (Input.GetKeyDown(KeyCode.BackQuote) || Input.GetKeyDown(KeyCode.F2))
+			{
+				ToggleModMenu();
+			}
+
+			// Phím Home: Giải kẹt khẩn cấp nhân vật
+			if (Input.GetKeyDown(KeyCode.Home))
+			{
+				EmergencyUnstuck();
+			}
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Bật hoặc tắt trạng thái kích hoạt của ToggleModMenu.
+	/// </summary>
+	public static void ToggleModMenu()
+	{
+		if (ModUI.uiCustomOpen)
+		{
+			ModMenu.CloseMenu();
+		}
+		else
+		{
+			ModMenu.OpenMenu();
+		}
+	}
+
+	/// <summary>
+	/// Bật hoặc tắt trạng thái kích hoạt của ToggleGameMenu.
+	/// </summary>
+	public static void ToggleGameMenu()
+	{
+		if (GameCanvas.panel != null && GameCanvas.panel.isShow)
+		{
+			GameCanvas.panel.hide();
+		}
+		else if (GameScr.instance != null)
+		{
+			GameScr.instance.actMenu();
+		}
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ EmergencyUnstuck.
+	/// </summary>
+	public static void EmergencyUnstuck()
+	{
+		try
+		{
+			Char me = Char.myCharz();
+			Char.ischangingMap = false;
+			Char.isLockKey = false;
+			if (me != null)
+			{
+				me.isLockAttack = false;
+				me.isLockMove = false;
+				me.currentMovePoint = null;
+				me.vMovePoints.removeAllElements();
+
+				// Đẩy nhân vật ra khỏi cổng nếu đang chạm cổng
+				if (TileMap.vGo != null)
+				{
+					for (int w = 0; w < TileMap.vGo.size(); w++)
+					{
+						Waypoint wp = (Waypoint)TileMap.vGo.elementAt(w);
+						if (wp != null && !wp.isEnter && me.cx >= wp.minX && me.cx <= wp.maxX && me.cy >= wp.minY && me.cy <= wp.maxY)
+						{
+							if (wp.minX <= 24) me.cx = wp.maxX + 20;
+							else if (wp.maxX >= TileMap.pxw - 24) me.cx = wp.minX - 20;
+							else me.cx += 25;
+							break;
+						}
+					}
+				}
+
+				me.cy = TileMap.tileYofPixel(me.cy);
+				me.cxSend = me.cx;
+				me.cySend = me.cy;
+				me.cxFocus = me.cx;
+				me.cyFocus = me.cy;
+				Service.gI().charMove();
+			}
+
+			InfoDlg.hide();
+			GameCanvas.endDlg();
+			GameCanvas.clearKeyHold();
+			GameCanvas.clearKeyPressed();
+			GameScr.info1.addInfo("Đã giải kẹt nhân vật!", 0);
+		}
+		catch
+		{
+		}
+	}
+}

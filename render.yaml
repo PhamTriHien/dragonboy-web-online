@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dragonboy-web-online
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DOTNET_gcServer
+        value: "0"
+      - key: PORT
+        value: "10000"

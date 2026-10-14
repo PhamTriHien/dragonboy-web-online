@@ -1,0 +1,304 @@
+using System;
+
+/// <summary>
+/// Module Auto Bơm Đậu & Hồi Phục: Tự động thu hoạch và sử dụng đậu thần để hồi máu và mana khi xuống dưới ngưỡng.
+/// </summary>
+public static class ModAutoHeal
+{
+	public static bool autoPean = true;
+	public static int autoPeanHpPercent = 30;
+	public static bool lockHPMP = false;
+
+	public static bool autoHarvestPea = true;
+	public static bool autoDonateClan = true;
+	public static bool autoFeedPetOnAsk = true;
+
+	private static long lastPeanTime = 0;
+	private static long lastHarvestTime = 0;
+	private static long lastClanDonateTime = 0;
+	private static long lastFeedPetTime = 0;
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của GetBeanCount.
+	/// </summary>
+	public static int GetBeanCount()
+	{
+		Char me = Char.myCharz();
+		if (me == null || me.arrItemBag == null)
+		{
+			return 0;
+		}
+		int count = 0;
+		for (int i = 0; i < me.arrItemBag.Length; i++)
+		{
+			Item it = me.arrItemBag[i];
+			if (it != null && it.template != null && it.template.type == 6)
+			{
+				count += it.quantity;
+			}
+		}
+		return count;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của GetBoxBeanCount.
+	/// </summary>
+	public static int GetBoxBeanCount()
+	{
+		Char me = Char.myCharz();
+		if (me == null || me.arrItemBox == null)
+		{
+			return 0;
+		}
+		int count = 0;
+		for (int i = 0; i < me.arrItemBox.Length; i++)
+		{
+			Item it = me.arrItemBox[i];
+			if (it != null && it.template != null && it.template.type == 6)
+			{
+				count += it.quantity;
+			}
+		}
+		return count;
+	}
+
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của IsBeanFull.
+	/// </summary>
+	public static bool IsBeanFull()
+	{
+		Char me = Char.myCharz();
+		if (me == null || me.arrItemBag == null)
+		{
+			return true;
+		}
+
+		MagicTree mt = (GameScr.gI() != null) ? GameScr.gI().magicTree : null;
+		int maxCapacity = (mt != null && mt.maxPeas > 0) ? mt.maxPeas : 99;
+
+		int currentBagBeans = GetBeanCount();
+		if (currentBagBeans >= maxCapacity)
+		{
+			return true;
+		}
+
+		int emptyBagSlots = 0;
+		bool hasBeanSlot = false;
+		for (int i = 0; i < me.arrItemBag.Length; i++)
+		{
+			Item it = me.arrItemBag[i];
+			if (it == null)
+			{
+				emptyBagSlots++;
+			}
+			else if (it.template != null && it.template.type == 6)
+			{
+				hasBeanSlot = true;
+			}
+		}
+
+		if (!hasBeanSlot && emptyBagSlots == 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ HarvestMagicTreeNow.
+	/// </summary>
+	public static void HarvestMagicTreeNow()
+	{
+		if (IsBeanFull())
+		{
+			GameScr.info1.addInfo("Đậu thần trong hành trang/rương đã đầy!", 0);
+			SoundMn.gI().buttonClick();
+			return;
+		}
+		if (GameScr.gI() != null && GameScr.gI().magicTree != null && GameScr.gI().magicTree.currPeas <= 0)
+		{
+			GameScr.info1.addInfo("Cây đậu hiện chưa có hạt nào!", 0);
+			SoundMn.gI().buttonClick();
+			return;
+		}
+		Service.gI().magicTree(1);
+		lastHarvestTime = mSystem.currentTimeMillis();
+		GameScr.info1.addInfo("Đã gửi yêu cầu thu hoạch đậu thần!", 0);
+		SoundMn.gI().buttonClick();
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ DonateClanNow.
+	/// </summary>
+	public static void DonateClanNow()
+	{
+		if (GetBeanCount() <= 0)
+		{
+			GameScr.info1.addInfo("Không còn đậu trong hành trang!", 0);
+			return;
+		}
+
+		if (ClanMessage.vMessage != null && ClanMessage.vMessage.size() > 0)
+		{
+			Char me = Char.myCharz();
+			int myId = (me != null) ? me.charID : -1;
+			for (int i = 0; i < ClanMessage.vMessage.size(); i++)
+			{
+				ClanMessage cm = (ClanMessage)ClanMessage.vMessage.elementAt(i);
+				if (cm != null && cm.type == 1 && cm.playerId != myId && cm.recieve < cm.maxCap)
+				{
+					Service.gI().clanDonate(cm.id);
+					cm.recieve++;
+					lastClanDonateTime = mSystem.currentTimeMillis();
+					GameScr.info1.addInfo("Đã cho đậu: " + cm.playerName, 0);
+					SoundMn.gI().buttonClick();
+					return;
+				}
+			}
+		}
+
+		GameScr.info1.addInfo("Hiện không có ai xin đậu trong bang!", 0);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ FeedPetBean.
+	/// </summary>
+	public static void FeedPetBean(string reason)
+	{
+		long now = mSystem.currentTimeMillis();
+		if (now - lastFeedPetTime < 2000)
+		{
+			return;
+		}
+
+		Char me = Char.myCharz();
+		if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5)
+		{
+			return;
+		}
+
+		if (GetBeanCount() <= 0)
+		{
+			GameScr.info1.addInfo("Hết đậu thần, không thể cho đệ tử!", 0);
+			return;
+		}
+
+		lastFeedPetTime = now;
+		lastPeanTime = now;
+
+		if (!me.doUsePotion())
+		{
+			GameScr.gI().doUseHP();
+		}
+
+		SoundMn.gI().HP_MPup();
+		GameScr.info1.addInfo("Đã ăn đậu cho đệ tử! (" + reason + ")", 0);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ DoRealAutoHeal.
+	/// </summary>
+	public static void DoRealAutoHeal()
+	{
+		try
+		{
+			Char me = Char.myCharz();
+			if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5)
+			{
+				return;
+			}
+
+			long now = mSystem.currentTimeMillis();
+
+			// 1. Tự ăn đậu thần cho bản thân khi HP/MP xuống thấp
+			bool needHeal = false;
+			if (lockHPMP)
+			{
+				if (me.cHP < me.cHPFull || me.cMP < me.cMPFull)
+				{
+					needHeal = true;
+				}
+			}
+			else if (autoPean)
+			{
+				long curHpPercent = (me.cHPFull > 0) ? (me.cHP * 100L / me.cHPFull) : 100;
+				long curMpPercent = (me.cMPFull > 0) ? (me.cMP * 100L / me.cMPFull) : 100;
+
+				if (curHpPercent < autoPeanHpPercent || curMpPercent < autoPeanHpPercent)
+				{
+					needHeal = true;
+				}
+			}
+
+			if (needHeal)
+			{
+				if (now - lastPeanTime >= 1500)
+				{
+					lastPeanTime = now;
+					if (!me.doUsePotion())
+					{
+						GameScr.gI().doUseHP();
+					}
+				}
+			}
+
+			// 2. Tự động thu đậu thần từ cây đậu khi về map nhà và chưa đầy đậu
+			if (autoHarvestPea)
+			{
+				bool isHomeMap = (GameScr.gI() != null && GameScr.gI().magicTree != null)
+					|| TileMap.mapID == 21 || TileMap.mapID == 22 || TileMap.mapID == 23;
+
+				if (isHomeMap && !IsBeanFull())
+				{
+					if (GameScr.gI() != null && GameScr.gI().magicTree != null)
+					{
+						MagicTree mt = GameScr.gI().magicTree;
+						if (mt.currPeas > 0 && now - lastHarvestTime > 4000)
+						{
+							lastHarvestTime = now;
+							Service.gI().magicTree(1);
+						}
+					}
+				}
+			}
+
+			// 3. Tự động cho đậu bang hội khi có thành viên xin
+			if (autoDonateClan && now - lastClanDonateTime >= 1500)
+			{
+				if (ClanMessage.vMessage != null && ClanMessage.vMessage.size() > 0 && GetBeanCount() > 0)
+				{
+					for (int i = 0; i < ClanMessage.vMessage.size(); i++)
+					{
+						ClanMessage cm = (ClanMessage)ClanMessage.vMessage.elementAt(i);
+						if (cm != null && cm.type == 1 && cm.playerId != me.charID && cm.recieve < cm.maxCap)
+						{
+							Service.gI().clanDonate(cm.id);
+							cm.recieve++;
+							lastClanDonateTime = now;
+							GameScr.info1.addInfo("Tự động cho đậu: " + cm.playerName, 0);
+							break;
+						}
+					}
+				}
+			}
+
+			// 4. Giám sát sinh lực đệ tử, tự ăn đậu khi máu đệ tử nguy kịch
+			if (autoFeedPetOnAsk && me.havePet && Char.myPetz() != null)
+			{
+				Char pet = Char.myPetz();
+				if (pet.cHPFull > 0 && pet.cHP > 0)
+				{
+					long petHpPercent = pet.cHP * 100L / pet.cHPFull;
+					if (petHpPercent <= 25)
+					{
+						FeedPetBean("HP đệ còn " + petHpPercent + "%");
+					}
+				}
+			}
+		}
+		catch
+		{
+		}
+	}
+}

@@ -1,0 +1,352 @@
+using System;
+
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp CreateCharScr: Đảm nhiệm phân hệ chuyên trách Action ().
+/// </summary>
+public partial class CreateCharScr
+{
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadMapFromResource.
+	/// </summary>
+	public static void loadMapFromResource(sbyte[] mapID)
+		{
+			Res.outz("newwwwwwwwww =============");
+			DataInputStream dataInputStream = null;
+			for (int i = 0; i < mapID.Length; i++)
+			{
+				dataInputStream = MyStream.readFile("/mymap/" + mapID[i]);
+				MapTemplate.tmw[i] = (ushort)dataInputStream.read();
+				MapTemplate.tmh[i] = (ushort)dataInputStream.read();
+				Cout.LogError("Thong TIn : " + MapTemplate.tmw[i] + "::" + MapTemplate.tmh[i]);
+				MapTemplate.maps[i] = new int[dataInputStream.available()];
+				Cout.LogError("lent= " + MapTemplate.maps[i].Length);
+				for (int j = 0; j < MapTemplate.tmw[i] * MapTemplate.tmh[i]; j++)
+				{
+					MapTemplate.maps[i][j] = dataInputStream.read();
+				}
+				MapTemplate.types[i] = new int[MapTemplate.maps[i].Length];
+				MapTemplate.pxw[i] = MapTemplate.tmw[i] * TileMap.size;
+				MapTemplate.pxh[i] = MapTemplate.tmh[i] * TileMap.size;
+			}
+		}
+
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadMapTableFromResource.
+	/// </summary>
+	public void loadMapTableFromResource(sbyte[] mapID)
+		{
+			if (GameCanvas.lowGraphic)
+			{
+				return;
+			}
+			DataInputStream dataInputStream = null;
+			try
+			{
+				for (int i = 0; i < mapID.Length; i++)
+				{
+					dataInputStream = MyStream.readFile("/mymap/mapTable" + mapID[i]);
+					Cout.LogError("mapTable : " + mapID[i]);
+					short num = dataInputStream.readShort();
+					MapTemplate.vCurrItem[i] = new MyVector();
+					Res.outz("nItem= " + num);
+					for (int j = 0; j < num; j++)
+					{
+						short id = dataInputStream.readShort();
+						short num2 = dataInputStream.readShort();
+						short num3 = dataInputStream.readShort();
+						if (TileMap.getBIById(id) != null)
+						{
+							BgItem bIById = TileMap.getBIById(id);
+							BgItem bgItem = new BgItem();
+							bgItem.id = id;
+							bgItem.idImage = bIById.idImage;
+							bgItem.dx = bIById.dx;
+							bgItem.dy = bIById.dy;
+							bgItem.x = num2 * TileMap.size;
+							bgItem.y = num3 * TileMap.size;
+							bgItem.layer = bIById.layer;
+							MapTemplate.vCurrItem[i].addElement(bgItem);
+							if (!BgItem.imgNew.containsKey(bgItem.idImage + string.Empty))
+							{
+								try
+								{
+									Image image = GameCanvas.loadImage("/mapBackGround/" + bgItem.idImage + ".png");
+									if (image == null)
+									{
+										BgItem.imgNew.put(bgItem.idImage + string.Empty, Image.createRGBImage(new int[1], 1, 1, bl: true));
+										Service.gI().getBgTemplate(bgItem.idImage);
+									}
+									else
+									{
+										BgItem.imgNew.put(bgItem.idImage + string.Empty, image);
+									}
+								}
+								catch (Exception)
+								{
+									Image image2 = GameCanvas.loadImage("/mapBackGround/" + bgItem.idImage + ".png");
+									if (image2 == null)
+									{
+										image2 = Image.createRGBImage(new int[1], 1, 1, bl: true);
+										Service.gI().getBgTemplate(bgItem.idImage);
+									}
+									BgItem.imgNew.put(bgItem.idImage + string.Empty, image2);
+								}
+								BgItem.vKeysLast.addElement(bgItem.idImage + string.Empty);
+							}
+							if (!BgItem.isExistKeyNews(bgItem.idImage + string.Empty))
+							{
+								BgItem.vKeysNew.addElement(bgItem.idImage + string.Empty);
+							}
+							bgItem.changeColor();
+						}
+						else
+						{
+							Res.outz("item null");
+						}
+					}
+				}
+			}
+			catch (Exception ex2)
+			{
+				Cout.println("LOI TAI loadMapTableFromResource" + ex2.ToString());
+			}
+		}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ doChangeMap.
+	/// </summary>
+	public void doChangeMap()
+		{
+			if (MapTemplate.maps != null && indexGender >= 0 && indexGender < MapTemplate.maps.Length && MapTemplate.maps[indexGender] != null)
+			{
+				TileMap.maps = MapTemplate.maps[indexGender];
+				TileMap.types = MapTemplate.types[indexGender];
+				TileMap.tmw = MapTemplate.tmw[indexGender];
+				TileMap.tmh = MapTemplate.tmh[indexGender];
+				TileMap.pxw = MapTemplate.tmw[indexGender] * TileMap.size;
+				TileMap.pxh = MapTemplate.tmh[indexGender] * TileMap.size;
+			}
+			TileMap.tileID = bgID[indexGender] + 1;
+			TileMap.loadMainTile();
+			TileMap.loadTileCreatChar();
+			GameCanvas.loadBG(bgID[indexGender]);
+			GameScr.loadCamera(fullmScreen: false, cx, cy);
+		}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ keyPress.
+	/// </summary>
+	public override void keyPress(int keyCode)
+		{
+			tAddName.keyPressed(keyCode);
+		}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của đối tượng theo từng chu kỳ khung hình.
+	/// </summary>
+	public override void update()
+		{
+			cp1++;
+			if (cp1 > 30)
+			{
+				cp1 = 0;
+			}
+			if (cp1 % 15 < 5)
+			{
+				cf = 0;
+			}
+			else
+			{
+				cf = 1;
+			}
+			tAddName.update();
+			if (cmdSelectSv != null && cmdSelectSv.isPointerPressInside())
+			{
+				cmdSelectSv.performAction();
+			}
+			if (selected != 0)
+			{
+				tAddName.isFocus = false;
+			}
+		}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateKey theo chu kỳ khung hình.
+	/// </summary>
+	public override void updateKey()
+		{
+			if (GameCanvas.keyPressed[2] || GameCanvas.keyPressed[21])
+			{
+				selected--;
+				if (selected < 0)
+				{
+					selected = mResources.MENUNEWCHAR.Length - 1;
+				}
+			}
+			if (GameCanvas.keyPressed[8] || GameCanvas.keyPressed[22])
+			{
+				selected++;
+				if (selected >= mResources.MENUNEWCHAR.Length)
+				{
+					selected = 0;
+				}
+			}
+			if (selected == 0)
+			{
+				if (!GameCanvas.isTouch)
+				{
+					right = tAddName.cmdClear;
+				}
+				tAddName.update();
+			}
+			if (selected == 1)
+			{
+				if (GameCanvas.keyPressed[4] || GameCanvas.keyPressed[23])
+				{
+					indexGender--;
+					if (indexGender < 0)
+					{
+						indexGender = mResources.MENUGENDER.Length - 1;
+					}
+					doChangeMap();
+				}
+				if (GameCanvas.keyPressed[6] || GameCanvas.keyPressed[24])
+				{
+					indexGender++;
+					if (indexGender > mResources.MENUGENDER.Length - 1)
+					{
+						indexGender = 0;
+					}
+					doChangeMap();
+				}
+				right = null;
+			}
+			if (selected == 2)
+			{
+				if (GameCanvas.keyPressed[4] || GameCanvas.keyPressed[23])
+				{
+					indexHair--;
+					if (indexHair < 0)
+					{
+						indexHair = mResources.hairStyleName[0].Length - 1;
+					}
+				}
+				if (GameCanvas.keyPressed[6] || GameCanvas.keyPressed[24])
+				{
+					indexHair++;
+					if (indexHair > mResources.hairStyleName[0].Length - 1)
+					{
+						indexHair = 0;
+					}
+				}
+				right = null;
+			}
+			if (GameCanvas.isPointerJustRelease)
+			{
+				int num = 110;
+				int num2 = 60;
+				int num3 = 78;
+				if (GameCanvas.w > GameCanvas.h)
+				{
+					num = 100;
+					num2 = 40;
+				}
+				int genderY = (GameCanvas.w > GameCanvas.h) ? 65 : (num - 30);
+				int hairY = (GameCanvas.w > GameCanvas.h) ? 120 : (num - 30 + num2 + 5);
+
+				if (GameCanvas.isPointerHoldIn(GameCanvas.w / 2 - 3 * num3 / 2, 10, num3 * 3, 55))
+				{
+					selected = 0;
+					tAddName.isFocus = true;
+				}
+				else if (GameCanvas.isPointerHoldIn(GameCanvas.w / 2 - 3 * num3 / 2, genderY, num3 * 3, 55))
+				{
+					selected = 1;
+					int num4 = indexGender;
+					indexGender = (GameCanvas.px - (GameCanvas.w / 2 - 3 * num3 / 2)) / num3;
+					if (indexGender < 0)
+					{
+						indexGender = 0;
+					}
+					if (indexGender > mResources.MENUGENDER.Length - 1)
+					{
+						indexGender = mResources.MENUGENDER.Length - 1;
+					}
+					if (num4 != indexGender)
+					{
+						doChangeMap();
+					}
+				}
+				else if (GameCanvas.isPointerHoldIn(GameCanvas.w / 2 - 3 * num3 / 2, hairY, num3 * 3, 55))
+				{
+					selected = 2;
+					indexHair = (GameCanvas.px - (GameCanvas.w / 2 - 3 * num3 / 2)) / num3;
+					if (indexHair < 0)
+					{
+						indexHair = 0;
+					}
+					if (indexHair > mResources.hairStyleName[0].Length - 1)
+					{
+						indexHair = mResources.hairStyleName[0].Length - 1;
+					}
+				}
+			}
+			base.updateKey();
+			GameCanvas.clearKeyHold();
+			GameCanvas.clearKeyPressed();
+		}
+
+	/// <summary>
+	/// Thực thi hành động tương tác khi người dùng kích hoạt lệnh hoặc nút bấm.
+	/// </summary>
+	public void perform(int idAction, object p)
+		{
+			switch (idAction)
+			{
+			case 8000:
+				if (tAddName.getText().Equals(string.Empty))
+				{
+					GameCanvas.startOKDlg(mResources.char_name_blank);
+					break;
+				}
+				if (tAddName.getText().Length < 5)
+				{
+					GameCanvas.startOKDlg(mResources.char_name_short);
+					break;
+				}
+				if (tAddName.getText().Length > 15)
+				{
+					GameCanvas.startOKDlg(mResources.char_name_long);
+					break;
+				}
+				InfoDlg.showWait();
+				Service.gI().createChar(tAddName.getText(), indexGender, hairID[indexGender][indexHair]);
+				break;
+			case 8001:
+				if (GameCanvas.loginScr.isLogin2)
+				{
+					GameCanvas.startYesNoDlg(mResources.note, new Command(mResources.YES, this, 10019, null), new Command(mResources.NO, this, 10020, null));
+					break;
+				}
+				Session_ME.gI().close();
+				ServerListScreen.isAutoLogin = false;
+				GameCanvas.serverScreen.switchToMe();
+				break;
+			case 10020:
+				GameCanvas.endDlg();
+				break;
+			case 10019:
+				Session_ME.gI().close();
+				GameCanvas.endDlg();
+				ServerListScreen.isAutoLogin = false;
+				GameCanvas.serverScreen.switchToMe();
+				break;
+			case 10018:
+				ServerScr.isShowSv_HaveChar = false;
+				Controller.isEXTRA_LINK = false;
+				GameCanvas.serverScr.switchToMe();
+				break;
+			}
+		}
+
+}

@@ -1,0 +1,18 @@
+# Ignore everything in root by default except Web & Shared project files
+/*
+!/Dockerfile
+!/.dockerignore
+!/.gitignore
+!/render.yaml
+!/DragonBoy_Shared/
+!/DragonBoy_Web/
+
+# Ignore build artifacts, logs, and OS cache inside tracked folders
+**/bin/
+**/obj/
+**/.vs/
+**/Thumbs.db
+**/.DS_Store
+**/*.meta
+DragonBoy_Shared/*.txt
+DragonBoy_Shared/*.log

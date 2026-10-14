@@ -1,0 +1,841 @@
+(function () {
+    "use strict";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTabId = parseInt(urlParams.get("tab") || "1", 10) || 1;
+    const isEmbeddedTab = urlParams.get("embed") === "1";
+
+    const canvas = document.getElementById("game-canvas");
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+    const measureCanvas = document.createElement("canvas");
+    const measureCtx = measureCanvas.getContext("2d");
+
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const loadingBar = document.getElementById("loading-bar");
+    const loadingText = document.getElementById("loading-text");
+    const kbModal = document.getElementById("mobile-keyboard-modal");
+    const kbInput = document.getElementById("mobile-keyboard-input");
+    const kbOkBtn = document.getElementById("mobile-keyboard-ok");
+    const tabIframesContainer = document.getElementById("tab-iframes-container");
+
+    let virtualW = 1024;
+    let virtualH = 600;
+    let clipDepth = 0;
+    let matrixDepth = 0;
+    let clipboardCache = "";
+    let wasmExports = null;
+    let activeVisibleTabId = initialTabId;
+    const childTabIframes = new Map();
+
+    // Texture storage: texId -> { img, canvas, ctx, width, height, loaded, tintCache }
+    const textures = new Map();
+
+    // Persisted VFS storage in memory + IndexedDB + localStorage
+    const persistedFiles = new Map();
+    const DB_NAME = "DragonBoyWebVFS";
+    const DB_STORE = "files";
+    const LS_PREFIX = "db_vfs:";
+    let idbInstance = null;
+
+    function openIndexedDB() {
+        return new Promise((resolve) => {
+            try {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(DB_STORE)) {
+                        db.createObjectStore(DB_STORE);
+                    }
+                };
+                req.onsuccess = (e) => {
+                    idbInstance = e.target.result;
+                    const tx = idbInstance.transaction(DB_STORE, "readonly");
+                    const store = tx.objectStore(DB_STORE);
+                    const keysReq = store.getAllKeys();
+                    const valsReq = store.getAll();
+                    tx.oncomplete = () => {
+                        const keys = keysReq.result || [];
+                        const vals = valsReq.result || [];
+                        for (let i = 0; i < keys.length; i++) {
+                            persistedFiles.set(keys[i], vals[i]);
+                        }
+                        syncFromLocalStorage(false);
+                        resolve();
+                    };
+                    tx.onerror = () => {
+                        syncFromLocalStorage(false);
+                        resolve();
+                    };
+                };
+                req.onerror = () => {
+                    syncFromLocalStorage(false);
+                    resolve();
+                };
+            } catch (_) {
+                syncFromLocalStorage(false);
+                resolve();
+            }
+        });
+    }
+
+    function syncFromLocalStorage(sharedOnly) {
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k || !k.startsWith(LS_PREFIX)) continue;
+                const vfsPath = k.substring(LS_PREFIX.length);
+                if (sharedOnly && !isSharedVfsPath(vfsPath)) continue;
+                const val = localStorage.getItem(k);
+                if (val) {
+                    persistedFiles.set(vfsPath, val);
+                }
+            }
+        } catch (_) { }
+    }
+
+    function isSharedVfsPath(vfsPath) {
+        return vfsPath === "/rms/tabs.xml" ||
+            vfsPath.indexOf("/rms/tab_status_") === 0 ||
+            vfsPath.indexOf("/rms/stop_tab_") === 0;
+    }
+
+    function writeToStorage(vfsPath, encodedLine) {
+        persistedFiles.set(vfsPath, encodedLine);
+        try {
+            if (isSharedVfsPath(vfsPath) || encodedLine.length < 32768) {
+                localStorage.setItem(LS_PREFIX + vfsPath, encodedLine);
+            }
+        } catch (_) { }
+        if (idbInstance) {
+            try {
+                const tx = idbInstance.transaction(DB_STORE, "readwrite");
+                tx.objectStore(DB_STORE).put(encodedLine, vfsPath);
+            } catch (_) { }
+        }
+    }
+
+    function removeFromStorage(vfsPath) {
+        persistedFiles.delete(vfsPath);
+        try {
+            localStorage.removeItem(LS_PREFIX + vfsPath);
+        } catch (_) { }
+        if (idbInstance) {
+            try {
+                const tx = idbInstance.transaction(DB_STORE, "readwrite");
+                tx.objectStore(DB_STORE).delete(vfsPath);
+            } catch (_) { }
+        }
+    }
+
+    function utf8ToBase64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let bin = "";
+        for (let i = 0; i < bytes.length; i++) {
+            bin += String.fromCharCode(bytes[i]);
+        }
+        return btoa(bin);
+    }
+
+    function updateCanvasViewportSize() {
+        const w = Math.max(320, Math.floor(window.innerWidth));
+        const h = Math.max(240, Math.floor(window.innerHeight));
+        if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+        }
+        virtualW = w;
+        virtualH = h;
+    }
+
+    window.addEventListener("resize", updateCanvasViewportSize);
+    updateCanvasViewportSize();
+
+    function getFontFamily(fontTheme) {
+        if (fontTheme === 1) return "'DragonBoyFont1', sans-serif";
+        if (fontTheme === 2) return "'DragonBoyFont2', sans-serif";
+        return "'DragonBoyFont0', sans-serif";
+    }
+
+    function ensureTextureCanvas(entry) {
+        if (entry.canvas) return entry.canvas;
+        if (!entry.loaded || !entry.img) return null;
+        const c = document.createElement("canvas");
+        c.width = entry.width;
+        c.height = entry.height;
+        const cctx = c.getContext("2d", { willReadFrequently: true });
+        cctx.imageSmoothingEnabled = false;
+        cctx.drawImage(entry.img, 0, 0, entry.width, entry.height);
+        entry.canvas = c;
+        entry.ctx = cctx;
+        return c;
+    }
+
+    function getTintedSource(entry, r, g, b) {
+        const source = entry.canvas || (entry.loaded ? entry.img : null);
+        if (!source) return null;
+        if (r >= 0.99 && g >= 0.99 && b >= 0.99) return source;
+
+        const rq = Math.round(r * 32);
+        const gq = Math.round(g * 32);
+        const bq = Math.round(b * 32);
+        const key = (rq << 12) | (gq << 6) | bq;
+        if (!entry.tintCache) entry.tintCache = new Map();
+        let tc = entry.tintCache.get(key);
+        if (tc) return tc;
+
+        if (entry.tintCache.size > 8) entry.tintCache.clear();
+        tc = document.createElement("canvas");
+        tc.width = entry.width;
+        tc.height = entry.height;
+        const tctx = tc.getContext("2d");
+        tctx.imageSmoothingEnabled = false;
+        tctx.drawImage(source, 0, 0, entry.width, entry.height);
+        tctx.globalCompositeOperation = "multiply";
+        tctx.fillStyle = `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+        tctx.fillRect(0, 0, entry.width, entry.height);
+        tctx.globalCompositeOperation = "destination-in";
+        tctx.drawImage(source, 0, 0, entry.width, entry.height);
+        entry.tintCache.set(key, tc);
+        return tc;
+    }
+
+    // Input coordinates helper
+    function toVirtualCoords(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = virtualW / Math.max(1, rect.width);
+        const scaleY = virtualH / Math.max(1, rect.height);
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    function setupInputListeners() {
+        canvas.addEventListener("pointerdown", (e) => {
+            if (kbModal.classList.contains("visible")) return;
+            canvas.focus();
+            try { canvas.setPointerCapture(e.pointerId); } catch (_) { }
+            const pt = toVirtualCoords(e.clientX, e.clientY);
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(0, pt.x, pt.y, e.button || 0);
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener("pointermove", (e) => {
+            if (kbModal.classList.contains("visible")) return;
+            const pt = toVirtualCoords(e.clientX, e.clientY);
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(2, pt.x, pt.y, e.button || 0);
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        const onUp = (e) => {
+            if (kbModal.classList.contains("visible")) return;
+            const pt = toVirtualCoords(e.clientX, e.clientY);
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(1, pt.x, pt.y, e.button || 0);
+            }
+            e.preventDefault();
+        };
+        canvas.addEventListener("pointerup", onUp, { passive: false });
+        canvas.addEventListener("pointercancel", onUp, { passive: false });
+
+        canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        canvas.addEventListener("wheel", (e) => {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnWheelEvent(e.deltaY);
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener("keydown", (e) => {
+            if (document.activeElement === kbInput) return;
+            if (e.ctrlKey && (e.code === "KeyV" || e.code === "KeyC")) {
+                if (navigator.clipboard && navigator.clipboard.readText && e.code === "KeyV") {
+                    navigator.clipboard.readText().then(t => { clipboardCache = t || ""; }).catch(() => { });
+                }
+            }
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnKeyEvent(1, e.code || "", e.key || "", e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0);
+            }
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Space", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (document.activeElement === kbInput) return;
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnKeyEvent(0, e.code || "", e.key || "", e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0);
+            }
+        });
+
+        kbInput.addEventListener("input", () => {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardCommit(kbInput.value);
+            }
+        });
+
+        kbInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                if (wasmExports) {
+                    wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardCommit(kbInput.value);
+                }
+                kbModal.classList.remove("visible");
+                kbInput.blur();
+                canvas.focus();
+                e.preventDefault();
+            } else if (e.key === "Escape") {
+                kbModal.classList.remove("visible");
+                kbInput.blur();
+                canvas.focus();
+                e.preventDefault();
+            }
+        });
+
+        kbOkBtn.addEventListener("click", () => {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardCommit(kbInput.value);
+            }
+            kbModal.classList.remove("visible");
+            kbInput.blur();
+            canvas.focus();
+        });
+    }
+
+    // Multi-Tab Iframe coordination (Parent Window <-> Child Tab Iframes)
+    function ensureChildTabIframe(tabId) {
+        if (tabId <= 1) return null;
+        if (isEmbeddedTab) {
+            window.parent.postMessage({ type: "db_prewarm_tab", tabId }, "*");
+            return null;
+        }
+        let iframe = childTabIframes.get(tabId);
+        if (!iframe) {
+            iframe = document.createElement("iframe");
+            iframe.className = "tab-iframe";
+            iframe.src = `${window.location.pathname}?tab=${tabId}&embed=1`;
+            tabIframesContainer.appendChild(iframe);
+            childTabIframes.set(tabId, iframe);
+        }
+        return iframe;
+    }
+
+    function activateTabInHost(tabId, keepHubOpen, bx, by) {
+        if (isEmbeddedTab) {
+            window.parent.postMessage({ type: "db_switch_tab", tabId, keepHubOpen, bx, by }, "*");
+            return;
+        }
+        activeVisibleTabId = tabId;
+        for (const [id, frame] of childTabIframes.entries()) {
+            if (id === tabId) {
+                frame.classList.add("active");
+                try {
+                    frame.contentWindow.postMessage({ type: "db_tab_activated", keepHubOpen: keepHubOpen ? 1 : 0, bx, by }, "*");
+                    frame.contentWindow.focus();
+                } catch (_) { }
+            } else {
+                frame.classList.remove("active");
+            }
+        }
+        if (tabId === 1) {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.Program.OnTabActivated(keepHubOpen ? 1 : 0, bx, by);
+            }
+            canvas.focus();
+        } else {
+            const targetFrame = ensureChildTabIframe(tabId);
+            if (targetFrame) {
+                targetFrame.classList.add("active");
+                setTimeout(() => {
+                    try {
+                        targetFrame.contentWindow.postMessage({ type: "db_tab_activated", keepHubOpen: keepHubOpen ? 1 : 0, bx, by }, "*");
+                    } catch (_) { }
+                }, 120);
+            }
+        }
+    }
+
+    window.addEventListener("message", (e) => {
+        const d = e.data;
+        if (!d || typeof d.type !== "string") return;
+        if (d.type === "db_switch_tab") {
+            activateTabInHost(d.tabId, d.keepHubOpen, d.bx, d.by);
+        } else if (d.type === "db_prewarm_tab") {
+            ensureChildTabIframe(d.tabId);
+        } else if (d.type === "db_stop_tab") {
+            if (!isEmbeddedTab) {
+                const frame = childTabIframes.get(d.tabId);
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({ type: "db_do_stop_self" }, "*");
+                }
+            }
+        } else if (d.type === "db_delete_tab") {
+            if (!isEmbeddedTab) {
+                const frame = childTabIframes.get(d.tabId);
+                if (frame) {
+                    frame.remove();
+                    childTabIframes.delete(d.tabId);
+                }
+                if (activeVisibleTabId === d.tabId) {
+                    activateTabInHost(1, true, -1, -1);
+                }
+            }
+        } else if (d.type === "db_tab_activated") {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.Program.OnTabActivated(d.keepHubOpen || 0, d.bx ?? -1, d.by ?? -1);
+            }
+        } else if (d.type === "db_do_stop_self") {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.Program.OnTabStopRequested();
+            }
+        }
+    });
+
+    function startGameLoops() {
+        let lastRafTime = 0;
+
+        function onRaf(timestamp) {
+            lastRafTime = performance.now();
+            const isTabVisible = !document.hidden && (isEmbeddedTab || activeVisibleTabId === 1);
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.Program.OnBrowserFrame(lastRafTime, isTabVisible ? 1 : 0);
+            }
+            requestAnimationFrame(onRaf);
+        }
+        requestAnimationFrame(onRaf);
+
+        // Background Web Worker heartbeat so Auto-Play & Socket Keep-Alive never pause when browser tab is minimized
+        try {
+            const workerBlob = new Blob([
+                "setInterval(function(){ postMessage(Date.now()); }, 25);"
+            ], { type: "application/javascript" });
+            const worker = new Worker(URL.createObjectURL(workerBlob));
+            worker.onmessage = function () {
+                const now = performance.now();
+                if (now - lastRafTime >= 40 && wasmExports) {
+                    wasmExports.DragonBoy_Web_Host.Program.OnBrowserFrame(now, 0);
+                }
+            };
+        } catch (_) { }
+    }
+
+    window.DragonBoyWeb = {
+        getCanvasWidth: () => virtualW,
+        getCanvasHeight: () => virtualH,
+        isFullScreen: () => !!document.fullscreenElement,
+        setResolution: (w, h, fullscreen) => {
+            if (fullscreen && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen?.().catch(() => { });
+            } else if (!fullscreen && document.fullscreenElement) {
+                document.exitFullscreen?.().catch(() => { });
+            }
+        },
+        setWindowTitle: (title) => {
+            if (!isEmbeddedTab && title) document.title = title;
+        },
+        isTouchDevice: () => ("ontouchstart" in window) || (navigator.maxTouchPoints > 0),
+
+        registerLazyTexture: (texId, url, width, height) => {
+            const entry = {
+                img: null,
+                canvas: null,
+                ctx: null,
+                width: width || 1,
+                height: height || 1,
+                loaded: false,
+                url: url,
+                pendingScales: []
+            };
+            const img = new Image();
+            img.decoding = "async";
+            img.onload = () => {
+                entry.loaded = true;
+                if (img.naturalWidth > 0) entry.width = img.naturalWidth;
+                if (img.naturalHeight > 0) entry.height = img.naturalHeight;
+                if (entry.pendingScales.length > 0) {
+                    for (const fn of entry.pendingScales) fn();
+                    entry.pendingScales.length = 0;
+                }
+            };
+            img.src = url;
+            entry.img = img;
+            textures.set(texId, entry);
+        },
+
+        createTextureFromBytes: (texId, imageBytes, width, height) => {
+            const entry = {
+                img: null,
+                canvas: null,
+                ctx: null,
+                width: width || 1,
+                height: height || 1,
+                loaded: false,
+                pendingScales: []
+            };
+            const blob = new Blob([imageBytes]);
+            const blobUrl = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                entry.loaded = true;
+                if (img.naturalWidth > 0) entry.width = img.naturalWidth;
+                if (img.naturalHeight > 0) entry.height = img.naturalHeight;
+                URL.revokeObjectURL(blobUrl);
+                if (entry.pendingScales.length > 0) {
+                    for (const fn of entry.pendingScales) fn();
+                    entry.pendingScales.length = 0;
+                }
+            };
+            img.src = blobUrl;
+            entry.img = img;
+            textures.set(texId, entry);
+        },
+
+        scaleTextureNN: (dstTexId, srcTexId, srcW, srcH, targetW, targetH) => {
+            const dstCanvas = document.createElement("canvas");
+            dstCanvas.width = targetW;
+            dstCanvas.height = targetH;
+            const dstCtx = dstCanvas.getContext("2d");
+            dstCtx.imageSmoothingEnabled = false;
+
+            const dstEntry = {
+                img: null,
+                canvas: dstCanvas,
+                ctx: dstCtx,
+                width: targetW,
+                height: targetH,
+                loaded: true,
+                pendingScales: []
+            };
+            textures.set(dstTexId, dstEntry);
+
+            const srcEntry = textures.get(srcTexId);
+            if (!srcEntry) return;
+
+            const performScale = () => {
+                const srcDrawable = srcEntry.canvas || srcEntry.img;
+                if (srcDrawable) {
+                    dstCtx.clearRect(0, 0, targetW, targetH);
+                    dstCtx.imageSmoothingEnabled = false;
+                    dstCtx.drawImage(srcDrawable, 0, 0, srcEntry.width, srcEntry.height, 0, 0, targetW, targetH);
+                }
+            };
+
+            if (srcEntry.loaded || srcEntry.canvas) {
+                performScale();
+            } else if (srcEntry.pendingScales) {
+                srcEntry.pendingScales.push(performScale);
+            }
+        },
+
+        uploadRgbaPixels: (texId, rgbaBytes, width, height) => {
+            let entry = textures.get(texId);
+            if (!entry || !entry.canvas || entry.width !== width || entry.height !== height) {
+                const c = document.createElement("canvas");
+                c.width = width;
+                c.height = height;
+                const cctx = c.getContext("2d");
+                cctx.imageSmoothingEnabled = false;
+                entry = {
+                    img: null,
+                    canvas: c,
+                    ctx: cctx,
+                    width: width,
+                    height: height,
+                    loaded: true,
+                    pendingScales: []
+                };
+                textures.set(texId, entry);
+            }
+            const clamped = new Uint8ClampedArray(rgbaBytes.buffer, rgbaBytes.byteOffset, rgbaBytes.byteLength);
+            const imgData = new ImageData(clamped, width, height);
+            entry.ctx.putImageData(imgData, 0, 0);
+            if (entry.tintCache) entry.tintCache.clear();
+        },
+
+        readTexturePixels: (texId, width, height) => {
+            const entry = textures.get(texId);
+            if (!entry) return new Uint8Array(width * height * 4);
+            const c = ensureTextureCanvas(entry);
+            if (!c || !entry.ctx) return new Uint8Array(width * height * 4);
+            const imgData = entry.ctx.getImageData(0, 0, width, height);
+            return new Uint8Array(imgData.data.buffer);
+        },
+
+        beginFrame: (vw, vh) => {
+            while (clipDepth > 0) {
+                ctx.restore();
+                clipDepth--;
+            }
+            while (matrixDepth > 0) {
+                ctx.restore();
+                matrixDepth--;
+            }
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        },
+
+        endFrame: () => {
+            while (clipDepth > 0) {
+                ctx.restore();
+                clipDepth--;
+            }
+            while (matrixDepth > 0) {
+                ctx.restore();
+                matrixDepth--;
+            }
+            ctx.globalAlpha = 1.0;
+        },
+
+        drawTexture: (texId, dstX, dstY, dstW, dstH, srcX, srcY, srcW, srcH, r, g, b, a) => {
+            const entry = textures.get(texId);
+            if (!entry) return;
+            const drawable = getTintedSource(entry, r, g, b);
+            if (!drawable) return;
+
+            const tw = entry.width;
+            const th = entry.height;
+            let sx = srcX * tw;
+            let sy = (1.0 - srcY - srcH) * th;
+            let sw = srcW * tw;
+            let sh = srcH * th;
+
+            const flipX = sw < 0;
+            const flipY = sh < 0;
+            if (flipX) {
+                sx += sw;
+                sw = -sw;
+            }
+            if (flipY) {
+                sy += sh;
+                sh = -sh;
+            }
+            if (sw <= 0.001 || sh <= 0.001 || dstW <= 0.001 || dstH <= 0.001) return;
+
+            const prevAlpha = ctx.globalAlpha;
+            ctx.globalAlpha = a;
+
+            if (flipX || flipY) {
+                ctx.save();
+                ctx.translate(dstX + (flipX ? dstW : 0), dstY + (flipY ? dstH : 0));
+                ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+                ctx.drawImage(drawable, sx, sy, sw, sh, 0, 0, dstW, dstH);
+                ctx.restore();
+            } else {
+                ctx.drawImage(drawable, sx, sy, sw, sh, dstX, dstY, dstW, dstH);
+            }
+
+            ctx.globalAlpha = prevAlpha;
+        },
+
+        drawSolidRect: (dstX, dstY, dstW, dstH, r, g, b, a) => {
+            ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
+            ctx.fillRect(dstX, dstY, dstW, dstH);
+        },
+
+        drawCircle: (cx, cy, radius, r, g, b, a, fill) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            const style = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
+            if (fill) {
+                ctx.fillStyle = style;
+                ctx.fill();
+            } else {
+                ctx.strokeStyle = style;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+        },
+
+        measureTextWidth: (text, fontSize, fontTheme) => {
+            measureCtx.font = `bold ${fontSize}px ${getFontFamily(fontTheme)}`;
+            return measureCtx.measureText(text).width;
+        },
+
+        drawText: (text, x, y, w, h, fontSize, fontTheme, r, g, b, a, align) => {
+            ctx.font = `bold ${fontSize}px ${getFontFamily(fontTheme)}`;
+            ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
+            ctx.textBaseline = "top";
+            let drawX = x;
+            if (align === 1) {
+                ctx.textAlign = "center";
+                drawX = x + w * 0.5;
+            } else if (align === 2) {
+                ctx.textAlign = "right";
+                drawX = x + w;
+            } else {
+                ctx.textAlign = "left";
+            }
+            ctx.fillText(text, drawX, y + 1);
+        },
+
+        pushClipRect: (x, y, w, h) => {
+            ctx.save();
+            clipDepth++;
+            ctx.beginPath();
+            ctx.rect(x, y, Math.max(0, w), Math.max(0, h));
+            ctx.clip();
+        },
+
+        popClipRect: () => {
+            if (clipDepth > 0) {
+                ctx.restore();
+                clipDepth--;
+            }
+        },
+
+        rotateAroundPivot: (angleDeg, pivotX, pivotY) => {
+            ctx.save();
+            matrixDepth++;
+            const rad = (angleDeg * Math.PI) / 180.0;
+            ctx.translate(pivotX, pivotY);
+            ctx.rotate(rad);
+            ctx.translate(-pivotX, -pivotY);
+        },
+
+        restoreMatrix: () => {
+            if (matrixDepth > 0) {
+                ctx.restore();
+                matrixDepth--;
+            }
+        },
+
+        resetMatrixStack: () => {
+            while (matrixDepth > 0) {
+                ctx.restore();
+                matrixDepth--;
+            }
+        },
+
+        saveStorageFile: (vfsPath, base64Data) => {
+            writeToStorage(vfsPath, `B64|${vfsPath}|${base64Data}`);
+        },
+
+        saveStorageText: (vfsPath, textContent) => {
+            writeToStorage(vfsPath, `TXT|${vfsPath}|${utf8ToBase64(textContent)}`);
+        },
+
+        deleteStorageFile: (vfsPath) => {
+            removeFromStorage(vfsPath);
+        },
+
+        getSharedFilesPayload: () => {
+            syncFromLocalStorage(true);
+            const lines = [];
+            for (const [k, v] of persistedFiles.entries()) {
+                if (isSharedVfsPath(k)) lines.push(v);
+            }
+            return lines.join("\n");
+        },
+
+        getAllPersistedFilesPayload: () => {
+            syncFromLocalStorage(false);
+            const lines = [];
+            for (const v of persistedFiles.values()) {
+                lines.push(v);
+            }
+            return lines.join("\n");
+        },
+
+        openUrl: (url) => {
+            window.open(url, "_blank", "noopener,noreferrer");
+        },
+
+        getClipboardText: () => clipboardCache || "",
+
+        setClipboardText: (text) => {
+            clipboardCache = text || "";
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(clipboardCache).catch(() => { });
+            }
+        },
+
+        showSoftKeyboard: (initialText) => {
+            kbInput.value = initialText || "";
+            kbModal.classList.add("visible");
+            setTimeout(() => {
+                kbInput.focus();
+                kbInput.setSelectionRange(kbInput.value.length, kbInput.value.length);
+            }, 30);
+        },
+
+        hideSoftKeyboard: () => {
+            kbModal.classList.remove("visible");
+            kbInput.blur();
+            canvas.focus();
+        },
+
+        getRelayWsUrl: (targetHost, targetPort) => {
+            const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return `${proto}//${window.location.host}/ws/tcp?host=${encodeURIComponent(targetHost)}&port=${targetPort}`;
+        },
+
+        getHttpBaseUrl: () => window.location.origin,
+
+        getInitialTabId: () => initialTabId,
+
+        hostSwitchTab: (tabId, keepHubOpen, bx, by) => {
+            activateTabInHost(tabId, keepHubOpen, bx, by);
+        },
+
+        hostPrewarmTab: (tabId) => {
+            ensureChildTabIframe(tabId);
+        },
+
+        hostStopTab: (tabId) => {
+            if (isEmbeddedTab) {
+                window.parent.postMessage({ type: "db_stop_tab", tabId }, "*");
+            } else {
+                const frame = childTabIframes.get(tabId);
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({ type: "db_do_stop_self" }, "*");
+                }
+            }
+        },
+
+        hostDeleteTab: (tabId) => {
+            if (isEmbeddedTab) {
+                window.parent.postMessage({ type: "db_delete_tab", tabId }, "*");
+            } else {
+                const frame = childTabIframes.get(tabId);
+                if (frame) {
+                    frame.remove();
+                    childTabIframes.delete(tabId);
+                }
+            }
+        },
+
+        setLoadingProgress: (statusText, percent) => {
+            if (loadingText && statusText) loadingText.textContent = statusText;
+            if (loadingBar && typeof percent === "number") {
+                loadingBar.style.width = `${Math.max(5, Math.min(100, percent))}%`;
+            }
+        },
+
+        hideLoadingOverlay: () => {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add("hidden");
+                setTimeout(() => { loadingOverlay.style.display = "none"; }, 350);
+            }
+            canvas.focus();
+        },
+
+        bootBlazor: async () => {
+            await openIndexedDB();
+            if (document.fonts && document.fonts.ready) {
+                try { await document.fonts.ready; } catch (_) { }
+            }
+            await Blazor.start();
+            const runtime = await window.getDotnetRuntime(0);
+            wasmExports = await runtime.getAssemblyExports("DragonBoy_Web_Client.dll");
+            setupInputListeners();
+            startGameLoops();
+        }
+    };
+})();

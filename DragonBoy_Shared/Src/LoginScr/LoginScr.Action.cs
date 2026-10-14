@@ -1,0 +1,565 @@
+using System;
+using UnityEngine;
+
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp LoginScr: Đảm nhiệm phân hệ chuyên trách Action ().
+/// </summary>
+public partial class LoginScr : mScreen, IActionListener
+{
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateTfWhenOpenKb theo chu kỳ khung hình.
+	/// </summary>
+	public void updateTfWhenOpenKb()
+		{
+		}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của đối tượng theo từng chu kỳ khung hình.
+	/// </summary>
+	public override void update()
+		{
+			if (timeLogin > 0)
+			{
+				timeLogin = 0;
+			}
+			if (tfPass != null && tfPass.isFocus)
+			{
+				focus = 1;
+				if (tfUser != null && tfUser.isFocus) tfUser.isFocus = false;
+			}
+			else if (tfUser != null && tfUser.isFocus)
+			{
+				focus = 0;
+				if (tfPass != null && tfPass.isFocus) tfPass.isFocus = false;
+			}
+			if (isLogin2 && !isRes)
+			{
+				tfUser.name = ((mResources.language != 2) ? (mResources.phone + "/") : string.Empty) + mResources.email;
+				tfPass.name = mResources.password;
+				tfUser.isPaintCarret = false;
+				tfPass.isPaintCarret = false;
+				tfUser.update();
+				tfPass.update();
+			}
+			else
+			{
+				tfUser.name = ((mResources.language != 2) ? (mResources.phone + "/") : string.Empty) + mResources.email;
+				tfPass.name = mResources.password;
+				tfUser.update();
+				tfPass.update();
+			}
+			if (TouchScreenKeyboard.visible)
+			{
+				mGraphics.addYWhenOpenKeyBoard = 0;
+			}
+			for (int i = 0; i < Effect2.vEffect2.size(); i++)
+			{
+				Effect2 effect = (Effect2)Effect2.vEffect2.elementAt(i);
+				effect.update();
+			}
+			if (isUpdateAll && !isUpdateData && !isUpdateItem && !isUpdateMap && !isUpdateSkill)
+			{
+				isUpdateAll = false;
+				mSystem.gcc();
+				Service.gI().finishUpdate();
+			}
+			GameScr.cmx++;
+			if (GameScr.cmx > GameCanvas.w * 3 + 100)
+			{
+				GameScr.cmx = 100;
+			}
+			if (ChatPopup.currChatPopup != null)
+			{
+				return;
+			}
+			GameCanvas.debug("LGU1", 0);
+			GameCanvas.debug("LGU2", 0);
+			GameCanvas.debug("LGU3", 0);
+			updateLogo();
+			GameCanvas.debug("LGU4", 0);
+			GameCanvas.debug("LGU5", 0);
+			if (g >= 0)
+			{
+				ylogo += dir * g;
+				g += dir * v;
+				if (g <= 0)
+				{
+					dir *= -1;
+				}
+				if (ylogo > 0)
+				{
+					dir *= -1;
+					g -= 2 * v;
+				}
+			}
+			GameCanvas.debug("LGU6", 0);
+			if (tipid >= 0 && GameCanvas.gameTick % 100 == 0)
+			{
+				doChangeTip();
+			}
+			if (isLogin2 && !isRes)
+			{
+				tfUser.isPaintCarret = false;
+				tfPass.isPaintCarret = false;
+				tfUser.update();
+				tfPass.update();
+			}
+			else
+			{
+				tfUser.name = ((mResources.language != 2) ? (mResources.phone + "/") : string.Empty) + mResources.email;
+				tfPass.name = mResources.password;
+				tfUser.update();
+				tfPass.update();
+			}
+			if (GameCanvas.isTouch)
+			{
+				if (isRes)
+				{
+					center = cmdRes;
+					left = cmdBackFromRegister;
+					right = cmdPaste;
+				}
+				else
+				{
+					center = cmdOK;
+					left = cmdFogetPass;
+					right = cmdPaste;
+				}
+				if (cmdBack != null && cmdBack.isPointerPressInside())
+				{
+					cmdBack.performAction();
+				}
+			}
+			else if (isRes)
+			{
+				center = cmdRes;
+				left = cmdBackFromRegister;
+				right = cmdPaste;
+			}
+			else
+			{
+				center = cmdOK;
+				left = cmdFogetPass;
+				right = cmdPaste;
+			}
+			// Legacy auto-login removed to allow normal typing and Enter/button submission across all platforms
+			DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.UpdateLoginWatchdog();
+			ModAutoUpdate.UpdateTick();
+			ModAutoUpdate.UpdateLobbyInput();
+			updateTfWhenOpenKb();
+		}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateLogo theo chu kỳ khung hình.
+	/// </summary>
+	public void updateLogo()
+		{
+			if (defYL != yL)
+			{
+				yL += defYL - yL >> 1;
+			}
+		}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ keyPress.
+	/// </summary>
+	public override void keyPress(int keyCode)
+		{
+			if (keyCode == -26 || keyCode == 9)
+			{
+				focus = (focus == 0) ? 1 : 0;
+				if (tfUser != null) tfUser.setFocusWithKb(focus == 0);
+				if (tfPass != null) tfPass.setFocusWithKb(focus == 1);
+				return;
+			}
+			if (keyCode == -5 || keyCode == 10 || keyCode == 13)
+			{
+				if (focus == 0)
+				{
+					focus = 1;
+					if (tfUser != null) tfUser.setFocusWithKb(false);
+					if (tfPass != null) tfPass.setFocusWithKb(true);
+					return;
+				}
+				else if (focus == 1)
+				{
+					perform(2008, null);
+					return;
+				}
+			}
+			if (tfPass != null && tfPass.isFocus)
+			{
+				tfPass.keyPressed(keyCode);
+			}
+			else if (tfUser != null && tfUser.isFocus)
+			{
+				tfUser.keyPressed(keyCode);
+			}
+			else if (focus == 1 && tfPass != null)
+			{
+				tfPass.keyPressed(keyCode);
+			}
+			else if (tfUser != null)
+			{
+				tfUser.keyPressed(keyCode);
+			}
+			base.keyPress(keyCode);
+		}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateKey theo chu kỳ khung hình.
+	/// </summary>
+	public override void updateKey()
+		{
+			if (ModAutoUpdate.isShowUpdateBoard || ModAutoUpdate.isDownloading || ModAutoUpdate.isShowCompletedBoard)
+			{
+				return;
+			}
+			if (GameCanvas.isTouch)
+			{
+				if (cmdCallHotline != null && cmdCallHotline.isPointerPressInside())
+				{
+					cmdCallHotline.performAction();
+				}
+			}
+			else if (mSystem.clientType == 1 && GameCanvas.keyPressed[13])
+			{
+				GameCanvas.keyPressed[13] = false;
+				cmdCallHotline.performAction();
+			}
+			if (isContinueToLogin)
+			{
+				return;
+			}
+			if (!GameCanvas.isTouch)
+			{
+				if (tfUser.isFocus)
+				{
+					right = tfUser.cmdClear;
+				}
+				else
+				{
+					right = tfPass.cmdClear;
+				}
+			}
+			if (GameCanvas.keyPressed[(!Main.isPC) ? 2 : 21])
+			{
+				focus--;
+				if (focus < 0)
+				{
+					focus = 1;
+				}
+			}
+			else if (GameCanvas.keyPressed[(!Main.isPC) ? 8 : 22] || GameCanvas.keyPressed[16])
+			{
+				focus++;
+				if (focus > 1)
+				{
+					focus = 0;
+				}
+			}
+			if (GameCanvas.keyPressed[(!Main.isPC) ? 2 : 21] || GameCanvas.keyPressed[(!Main.isPC) ? 8 : 22] || GameCanvas.keyPressed[16])
+			{
+				GameCanvas.clearKeyPressed();
+				if (!isLogin2 || isRes)
+				{
+					if (focus == 1)
+					{
+						tfUser.isFocus = false;
+						tfPass.isFocus = true;
+					}
+					else if (focus == 0)
+					{
+						tfUser.isFocus = true;
+						tfPass.isFocus = false;
+					}
+					else
+					{
+						tfUser.isFocus = false;
+						tfPass.isFocus = false;
+					}
+				}
+			}
+			if (GameCanvas.isTouch)
+			{
+				if (isRes)
+				{
+					center = cmdRes;
+					left = cmdBackFromRegister;
+					right = cmdPaste;
+				}
+				else
+				{
+					center = cmdOK;
+					left = cmdFogetPass;
+					right = cmdPaste;
+				}
+			}
+			else if (isRes)
+			{
+				center = cmdRes;
+				left = cmdBackFromRegister;
+				right = cmdPaste;
+			}
+			else
+			{
+				center = cmdOK;
+				left = cmdFogetPass;
+				right = cmdPaste;
+			}
+			if ((GameCanvas.isPointerJustRelease || GameCanvas.isPointerClick) && (!isLogin2 || isRes))
+			{
+				if (GameCanvas.isPointerHoldIn(tfUser.x, tfUser.y, tfUser.width, tfUser.height) || GameCanvas.isPointer(tfUser.x, tfUser.y, tfUser.width, tfUser.height))
+				{
+					focus = 0;
+					tfUser.setFocusWithKb(true);
+					tfPass.setFocusWithKb(false);
+					GameCanvas.isPointerJustRelease = false;
+					GameCanvas.isPointerClick = false;
+					GameCanvas.clearKeyPressed();
+				}
+				else if (GameCanvas.isPointerHoldIn(tfPass.x, tfPass.y, tfPass.width, tfPass.height) || GameCanvas.isPointer(tfPass.x, tfPass.y, tfPass.width, tfPass.height))
+				{
+					focus = 1;
+					tfUser.setFocusWithKb(false);
+					tfPass.setFocusWithKb(true);
+					GameCanvas.isPointerJustRelease = false;
+					GameCanvas.isPointerClick = false;
+					GameCanvas.clearKeyPressed();
+				}
+				else if (GameCanvas.isPointerHoldIn(xLog + 10, yLog + 72, 130, 22) || GameCanvas.isPointer(xLog + 10, yLog + 72, 130, 22))
+				{
+					isCheck = !isCheck;
+					DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.SaveCredentials(tfUser.getText(), tfPass.getText(), isCheck);
+					GameCanvas.isPointerJustRelease = false;
+					GameCanvas.isPointerClick = false;
+					GameCanvas.clearKeyPressed();
+				}
+			}
+			if (GameCanvas.keyPressed[(!Main.isPC) ? 5 : 25])
+			{
+				if (focus == 0 && string.IsNullOrEmpty(tfPass.getText()))
+				{
+					GameCanvas.keyPressed[(!Main.isPC) ? 5 : 25] = false;
+					focus = 1;
+					tfUser.setFocusWithKb(false);
+					tfPass.setFocusWithKb(true);
+					return;
+				}
+			}
+			base.updateKey();
+			GameCanvas.clearKeyPressed();
+		}
+
+	/// <summary>
+	/// Thực thi hành động tương tác khi người dùng kích hoạt lệnh hoặc nút bấm.
+	/// </summary>
+	public void perform(int idAction, object p)
+		{
+			Res.outz(">>>>Loginscr perform: " + idAction);
+			switch (idAction)
+			{
+			case 101:
+			{
+				int savedSv101 = Rms.loadRMSInt(ServerListScreen.RMS_svselect);
+				if (savedSv101 >= 0 && ServerListScreen.nameServer != null && savedSv101 < ServerListScreen.nameServer.Length)
+				{
+					ServerListScreen.ipSelect = savedSv101;
+				}
+				if (GameCanvas.serverScreen == null)
+				{
+					GameCanvas.serverScreen = new ServerListScreen();
+				}
+				GameCanvas.serverScreen.switchToMe();
+				break;
+			}
+			case 13:
+				switch (mSystem.clientType)
+				{
+				case 1:
+					mSystem.callHotlineJava();
+					break;
+				case 3:
+				case 5:
+					mSystem.callHotlineIphone();
+					break;
+				case 6:
+					mSystem.callHotlineWindowsPhone();
+					break;
+				case 4:
+					mSystem.callHotlinePC();
+					break;
+				case 2:
+					break;
+				}
+				break;
+			case 1000:
+				try
+				{
+					GameMidlet.instance.platformRequest((string)p);
+				}
+				catch (Exception)
+				{
+				}
+				GameCanvas.endDlg();
+				break;
+			case 1001:
+				GameCanvas.endDlg();
+				isRes = false;
+				break;
+			case 1002:
+			{
+				GameCanvas.startWaitDlg();
+				string text = Rms.loadRMSString(Rms.RMS_userAo + ServerListScreen.ipSelect);
+				if (text == null || text.Equals(string.Empty))
+				{
+					Service.gI().login2(string.Empty);
+					break;
+				}
+				GameCanvas.loginScr.isLogin2 = true;
+				GameCanvas.connect();
+				Service.gI().setClientType();
+				Service.gI().login(text, string.Empty, GameMidlet.VERSION, 1);
+				break;
+			}
+			case 1004:
+				ServerListScreen.doUpdateServer();
+				GameCanvas.serverScreen.switchToMe();
+				break;
+			case 10021:
+				actRegisterLeft();
+				break;
+			case 1003:
+				GameCanvas.startOKDlg(mResources.goToWebForPassword);
+				break;
+			case 1005:
+				try
+				{
+					GameMidlet.instance.platformRequest("http://ngocrongonline.com");
+					break;
+				}
+				catch (Exception)
+				{
+					break;
+				}
+			case 10041:
+				Rms.saveRMSInt("lowGraphic", 0);
+				GameCanvas.startOK(mResources.plsRestartGame, 8885, null);
+				break;
+			case 10042:
+				Rms.saveRMSInt("lowGraphic", 1);
+				GameCanvas.startOK(mResources.plsRestartGame, 8885, null);
+				break;
+			case 2001:
+				if (isCheck)
+				{
+					isCheck = false;
+				}
+				else
+				{
+					isCheck = true;
+				}
+				break;
+			case 2002:
+				doRegister();
+				break;
+			case 2003:
+				doMenu();
+				break;
+			case 2004:
+				actRegister();
+				break;
+			case 2008:
+			{
+				string user = (tfUser != null && tfUser.getText() != null) ? tfUser.getText().Trim() : string.Empty;
+				string pass = (tfPass != null && tfPass.getText() != null) ? tfPass.getText() : string.Empty;
+
+				if (string.IsNullOrEmpty(user))
+				{
+					focus = 0;
+					if (tfUser != null)
+					{
+						tfUser.setFocusWithKb(true);
+					}
+					if (tfPass != null)
+					{
+						tfPass.setFocusWithKb(false);
+					}
+					GameCanvas.startOKDlg(mResources.userBlank);
+					break;
+				}
+				if (string.IsNullOrEmpty(pass))
+				{
+					focus = 1;
+					if (tfUser != null)
+					{
+						tfUser.setFocusWithKb(false);
+					}
+					if (tfPass != null)
+					{
+						tfPass.setFocusWithKb(true);
+					}
+					GameCanvas.startOKDlg(mResources.passwordBlank);
+					break;
+				}
+
+				Rms.saveRMSString(Rms.RMS_acc, user);
+				Rms.saveRMSString(Rms.RMS_pass, pass);
+				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.SaveCredentials(user, pass, isCheck);
+
+				GameCanvas.clearAllPointerEvent();
+				GameCanvas.clearKeyPressed();
+
+				int savedSv2008 = Rms.loadRMSInt(ServerListScreen.RMS_svselect);
+				if (savedSv2008 >= 0 && ServerListScreen.nameServer != null && savedSv2008 < ServerListScreen.nameServer.Length)
+				{
+					ServerListScreen.ipSelect = savedSv2008;
+				}
+				if (ServerListScreen.address != null && ServerListScreen.ipSelect >= 0 && ServerListScreen.ipSelect < ServerListScreen.address.Length)
+				{
+					GameMidlet.IP = ServerListScreen.address[ServerListScreen.ipSelect];
+					GameMidlet.PORT = ServerListScreen.port[ServerListScreen.ipSelect];
+				}
+
+				if (GameCanvas.serverScreen == null)
+				{
+					GameCanvas.serverScreen = new ServerListScreen();
+				}
+				GameCanvas.serverScreen.switchToMe();
+				break;
+			}
+			case 2009:
+			{
+				string clip = GUIUtility.systemCopyBuffer;
+				if (!string.IsNullOrEmpty(clip))
+				{
+					if (tfPass != null && tfPass.isFocus)
+					{
+						tfPass.clearAllText();
+						tfPass.paste(clip);
+					}
+					else if (tfUser != null && tfUser.isFocus)
+					{
+						tfUser.clearAllText();
+						tfUser.paste(clip);
+					}
+					else if (focus == 1 && tfPass != null)
+					{
+						tfPass.clearAllText();
+						tfPass.paste(clip);
+					}
+					else if (tfUser != null)
+					{
+						tfUser.clearAllText();
+						tfUser.paste(clip);
+					}
+				}
+				break;
+			}
+			case 4000:
+				doRegister(tfUser.getText());
+				break;
+			}
+		}
+
+}

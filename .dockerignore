@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.gitignore
+DragonBoy_Net8_Native/
+DragonBoy_Mobile/
+ModNRO_Tools/
+Publish_Web/
+*.apk
+*.exe
+*.pdb
+*.log
+**/Thumbs.db
+**/.DS_Store
+**/*.meta
+PROJECT_DOCUMENTATION.md

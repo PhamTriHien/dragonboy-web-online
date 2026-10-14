@@ -1,0 +1,493 @@
+using System;
+using UnityEngine;
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp ServerListScreen: Đảm nhiệm phân hệ chuyên trách Part2 ().
+/// </summary>
+public partial class ServerListScreen : mScreen, IActionListener
+{
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ saveIP.
+	/// </summary>
+	public static void saveIP()
+		{
+			DataOutputStream dataOutputStream = new DataOutputStream();
+			try
+			{
+				dataOutputStream.writeByte(mResources.language);
+				dataOutputStream.writeByte((sbyte)nameServer.Length);
+				for (int i = 0; i < nameServer.Length; i++)
+				{
+					dataOutputStream.writeUTF(nameServer[i]);
+					dataOutputStream.writeUTF(address[i]);
+					dataOutputStream.writeShort(port[i]);
+					dataOutputStream.writeByte(language[i]);
+					try
+					{
+						dataOutputStream.writeByte(typeSv[i]);
+					}
+					catch (Exception)
+					{
+						dataOutputStream.writeByte(0);
+					}
+					try
+					{
+						dataOutputStream.writeByte(isNew[i]);
+					}
+					catch (Exception)
+					{
+						dataOutputStream.writeByte(0);
+					}
+				}
+				dataOutputStream.writeByte(serverPriority);
+				Rms.saveRMS(RMS_NRlink, dataOutputStream.toByteArray());
+				dataOutputStream.close();
+				SplashScr.loadIP();
+			}
+			catch (Exception)
+			{
+			}
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ allServerConnected.
+	/// </summary>
+	public static bool allServerConnected()
+		{
+			for (int i = 0; i < 2; i++)
+			{
+				if (!hasConnected[i])
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadIP.
+	/// </summary>
+	public static void loadIP()
+		{
+			sbyte[] array = Rms.loadRMS(RMS_NRlink);
+			if (array == null)
+			{
+				getServerList(linkDefault);
+				return;
+			}
+			DataInputStream dataInputStream = new DataInputStream(array);
+			if (dataInputStream == null)
+			{
+				return;
+			}
+			try
+			{
+				mResources.loadLanguague(dataInputStream.readByte());
+				sbyte b = dataInputStream.readByte();
+				nameServer = new string[b];
+				address = new string[b];
+				port = new short[b];
+				language = new sbyte[b];
+				typeSv = new sbyte[b];
+				isNew = new sbyte[b];
+				for (int i = 0; i < b; i++)
+				{
+					nameServer[i] = dataInputStream.readUTF();
+					address[i] = dataInputStream.readUTF();
+					port[i] = dataInputStream.readShort();
+					language[i] = dataInputStream.readByte();
+					try
+					{
+						typeSv[i] = dataInputStream.readByte();
+					}
+					catch (Exception)
+					{
+						typeSv[i] = 0;
+					}
+					try
+					{
+						isNew[i] = dataInputStream.readByte();
+					}
+					catch (Exception)
+					{
+						isNew[i] = 0;
+					}
+				}
+				serverPriority = dataInputStream.readByte();
+				dataInputStream.close();
+				if (ipSelect < 0 || (nameServer != null && ipSelect >= nameServer.Length))
+				{
+					SetIpSelect((serverPriority >= 0 && nameServer != null && serverPriority < nameServer.Length) ? serverPriority : 0, issave: true);
+				}
+				SplashScr.loadIP();
+			}
+			catch (Exception)
+			{
+			}
+		}
+	/// <summary>
+	/// Chuyển đổi màn hình hiện tại sang màn hình này làm màn hình hiển thị chính.
+	/// </summary>
+	public override void switchToMe()
+		{
+			Res.outz(">>>>switchToMe  ServerListScreen:\n" + Environment.StackTrace);
+			GameCanvas.clearAllPointerEvent();
+			GameCanvas.clearKeyPressed();
+			GameCanvas.endDlg();
+			EffectManager.remove();
+			GameScr.cmy = 0;
+			GameScr.cmx = 0;
+			int savedSv = Rms.loadRMSInt(RMS_svselect);
+			if (savedSv >= 0 && nameServer != null && savedSv < nameServer.Length)
+			{
+				ipSelect = savedSv;
+			}
+			initCommand();
+			isWait = false;
+			GameCanvas.loginScr = null;
+			loadScreen = true;
+			GameCanvas.loadBG(0);
+			bigOk = true;
+			selected = 0;
+			string sName = (nameServer != null && ipSelect >= 0 && ipSelect < nameServer.Length) ? nameServer[ipSelect] : string.Empty;
+			if (cmd != null && cmd.Length > 2 + nCmdPlay && cmd[2 + nCmdPlay] != null)
+			{
+				cmd[2 + nCmdPlay].caption = mResources.server + ": " + sName;
+			}
+			center = new Command(string.Empty, this, cmd[selected].idAction, null);
+			if (cmd != null && cmd.Length > 1 + nCmdPlay && cmd[1 + nCmdPlay] != null)
+			{
+				cmd[1 + nCmdPlay].caption = mResources.change_account;
+			}
+			if (cmd != null && cmd.Length == 4 + nCmdPlay && cmd[3 + nCmdPlay] != null)
+			{
+				cmd[3 + nCmdPlay].caption = mResources.option;
+			}
+			Char.isLoadingMap = false;
+			mSystem.resetCurInapp();
+			count_reConnect = 0;
+			DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginFinished();
+			if ((!bigOk || !loadScreen || isGetData || waitToLogin) && !Session_ME.gI().isConnected() && !Session_ME.connecting)
+			{
+				ConnectIP();
+			}
+			base.switchToMe();
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ switchToMe2.
+	/// </summary>
+	public void switchToMe2()
+		{
+			GameCanvas.endDlg();
+			GameScr.cmy = 0;
+			GameScr.cmx = 0;
+			int savedSv = Rms.loadRMSInt(RMS_svselect);
+			if (savedSv >= 0 && nameServer != null && savedSv < nameServer.Length)
+			{
+				ipSelect = savedSv;
+			}
+			initCommand();
+			isWait = false;
+			GameCanvas.loginScr = null;
+			loadScreen = true;
+			GameCanvas.loadBG(0);
+			bigOk = true;
+			string sName = (nameServer != null && ipSelect >= 0 && ipSelect < nameServer.Length) ? nameServer[ipSelect] : string.Empty;
+			if (cmd != null && cmd.Length > 2 + nCmdPlay && cmd[2 + nCmdPlay] != null)
+			{
+				cmd[2 + nCmdPlay].caption = mResources.server + ": " + sName;
+			}
+			center = new Command(string.Empty, this, cmd[selected].idAction, null);
+			if (cmd != null && cmd.Length > 1 + nCmdPlay && cmd[1 + nCmdPlay] != null)
+			{
+				cmd[1 + nCmdPlay].caption = mResources.change_account;
+			}
+			if (cmd != null && cmd.Length == 4 + nCmdPlay && cmd[3 + nCmdPlay] != null)
+			{
+				cmd[3 + nCmdPlay].caption = mResources.option;
+			}
+			mSystem.resetCurInapp();
+			DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginFinished();
+			base.switchToMe();
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ connectOk.
+	/// </summary>
+	public void connectOk()
+		{
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của cancel.
+	/// </summary>
+	public void cancel()
+		{
+			if (GameCanvas.serverScreen == null)
+			{
+				GameCanvas.serverScreen = new ServerListScreen();
+			}
+			demPercent = 0;
+			percent = 0;
+			stopDownload = true;
+			isGetData = false;
+			loadScreen = true;
+			bigOk = true;
+			GameCanvas.serverScreen.switchToMe();
+		}
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho init.
+	/// </summary>
+	public void init()
+		{
+			if (cmd != null)
+			{
+				int numY = GameCanvas.hh - 15 * cmd.Length + 28;
+				for (int i = 0; i < cmd.Length; i++)
+				{
+					if (cmd[i] != null)
+					{
+						cmd[i].x = (GameCanvas.w - cmd[i].w) / 2;
+						cmd[i].y = numY + i * 30;
+					}
+				}
+			}
+			if (cmd_New_Ui != null)
+			{
+				int num = GameCanvas.hh - 15 * cmd_New_Ui.Length + 28;
+				for (int i = 0; i < cmd_New_Ui.Length; i++)
+				{
+					if (cmd_New_Ui[i] != null)
+					{
+						cmd_New_Ui[i].x = (GameCanvas.w - cmd_New_Ui[i].w) / 2;
+						cmd_New_Ui[i].y = num;
+						num += 30;
+					}
+				}
+			}
+			if (cmdCallHotline != null)
+			{
+				cmdCallHotline.x = GameCanvas.w - 75;
+				if (mSystem.clientType == 1 && !GameCanvas.isTouch)
+				{
+					cmdCallHotline.y = GameCanvas.h - 20;
+				}
+				else
+				{
+					cmdCallHotline.y = 8;
+				}
+			}
+			if (cmdDeleteRMS != null)
+			{
+				cmdDeleteRMS.x = GameCanvas.w - 78;
+				cmdDeleteRMS.y = GameCanvas.h - 26;
+			}
+			if (!loadScreen)
+			{
+				if (isGetData)
+				{
+					cmdDownload = new Command(mResources.huy, this, 4, null);
+					cmdDownload.x = GameCanvas.w / 2 - mScreen.cmdW / 2;
+					cmdDownload.y = GameCanvas.hh + 56;
+					if (!GameCanvas.isTouch)
+					{
+						cmdDownload.y = GameCanvas.h - mScreen.cmdH - 1;
+					}
+					else if (cmdDownload.y > GameCanvas.h - mScreen.cmdH - 2)
+					{
+						cmdDownload.y = GameCanvas.h - mScreen.cmdH - 2;
+					}
+				}
+				else
+				{
+					cmdDownload = new Command(mResources.taidulieu, this, 2, null);
+					cmdDownload.isFocus = true;
+					cmdDownload.x = GameCanvas.w / 2 - mScreen.cmdW / 2;
+					cmdDownload.y = GameCanvas.hh + 45;
+					if (cmdDownload.y > GameCanvas.h - mScreen.cmdH - 2)
+					{
+						cmdDownload.y = GameCanvas.h - mScreen.cmdH - 2;
+					}
+				}
+			}
+			if (!GameCanvas.isTouch)
+			{
+				selected = 0;
+				processInput();
+			}
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ show2.
+	/// </summary>
+	public void show2()
+		{
+			Debug.LogError(">>>>ServerListScreen show2: ");
+			GameScr.cmx = 0;
+			GameScr.cmy = 0;
+			initCommand();
+			loadScreen = true;
+			percent = 0;
+			bigOk = true;
+			isGetData = false;
+			p = 0;
+			demPercent = 0;
+			strWait = mResources.PLEASEWAIT;
+			Char.isLoadingMap = false;
+			init();
+			base.switchToMe();
+		}
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setLinkDefault.
+	/// </summary>
+	public void setLinkDefault(sbyte language)
+		{
+			if (language == 2)
+			{
+				if (mSystem.clientType == 1)
+				{
+					linkDefault = javaIn;
+				}
+				else
+				{
+					linkDefault = smartPhoneIn;
+				}
+			}
+			else if (language == 1)
+			{
+				linkDefault = javaE;
+				if (mSystem.clientType == 1)
+				{
+					linkDefault = javaE;
+				}
+				else
+				{
+					linkDefault = smartPhoneE;
+				}
+			}
+			else
+			{
+				linkDefault = javaVN;
+				if (mSystem.clientType == 1)
+				{
+					linkDefault = javaVN;
+				}
+				else
+				{
+					linkDefault = smartPhoneVN;
+				}
+			}
+			mSystem.AddIpTest();
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ ConnectIP.
+	/// </summary>
+	public static void ConnectIP()
+		{
+			if (address == null || address.Length == 0)
+			{
+				return;
+			}
+			if (ipSelect < 0 || ipSelect >= address.Length)
+			{
+				ipSelect = (serverPriority >= 0 && serverPriority < address.Length) ? serverPriority : 0;
+			}
+			GameMidlet.IP = address[ipSelect];
+			GameMidlet.PORT = port[ipSelect];
+			if (language != null && ipSelect < language.Length)
+			{
+				mResources.loadLanguague(language[ipSelect]);
+			}
+			if (nameServer != null && ipSelect < nameServer.Length)
+			{
+				LoginScr.serverName = nameServer[ipSelect];
+			}
+			GameCanvas.connect();
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ Login_New.
+	/// </summary>
+	public void Login_New()
+		{
+			ModNextMap.StopNextMap();
+			bool flag = false;
+			bool flag2 = false;
+			string text = Rms.loadRMSString(Rms.RMS_userAo + ipSelect);
+			try
+			{
+				string acc = Rms.loadRMSString(Rms.RMS_acc);
+				string pass = DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.LoadSavedPassword();
+				if (string.IsNullOrEmpty(pass))
+				{
+					pass = Rms.loadRMSString(Rms.RMS_pass);
+				}
+				if (!string.IsNullOrEmpty(acc) && !string.IsNullOrEmpty(pass))
+				{
+					flag = true;
+				}
+				if (!string.IsNullOrEmpty(text))
+				{
+					flag2 = true;
+				}
+			}
+			catch (Exception)
+			{
+			}
+			if (!flag && !flag2)
+			{
+				if (GameCanvas.loginScr == null)
+				{
+					GameCanvas.loginScr = new LoginScr();
+				}
+				GameCanvas.loginScr.switchToMe();
+				if (UnityEngine.Application.CurrentTabId > 1 && string.IsNullOrEmpty(text))
+				{
+					Rms.saveRMSInt(RMS_svselect, ipSelect);
+					return;
+				}
+				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
+				if (!Session_ME.gI().isConnected())
+				{
+					GameCanvas.connect();
+				}
+				Service.gI().setClientType();
+				if (text == null || text.Equals(string.Empty))
+				{
+					Debug.LogError(">>>>Login_New: login2: ");
+					Service.gI().login2(string.Empty);
+				}
+				else
+				{
+					GameCanvas.loginScr.isLogin2 = true;
+					Service.gI().login(text, string.Empty, GameMidlet.VERSION, 1);
+				}
+				Rms.saveRMSInt(RMS_svselect, ipSelect);
+				GameCanvas.startWaitDlg(mResources.PLEASEWAIT);
+			}
+			else if (flag)
+			{
+				if (GameCanvas.loginScr == null)
+				{
+					GameCanvas.loginScr = new LoginScr();
+				}
+				GameCanvas.loginScr.doLogin();
+			}
+			else if (flag2)
+			{
+				if (GameCanvas.loginScr == null)
+				{
+					GameCanvas.loginScr = new LoginScr();
+				}
+				GameCanvas.loginScr.switchToMe();
+				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
+				if (!Session_ME.gI().isConnected())
+				{
+					GameCanvas.connect();
+				}
+				Service.gI().setClientType();
+				GameCanvas.loginScr.isLogin2 = true;
+				Service.gI().login(text, string.Empty, GameMidlet.VERSION, 1);
+				Rms.saveRMSInt(RMS_svselect, ipSelect);
+				GameCanvas.startWaitDlg(mResources.PLEASEWAIT);
+			}
+			if (nameServer != null && ipSelect >= 0 && ipSelect < nameServer.Length)
+			{
+				LoginScr.serverName = nameServer[ipSelect];
+			}
+		}
+
+}

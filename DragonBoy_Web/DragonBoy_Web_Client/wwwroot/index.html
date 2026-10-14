@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>DragonBoy - Mod TriHienKun [Web Online]</title>
+    <style>
+        @font-face {
+            font-family: 'DragonBoyFont0';
+            src: url('/game-assets/myfont/barmeneb.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'DragonBoyFont1';
+            src: url('/game-assets/myfont/chelthm.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'DragonBoyFont2';
+            src: url('/game-assets/myfont/staccato.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0e14;
+            font-family: 'DragonBoyFont0', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+
+        #viewport-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #070a0f;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+            cursor: default;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+        }
+
+        #tab-iframes-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .tab-iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #070a0f;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .tab-iframe.active {
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #162238 0%, #090d16 75%);
+            color: #f0f6fc;
+            transition: opacity 0.3s ease;
+        }
+
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .brand-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffd166;
+            text-shadow: 0 2px 12px rgba(255, 209, 102, 0.35);
+            margin-bottom: 8px;
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: #8b949e;
+            margin-bottom: 24px;
+        }
+
+        .progress-track {
+            width: min(360px, 82vw);
+            height: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 209, 102, 0.28);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        #loading-bar {
+            width: 8%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff9f1c, #ffd166);
+            border-radius: 999px;
+            transition: width 0.2s ease;
+        }
+
+        #loading-text {
+            font-size: 13px;
+            color: #c9d1d9;
+        }
+
+        #mobile-keyboard-modal {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 90;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #ffd166;
+            border-radius: 10px;
+            padding: 8px 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            width: min(440px, 94vw);
+        }
+
+        #mobile-keyboard-modal.visible {
+            display: flex;
+        }
+
+        #mobile-keyboard-input {
+            flex: 1;
+            background: #1e293b;
+            color: #ffffff;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 15px;
+            outline: none;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        #mobile-keyboard-ok {
+            background: #f59e0b;
+            color: #0f172a;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewport-container">
+        <canvas id="game-canvas" tabindex="0"></canvas>
+    </div>
+
+    <div id="tab-iframes-container"></div>
+
+    <div id="mobile-keyboard-modal">
+        <input id="mobile-keyboard-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Nhập nội dung..." />
+        <button id="mobile-keyboard-ok" type="button">Xong</button>
+    </div>
+
+    <div id="loading-overlay">
+        <div class="brand-title">DRAGONBOY ONLINE</div>
+        <div class="brand-subtitle">Mod TriHienKun &bull; .NET 8 WebAssembly Edition</div>
+        <div class="progress-track">
+            <div id="loading-bar"></div>
+        </div>
+        <div id="loading-text">Đang khởi tạo WebAssembly Runtime...</div>
+    </div>
+
+    <div id="app" style="display:none"></div>
+
+    <script src="dragonboy.js"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        window.DragonBoyWeb.bootBlazor();
+    </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+using System;
+using UnityEngine;
+
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp LoginScr: Đảm nhiệm kết xuất đồ họa, vẽ giao diện, hiệu ứng và nhân vật ().
+/// </summary>
+public partial class LoginScr : mScreen, IActionListener
+{
+	/// <summary>
+	/// Thực hiện vẽ toàn bộ đối tượng và các lớp hiển thị lên canvas mGraphics.
+	/// </summary>
+	public override void paint(mGraphics g)
+	{
+		GameCanvas.debug("PLG1", 1);
+		GameCanvas.paintBGGameScr(g);
+		GameCanvas.debug("PLG2", 2);
+		int num = tfUser.y - 50;
+		if (GameCanvas.h <= 220)
+		{
+			num += 5;
+		}
+
+		if (GameCanvas.currentDialog == null)
+		{
+			int h = 105;
+			int w = ((GameCanvas.w < 200) ? 160 : 180);
+			int num2 = 4;
+			int num3 = num2 * 32 + 23 + 33;
+			if (num3 >= GameCanvas.w)
+			{
+				num2--;
+				num3 = num2 * 32 + 23 + 33;
+			}
+			xLog = GameCanvas.w / 2 - num3 / 2;
+			PopUp.paintPopUp(g, xLog, yLog - 10, w, h, -1, isButton: true);
+			if (GameCanvas.h > 160 && imgTitle != null)
+			{
+				g.drawImage(imgTitle, GameCanvas.hw, num, 3);
+			}
+			GameCanvas.debug("PLG4", 1);
+			tfUser.x = xLog + 10;
+			tfUser.y = yLog + 15;
+			tfPass.x = xLog + 10;
+			tfPass.y = yLog + 46;
+			tfUser.paint(g);
+			tfPass.paint(g);
+			ModUI.DrawCheckbox(xLog + 10, yLog + 74, isCheck, g);
+			mFont.tahoma_7b_dark.drawString(g, mResources.remember, xLog + 34, yLog + 77, 0);
+			int num4 = 0;
+			if (GameCanvas.w >= 176)
+			{
+				num4 = 50;
+			}
+			else
+			{
+				mFont.tahoma_7b_green2.drawString(g, mResources.acc + ":", tfUser.x - 35, tfUser.y + 7, 0);
+				mFont.tahoma_7b_green2.drawString(g, mResources.pwd + ":", tfPass.x - 35, tfPass.y + 7, 0);
+				mFont.tahoma_7b_green2.drawString(g, mResources.server + ":" + serverName, GameCanvas.w / 2, tfPass.y + 32, 2);
+				num4 = 0;
+			}
+		}
+		base.paint(g);
+		cmdBack.paint(g);
+		ModAutoUpdate.PaintLobbyUI(g);
+	}
+}

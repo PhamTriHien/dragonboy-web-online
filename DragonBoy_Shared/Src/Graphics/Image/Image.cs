@@ -1,0 +1,486 @@
+using System;
+using System.Threading;
+using UnityEngine;
+
+/// <summary>
+/// CLASS Image: Định nghĩa và điều phối logic trong hệ thống game.
+/// </summary>
+public class Image
+{
+	private const int INTERVAL = 5;
+
+	private const int MAXTIME = 500;
+
+	public Texture2D texture;
+
+	public static Image imgTemp;
+
+	public static string filenametemp;
+
+	public static byte[] datatemp;
+
+	public static Image imgSrcTemp;
+
+	public static int xtemp;
+
+	public static int ytemp;
+
+	public static int wtemp;
+
+	public static int htemp;
+
+	public static int transformtemp;
+
+	public int w;
+
+	public int h;
+
+	public bool isZoomScaled;
+
+	public static int status;
+
+	public Color colorBlend = Color.black;
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ scaleNN.
+	/// </summary>
+	public void scaleNN(int factor)
+	{
+		if (factor <= 1 || isZoomScaled || texture == null) return;
+		texture.ScaleNN(factor);
+		w = texture.width;
+		h = texture.height;
+		isZoomScaled = true;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ scaleImage.
+	/// </summary>
+	public static Image scaleImage(Image img, int factor)
+	{
+		if (img == null || img.texture == null || factor <= 1 || img.isZoomScaled)
+		{
+			return img;
+		}
+		img.scaleNN(factor);
+		return img;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createEmptyImage.
+	/// </summary>
+	public static Image createEmptyImage()
+	{
+		return __createEmptyImage();
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(string filename)
+	{
+		return __createImage(filename);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(byte[] imageData)
+	{
+		return __createImage(imageData);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(Image src, int x, int y, int w, int h, int transform)
+	{
+		return __createImage(src, x, y, w, h, transform);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(int w, int h)
+	{
+		return __createImage(w, h);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(Image img)
+	{
+		if (img == null || img.texture == null)
+		{
+			return null;
+		}
+		Image image = createImage(img.w, img.h);
+		image.texture = img.texture;
+		return image;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createImage.
+	/// </summary>
+	public static Image createImage(sbyte[] imageData, int offset, int lenght)
+	{
+		if (offset + lenght > imageData.Length)
+		{
+			return null;
+		}
+		byte[] array = new byte[lenght];
+		for (int i = 0; i < lenght; i++)
+		{
+			array[i] = convertSbyteToByte(imageData[i + offset]);
+		}
+		return createImage(array);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ convertSbyteToByte.
+	/// </summary>
+	public static byte convertSbyteToByte(sbyte var)
+	{
+		if (var > 0)
+		{
+			return (byte)var;
+		}
+		return (byte)(var + 256);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ convertArrSbyteToArrByte.
+	/// </summary>
+	public static byte[] convertArrSbyteToArrByte(sbyte[] var)
+	{
+		byte[] array = new byte[var.Length];
+		for (int i = 0; i < var.Length; i++)
+		{
+			if (var[i] > 0)
+			{
+				array[i] = (byte)var[i];
+			}
+			else
+			{
+				array[i] = (byte)(var[i] + 256);
+			}
+		}
+		return array;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createRGBImage.
+	/// </summary>
+	public static Image createRGBImage(int[] rbg, int w, int h, bool bl)
+	{
+		Image image = createImage(w, h);
+		Color[] array = new Color[rbg.Length];
+		for (int i = 0; i < array.Length; i++)
+		{
+			ref Color reference = ref array[i];
+			reference = setColorFromRBG(rbg[i]);
+		}
+		image.texture.SetPixels(0, 0, w, h, array);
+		image.texture.Apply();
+		return image;
+	}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setColorFromRBG.
+	/// </summary>
+	public static Color setColorFromRBG(int rgb)
+	{
+		int num = rgb & 0xFF;
+		int num2 = (rgb >> 8) & 0xFF;
+		int num3 = (rgb >> 16) & 0xFF;
+		float b = (float)num / 256f;
+		float g = (float)num2 / 256f;
+		float r = (float)num3 / 256f;
+		return new Color(r, g, b);
+	}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của đối tượng theo từng chu kỳ khung hình.
+	/// </summary>
+	public static void update()
+	{
+		if (status == 2)
+		{
+			status = 1;
+			imgTemp = __createEmptyImage();
+			status = 0;
+		}
+		else if (status == 3)
+		{
+			status = 1;
+			imgTemp = __createImage(filenametemp);
+			status = 0;
+		}
+		else if (status == 4)
+		{
+			status = 1;
+			imgTemp = __createImage(datatemp);
+			status = 0;
+		}
+		else if (status == 5)
+		{
+			status = 1;
+			imgTemp = __createImage(imgSrcTemp, xtemp, ytemp, wtemp, htemp, transformtemp);
+			status = 0;
+		}
+		else if (status == 6)
+		{
+			status = 1;
+			imgTemp = __createImage(wtemp, htemp);
+			status = 0;
+		}
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ _createEmptyImage.
+	/// </summary>
+	private static Image _createEmptyImage()
+	{
+		return __createEmptyImage();
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ _createImage.
+	/// </summary>
+	private static Image _createImage(string filename)
+	{
+		return __createImage(filename);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ _createImage.
+	/// </summary>
+	private static Image _createImage(byte[] imageData)
+	{
+		return __createImage(imageData);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ _createImage.
+	/// </summary>
+	private static Image _createImage(Image src, int x, int y, int w, int h, int transform)
+	{
+		return __createImage(src, x, y, w, h, transform);
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ _createImage.
+	/// </summary>
+	private static Image _createImage(int w, int h)
+	{
+		return __createImage(w, h);
+	}
+
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadData.
+	/// </summary>
+	public static byte[] loadData(string filename)
+	{
+		Image image = new Image();
+		TextAsset textAsset = (TextAsset)Resources.Load(filename, typeof(TextAsset));
+		if (textAsset == null || textAsset.bytes == null || textAsset.bytes.Length == 0)
+		{
+			return null;
+		}
+		sbyte[] array = ArrayCast.cast(textAsset.bytes);
+		Debug.LogError("CHIEU DAI MANG BYTE IMAGE CREAT = " + array.Length);
+		return textAsset.bytes;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ __createImage.
+	/// </summary>
+	private static Image __createImage(string filename)
+	{
+		Texture2D texture2D = Resources.Load(filename) as Texture2D;
+		if (texture2D == null)
+		{
+			return null;
+		}
+		Image image = new Image();
+		image.texture = texture2D;
+		image.w = image.texture.width;
+		image.h = image.texture.height;
+		image.isZoomScaled = true;
+		setTextureQuality(image);
+		return image;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ __createImage.
+	/// </summary>
+	private static Image __createImage(byte[] imageData)
+	{
+		if (imageData == null || imageData.Length == 0)
+		{
+			Cout.LogError("Create Image from byte array fail");
+			return null;
+		}
+		Image image = new Image();
+		try
+		{
+			image.texture = new Texture2D(1, 1, allocatePixelBuffer: false);
+			image.texture.LoadImage(imageData);
+			image.w = image.texture.width;
+			image.h = image.texture.height;
+			setTextureQuality(image);
+		}
+		catch (Exception)
+		{
+			Cout.LogError("CREAT IMAGE FROM ARRAY FAIL \n" + Environment.StackTrace);
+		}
+		return image;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ __createImage.
+	/// </summary>
+	private static Image __createImage(Image src, int x, int y, int w, int h, int transform)
+	{
+		if (src == null || src.texture == null)
+		{
+			return null;
+		}
+		Image image = new Image();
+		image.texture = new Texture2D(w, h, TextureFormat.RGBA32, false);
+		y = src.texture.height - y - h;
+		for (int i = 0; i < w; i++)
+		{
+			for (int j = 0; j < h; j++)
+			{
+				int num = i;
+				if (transform == 2)
+				{
+					num = w - i;
+				}
+				int num2 = j;
+				image.texture.SetPixel(i, j, src.texture.GetPixel(x + num, y + num2));
+			}
+		}
+		image.texture.Apply();
+		image.w = image.texture.width;
+		image.h = image.texture.height;
+		setTextureQuality(image);
+		return image;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ __createEmptyImage.
+	/// </summary>
+	private static Image __createEmptyImage()
+	{
+		return new Image();
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ __createImage.
+	/// </summary>
+	public static Image __createImage(int w, int h)
+	{
+		Image image = new Image();
+		image.texture = new Texture2D(w, h, TextureFormat.RGBA32, mipmap: false);
+		setTextureQuality(image);
+		image.w = w;
+		image.h = h;
+		image.texture.Apply();
+		return image;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getImageWidth.
+	/// </summary>
+	public static int getImageWidth(Image image)
+	{
+		return (image != null) ? image.getWidth() : 0;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getImageHeight.
+	/// </summary>
+	public static int getImageHeight(Image image)
+	{
+		return (image != null) ? image.getHeight() : 0;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getWidth.
+	/// </summary>
+	public int getWidth()
+	{
+		return (texture != null ? w : 0) / mGraphics.zoomLevel;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getHeight.
+	/// </summary>
+	public int getHeight()
+	{
+		return (texture != null ? h : 0) / mGraphics.zoomLevel;
+	}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setTextureQuality.
+	/// </summary>
+	private static void setTextureQuality(Image img)
+	{
+		if (img != null && img.texture != null)
+		{
+			setTextureQuality(img.texture);
+		}
+	}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setTextureQuality.
+	/// </summary>
+	public static void setTextureQuality(Texture2D texture)
+	{
+		if (texture == null) return;
+		texture.anisoLevel = 0;
+		texture.filterMode = FilterMode.Point;
+		texture.mipMapBias = 0f;
+		texture.wrapMode = TextureWrapMode.Clamp;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getColor.
+	/// </summary>
+	public Color[] getColor()
+	{
+		return (texture != null) ? texture.GetPixels() : new Color[0];
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getRealImageWidth.
+	/// </summary>
+	public int getRealImageWidth()
+	{
+		return (texture != null) ? w : 0;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getRealImageHeight.
+	/// </summary>
+	public int getRealImageHeight()
+	{
+		return (texture != null) ? h : 0;
+	}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getRGB.
+	/// </summary>
+	public void getRGB(ref int[] data, int x1, int x2, int x, int y, int w, int h)
+	{
+		if (texture == null) return;
+		Color[] pixels = texture.GetPixels(x, y, w, h);
+		for (int i = 0; i < pixels.Length; i++)
+		{
+			data[i] = mGraphics.getIntByColor(pixels[i]);
+		}
+	}
+}

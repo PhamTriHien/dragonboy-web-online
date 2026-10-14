@@ -1,0 +1,909 @@
+using System;
+using Assets.src.e;
+using Assets.src.g;
+using UnityEngine;
+
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp Char: Đảm nhiệm kết xuất đồ họa, vẽ giao diện, hiệu ứng và nhân vật (Body).
+/// </summary>
+public partial class Char : IMapObject
+{
+	/// <summary>
+	/// Tự động sắp xếp và dồn các vật phẩm cùng loại trong túi đồ hành trang.
+	/// </summary>
+	public void bagSort()
+			{
+				try
+				{
+					MyVector myVector = new MyVector();
+					for (int i = 0; i < arrItemBag.Length; i++)
+					{
+						Item item = arrItemBag[i];
+						if (item != null && item.template.isUpToUp && !item.isExpires)
+						{
+							myVector.addElement(item);
+						}
+					}
+					for (int j = 0; j < myVector.size(); j++)
+					{
+						Item item2 = (Item)myVector.elementAt(j);
+						if (item2 == null)
+						{
+							continue;
+						}
+						for (int k = j + 1; k < myVector.size(); k++)
+						{
+							Item item3 = (Item)myVector.elementAt(k);
+							if (item3 != null && item2.template.Equals(item3.template) && item2.isLock == item3.isLock)
+							{
+								item2.quantity += item3.quantity;
+								arrItemBag[item3.indexUI] = null;
+								myVector.setElementAt(null, k);
+							}
+						}
+					}
+					for (int l = 0; l < arrItemBag.Length; l++)
+					{
+						if (arrItemBag[l] == null)
+						{
+							continue;
+						}
+						for (int m = 0; m <= l; m++)
+						{
+							if (arrItemBag[m] == null)
+							{
+								arrItemBag[m] = arrItemBag[l];
+								arrItemBag[m].indexUI = m;
+								arrItemBag[l] = null;
+								break;
+							}
+						}
+					}
+				}
+				catch (Exception)
+				{
+					Cout.println("Char.bagSort()");
+				}
+			}
+
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của isHead_Fly.
+	/// </summary>
+	private bool isHead_Fly(int head2)
+			{
+				if (Arr_Head_FlyMove.Length > 0)
+				{
+					for (int i = 0; i < Arr_Head_FlyMove.Length; i++)
+					{
+						if (Arr_Head_FlyMove[i] == head2)
+						{
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintMount1 lên canvas đồ họa.
+	/// </summary>
+	public void paintMount1(mGraphics g)
+			{
+				if (xMount <= GameScr.cmx || xMount >= GameScr.cmx + GameCanvas.w)
+				{
+					return;
+				}
+				if (me)
+				{
+					if (!isEndMount && !isStartMount && !isMount)
+					{
+						return;
+					}
+					if (idMount >= ID_NEW_MOUNT)
+					{
+						string nameImg = strMount + (idMount - ID_NEW_MOUNT) + "_0";
+						FrameImage fraImage = mSystem.getFraImage(nameImg);
+						fraImage?.drawFrame(frameNewMount / 2 % fraImage.nFrame, xMount, yMount + fy, transMount, 3, g);
+					}
+					else
+					{
+						if (isSpeacialMount)
+						{
+							return;
+						}
+						if (isEventMount)
+						{
+							g.drawRegion(imgEventMountWing, 0, FrameMount[frameMount] * 60, 60, 60, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else if (genderMount == 2)
+						{
+							if (!isMountVip)
+							{
+								g.drawRegion(imgMount_XD, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+							}
+							else
+							{
+								g.drawRegion(imgMount_XD_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+							}
+						}
+						else if (genderMount == 1)
+						{
+							if (!isMountVip)
+							{
+								g.drawRegion(imgMount_NM, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+							}
+							else
+							{
+								g.drawRegion(imgMount_NM_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+							}
+						}
+					}
+				}
+				else
+				{
+					if (me)
+					{
+						return;
+					}
+					if (idMount >= ID_NEW_MOUNT)
+					{
+						string nameImg2 = strMount + (idMount - ID_NEW_MOUNT) + "_0";
+						FrameImage fraImage2 = mSystem.getFraImage(nameImg2);
+						fraImage2?.drawFrame(frameNewMount / 2 % fraImage2.nFrame, xMount, yMount + fy, transMount, 3, g);
+					}
+					else
+					{
+						if (isSpeacialMount)
+						{
+							return;
+						}
+						if (isEventMount)
+						{
+							g.drawRegion(imgEventMountWing, 0, FrameMount[frameMount] * 60, 60, 60, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else
+						{
+							if (!isMount)
+							{
+								return;
+							}
+							if (genderMount == 2)
+							{
+								if (!isMountVip)
+								{
+									g.drawRegion(imgMount_XD, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+								}
+								else
+								{
+									g.drawRegion(imgMount_XD_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+								}
+							}
+							else if (genderMount == 1)
+							{
+								if (!isMountVip)
+								{
+									g.drawRegion(imgMount_NM, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+								}
+								else
+								{
+									g.drawRegion(imgMount_NM_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+								}
+							}
+						}
+					}
+				}
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintMount2 lên canvas đồ họa.
+	/// </summary>
+	public void paintMount2(mGraphics g)
+			{
+				if (xMount <= GameScr.cmx || xMount >= GameScr.cmx + GameCanvas.w)
+				{
+					return;
+				}
+				if (me)
+				{
+					if (!isEndMount && !isStartMount && !isMount)
+					{
+						return;
+					}
+					if (idMount >= ID_NEW_MOUNT)
+					{
+						string nameImg = strMount + (idMount - ID_NEW_MOUNT) + "_1";
+						FrameImage fraImage = mSystem.getFraImage(nameImg);
+						fraImage?.drawFrame(frameNewMount / 2 % fraImage.nFrame, xMount, yMount + fy, transMount, 3, g);
+					}
+					else if (isSpeacialMount)
+					{
+						checkFrameTick(move);
+						if (Mob.arrMobTemplate[50] != null && Mob.arrMobTemplate[50].data != null)
+						{
+							Mob.arrMobTemplate[50].data.paintFrame(g, fM, xMount + ((cdir != 1) ? 8 : (-8)), yMount + 35, (cdir != 1) ? 1 : 0, 0);
+						}
+						else
+						{
+							getMountData();
+						}
+					}
+					else if (isEventMount)
+					{
+						g.drawRegion(imgEventMount, 0, FrameMount[frameMount] * 60, 60, 60, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+					}
+					else if (genderMount == 0)
+					{
+						if (!isMountVip)
+						{
+							g.drawRegion(imgMount_TD, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else
+						{
+							g.drawRegion(imgMount_TD_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+					}
+					else if (genderMount == 1)
+					{
+						if (!isMountVip)
+						{
+							g.drawRegion(imgMount_NM_1, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else
+						{
+							g.drawRegion(imgMount_NM_1_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+					}
+				}
+				else
+				{
+					if (me)
+					{
+						return;
+					}
+					if (idMount >= ID_NEW_MOUNT)
+					{
+						string nameImg2 = strMount + (idMount - ID_NEW_MOUNT) + "_1";
+						FrameImage fraImage2 = mSystem.getFraImage(nameImg2);
+						fraImage2?.drawFrame(frameNewMount / 2 % fraImage2.nFrame, xMount, yMount + fy, transMount, 3, g);
+						return;
+					}
+					if (isSpeacialMount)
+					{
+						checkFrameTick(move);
+						if (Mob.arrMobTemplate[50] != null && Mob.arrMobTemplate[50].data != null)
+						{
+							Mob.arrMobTemplate[50].data.paintFrame(g, fM, xMount + ((cdir != 1) ? 8 : (-8)), yMount + 35, (cdir != 1) ? 1 : 0, 0);
+						}
+						else
+						{
+							getMountData();
+						}
+						return;
+					}
+					if (isEventMount)
+					{
+						g.drawRegion(imgEventMount, 0, FrameMount[frameMount] * 60, 60, 60, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+					}
+					if (!isMount)
+					{
+						return;
+					}
+					if (genderMount == 0)
+					{
+						if (!isMountVip)
+						{
+							g.drawRegion(imgMount_TD, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else
+						{
+							g.drawRegion(imgMount_TD_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+					}
+					else if (genderMount == 1)
+					{
+						if (!isMountVip)
+						{
+							g.drawRegion(imgMount_NM_1, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+						else
+						{
+							g.drawRegion(imgMount_NM_1_VIP, 0, FrameMount[frameMount] * 40, 50, 40, transMount, xMount + dxMount, yMount + dyMount + fy, 0);
+						}
+					}
+				}
+			}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setDefaultBody.
+	/// </summary>
+	public void setDefaultBody()
+			{
+				if (cgender == 0)
+				{
+					body = 57;
+				}
+				else if (cgender == 1)
+				{
+					body = 59;
+				}
+				else if (cgender == 2)
+				{
+					body = 57;
+				}
+			}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setDefaultLeg.
+	/// </summary>
+	public void setDefaultLeg()
+			{
+				if (cgender == 0)
+				{
+					leg = 58;
+				}
+				else if (cgender == 1)
+				{
+					leg = 60;
+				}
+				else if (cgender == 2)
+				{
+					leg = 58;
+				}
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintCharName_HP_MP_Overhead lên canvas đồ họa.
+	/// </summary>
+	private void paintCharName_HP_MP_Overhead(mGraphics g)
+			{
+				Part part = GameScr.parts[getFHead(head)];
+				int num = CharInfo[cf][0][2] - part.pi[CharInfo[cf][0][0]].dy + 5;
+				if ((isInvisiblez && !me) || (!me && TileMap.mapID == 113 && cy >= 360))
+				{
+					return;
+				}
+				if (me)
+				{
+					num += 5;
+					paintHp(g, cx, cy - num + 3);
+					if (fraDanhHieu != null)
+					{
+						int x = cx - fraDanhHieu.frameWidth / 2;
+						int y = cy - num + 3 - mFont.tahoma_7.getHeight() - (fraDanhHieu.frameHeight + 5);
+						if (GameCanvas.gameTick % 5 == 0)
+						{
+							danhHieuFramme++;
+						}
+						if (danhHieuFramme >= fraDanhHieu.nFrame)
+						{
+							danhHieuFramme = 0;
+						}
+						fraDanhHieu.drawFrame(danhHieuFramme, x, y, 0, mGraphics.TOP | mGraphics.LEFT, g);
+					}
+					return;
+				}
+				bool flag = myChar.clan != null && clanID == myChar.clan.ID;
+				bool flag2 = cTypePk == 3 || cTypePk == 5 || myCharz().isMeCanAttackOtherPlayer(this);
+				bool flag3 = cTypePk == 4;
+				if (cName.StartsWith("$"))
+				{
+					cName = cName.Substring(1);
+					isPet = true;
+				}
+				if (cName.StartsWith("#"))
+				{
+					cName = cName.Substring(1);
+					isMiniPet = true;
+				}
+				if (myCharz().charFocus != null && myCharz().charFocus.Equals(this))
+				{
+					num += 5;
+					paintHp(g, cx, cy - num + 3);
+					if (fraDanhHieu != null)
+					{
+						int x2 = cx - fraDanhHieu.frameWidth / 2;
+						int y2 = cy - num + 3 - mFont.tahoma_7.getHeight() - (fraDanhHieu.frameHeight + 5);
+						if (GameCanvas.gameTick % 5 == 0)
+						{
+							danhHieuFramme++;
+						}
+						if (danhHieuFramme >= fraDanhHieu.nFrame)
+						{
+							danhHieuFramme = 0;
+						}
+						fraDanhHieu.drawFrame(danhHieuFramme, x2, y2, 0, mGraphics.TOP | mGraphics.LEFT, g);
+					}
+				}
+				num += mFont.tahoma_7_white.getHeight();
+				mFont mFont2 = mFont.tahoma_7_whiteSmall;
+				if (isPet || isMiniPet)
+				{
+					mFont2 = mFont.tahoma_7_blue1Small;
+				}
+				else if (flag2)
+				{
+					mFont2 = mFont.nameFontRed;
+				}
+				else if (flag3)
+				{
+					mFont2 = mFont.nameFontYellow;
+				}
+				else if (flag)
+				{
+					mFont2 = mFont.nameFontGreen;
+				}
+				if (TileMap.mapID == 170)
+				{
+					if (flagImage == 2325)
+					{
+						mFont2 = mFont.tahoma_7_blue;
+					}
+					else if (flagImage == 2323)
+					{
+						mFont2 = mFont.tahoma_7_red;
+					}
+				}
+				if ((paintName || flag2 || flag3) && !flag)
+				{
+					if (mSystem.clientType == 1)
+					{
+						mFont2.drawString(g, cName, cx, cy - num, mFont.CENTER, mFont.tahoma_7_greySmall);
+					}
+					else
+					{
+						mFont2.drawString(g, cName, cx, cy - num, mFont.CENTER);
+					}
+					num += mFont.tahoma_7.getHeight();
+				}
+				if (flag)
+				{
+					if (myCharz().charFocus != null && myCharz().charFocus.Equals(this))
+					{
+						mFont2.drawString(g, cName, cx, cy - num, mFont.CENTER, mFont.tahoma_7_greySmall);
+					}
+					else if (charFocus == null)
+					{
+						mFont2.drawString(g, cName, cx - 10, cy - num + 3, mFont.LEFT, mFont.tahoma_7_grey);
+						paintHp(g, cx - 16, cy - num + 10);
+					}
+				}
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintBag lên canvas đồ họa.
+	/// </summary>
+	public void paintBag(mGraphics g, short[] id, int x, int y, int dir, bool isPaintChar)
+			{
+				int num = 0;
+				int num2 = 0;
+				if (statusMe == 6)
+				{
+					num = 8;
+					num2 = 17;
+				}
+				if (statusMe == 1)
+				{
+					if (cp1 % 15 < 5)
+					{
+						num = 8;
+						num2 = 17;
+					}
+					else
+					{
+						num = 8;
+						num2 = 18;
+					}
+				}
+				if (statusMe == 2)
+				{
+					if (cf <= 3)
+					{
+						num = 7;
+						num2 = 17;
+					}
+					else
+					{
+						num = 7;
+						num2 = 18;
+					}
+				}
+				if (statusMe == 3 || statusMe == 9)
+				{
+					num = 5;
+					num2 = 20;
+				}
+				if (statusMe == 4)
+				{
+					if (cf == 8)
+					{
+						num = 5;
+						num2 = 16;
+					}
+					else
+					{
+						num = 5;
+						num2 = 20;
+					}
+				}
+				if (statusMe == 10)
+				{
+					if (cf == 8)
+					{
+						num = 0;
+						num2 = 23;
+					}
+					else
+					{
+						num = 5;
+						num2 = 22;
+					}
+				}
+				if (isInjure > 0)
+				{
+					num = 5;
+					num2 = 18;
+				}
+				if (skillPaint != null && skillInfoPaint() != null && indexSkill < skillInfoPaint().Length)
+				{
+					num = -1;
+					num2 = 17;
+				}
+				fBag++;
+				if (fBag > 10000)
+				{
+					fBag = 0;
+				}
+				sbyte b = (sbyte)(fBag / 4 % id.Length);
+				if (!isPaintChar)
+				{
+					if (id.Length == 2)
+					{
+						b = 1;
+					}
+					if (id.Length == 3)
+					{
+						if (id[2] >= 0)
+						{
+							b = 2;
+							if (GameCanvas.gameTick % 10 > 5)
+							{
+								b = 1;
+							}
+						}
+						else
+						{
+							b = 1;
+						}
+					}
+				}
+				else if (id.Length > 1 && (b == 0 || b == 1) && statusMe != 1 && statusMe != 6)
+				{
+					fBag = 0;
+					b = 0;
+					if (GameCanvas.gameTick % 10 > 5)
+					{
+						b = 1;
+					}
+				}
+				SmallImage.drawSmallImage(g, id[b], x + ((dir != 1) ? num : (-num)), y - num2, (dir != 1) ? 2 : 0, StaticObj.VCENTER_HCENTER);
+			}
+
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của isCharBodyImageID.
+	/// </summary>
+	public bool isCharBodyImageID(int id)
+			{
+				if (GameScr.parts == null) return false;
+				Part part = (head >= 0 && head < GameScr.parts.Length) ? GameScr.parts[head] : null;
+				Part part2 = (leg >= 0 && leg < GameScr.parts.Length) ? GameScr.parts[leg] : null;
+				Part part3 = (body >= 0 && body < GameScr.parts.Length) ? GameScr.parts[body] : null;
+				for (int i = 0; i < CharInfo.Length; i++)
+				{
+					if (part != null && part.pi != null && CharInfo[i][0][0] < part.pi.Length && id == part.pi[CharInfo[i][0][0]].id)
+					{
+						return true;
+					}
+					if (part2 != null && part2.pi != null && CharInfo[i][1][0] < part2.pi.Length && id == part2.pi[CharInfo[i][1][0]].id)
+					{
+						return true;
+					}
+					if (part3 != null && part3.pi != null && CharInfo[i][2][0] < part3.pi.Length && id == part3.pi[CharInfo[i][2][0]].id)
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintHead lên canvas đồ họa.
+	/// </summary>
+	public void paintHead(mGraphics g, int cx, int cy, int look)
+			{
+				if (GameScr.parts == null) return;
+				Part part = (head >= 0 && head < GameScr.parts.Length) ? GameScr.parts[head] : null;
+				if (part != null && part.pi != null && CharInfo[0][0][0] < part.pi.Length)
+				{
+					SmallImage.drawSmallImage(g, part.pi[CharInfo[0][0][0]].id, cx, cy, (look != 0) ? 2 : 0, mGraphics.RIGHT | mGraphics.VCENTER);
+				}
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintHeadWithXY lên canvas đồ họa.
+	/// </summary>
+	public void paintHeadWithXY(mGraphics g, int x, int y, int look)
+			{
+				if (GameScr.parts == null) return;
+				Part part = (head >= 0 && head < GameScr.parts.Length) ? GameScr.parts[head] : null;
+				if (part != null && part.pi != null && CharInfo[0][0][0] < part.pi.Length)
+				{
+					SmallImage.drawSmallImage(g, part.pi[CharInfo[0][0][0]].id, x + CharInfo[0][0][1] + part.pi[CharInfo[0][0][0]].dx - 3, y + 3, look, mGraphics.LEFT | mGraphics.BOTTOM);
+				}
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintCharBody lên canvas đồ họa.
+	/// </summary>
+	public void paintCharBody(mGraphics g, int cx, int cy, int cdir, int cf, bool isPaintBag)
+			{
+				if (GameScr.parts == null || GameScr.parts.Length == 0) return;
+				ph = (head >= 0 && head < GameScr.parts.Length) ? GameScr.parts[head] : null;
+				pl = (leg >= 0 && leg < GameScr.parts.Length) ? GameScr.parts[leg] : null;
+				pb = (body >= 0 && body < GameScr.parts.Length) ? GameScr.parts[body] : null;
+
+				// Fallback an toàn nếu thiếu part đầu, chân hoặc thân (tránh biến thành người vô hình chỉ còn mắt)
+				if ((ph == null || ph.pi == null) && GameScr.parts != null)
+				{
+					int fallbackHead = (cgender == 1) ? 9 : ((cgender == 2) ? 6 : 64);
+					if (fallbackHead < GameScr.parts.Length && GameScr.parts[fallbackHead] != null)
+					{
+						ph = GameScr.parts[fallbackHead];
+					}
+					else if (GameScr.parts.Length > 0 && GameScr.parts[0] != null)
+					{
+						ph = GameScr.parts[0];
+					}
+				}
+				if ((pl == null || pl.pi == null) && GameScr.parts != null)
+				{
+					int fallbackLeg = (cgender == 1) ? 13 : ((cgender == 2) ? 8 : 2);
+					if (fallbackLeg < GameScr.parts.Length && GameScr.parts[fallbackLeg] != null)
+					{
+						pl = GameScr.parts[fallbackLeg];
+					}
+					else if (fallbackLeg >= GameScr.parts.Length && GameScr.parts.Length > 2)
+					{
+						pl = GameScr.parts[2];
+					}
+				}
+				if ((pb == null || pb.pi == null) && GameScr.parts != null)
+				{
+					int fallbackBody = (cgender == 1) ? 12 : ((cgender == 2) ? 7 : 1);
+					if (fallbackBody < GameScr.parts.Length && GameScr.parts[fallbackBody] != null)
+					{
+						pb = GameScr.parts[fallbackBody];
+					}
+					else if (fallbackBody >= GameScr.parts.Length && GameScr.parts.Length > 1)
+					{
+						pb = GameScr.parts[1];
+					}
+				}
+
+				if (bag >= 0 && statusMe != 14)
+				{
+					if (!ClanImage.idImages.containsKey(bag + string.Empty))
+					{
+						ClanImage.idImages.put(bag + string.Empty, new ClanImage());
+						Service.gI().requestBagImage(bag);
+					}
+					else
+					{
+						ClanImage clanImage = (ClanImage)ClanImage.idImages.get(bag + string.Empty);
+						if (clanImage.idImage != null && isPaintBag)
+						{
+							paintBag(g, clanImage.idImage, cx, cy, cdir, isPaintChar: true);
+						}
+					}
+				}
+				int num = 2;
+				int anchor = 24;
+				int anchor2 = StaticObj.TOP_RIGHT;
+				int num2 = -1;
+				if (cdir == 1)
+				{
+					num = 0;
+					anchor = 0;
+					anchor2 = 0;
+					num2 = 1;
+				}
+				if (statusMe == 14)
+				{
+					if (GameCanvas.gameTick % 4 > 0)
+					{
+						g.drawImage(ItemMap.imageFlare, cx, cy - ch - 11, mGraphics.HCENTER | mGraphics.VCENTER);
+					}
+					int num3 = 0;
+					if (head == 89 || head == 457 || head == 460 || head == 461 || head == 462 || head == 463 || head == 464 || head == 465 || head == 466)
+					{
+						num3 = 15;
+					}
+					if (head == 1291)
+					{
+						num3 = 23;
+					}
+					int pbDy = (pb != null && pb.pi != null && CharInfo[cf][2][0] < pb.pi.Length) ? pb.pi[CharInfo[cf][2][0]].dy : 0;
+					SmallImage.drawSmallImage(g, 834, cx, cy - CharInfo[cf][2][2] + pbDy - 2 + num3, num, StaticObj.TOP_CENTER);
+					SmallImage.drawSmallImage(g, 79, cx, cy - ch - 8, 0, mGraphics.HCENTER | mGraphics.BOTTOM);
+					if (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length)
+					{
+						SmallImage.drawSmallImage(g, ph.pi[CharInfo[cf][0][0]].id, cx + (CharInfo[cf][0][1] + ph.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + ph.pi[CharInfo[cf][0][0]].dy, num, anchor);
+					}
+					paintHat_behind(g, cf, cy - CharInfo[cf][2][2] + pbDy);
+					if (isHead_2Fr(head))
+					{
+						int fHead = getFHead(head);
+						Part part = (fHead >= 0 && fHead < GameScr.parts.Length) ? GameScr.parts[fHead] : null;
+						if (part != null && part.pi != null && CharInfo[cf][0][0] < part.pi.Length)
+						{
+							SmallImage.drawSmallImage(g, part.pi[CharInfo[cf][0][0]].id, cx + (CharInfo[cf][0][1] + part.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + part.pi[CharInfo[cf][0][0]].dy, num, anchor);
+						}
+					}
+					else if (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length)
+					{
+						SmallImage.drawSmallImage(g, ph.pi[CharInfo[cf][0][0]].id, cx + (CharInfo[cf][0][1] + ph.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + ph.pi[CharInfo[cf][0][0]].dy, num, anchor);
+					}
+					paintHat_front(g, cf, cy - CharInfo[cf][2][2] + pbDy);
+					if (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length)
+					{
+						paintRedEye(g, cx + (CharInfo[cf][0][1] + ph.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + ph.pi[CharInfo[cf][0][0]].dy, num, anchor);
+					}
+				}
+				else
+				{
+					bool bodyDrawnSuccessfully = false;
+					if (pb != null && pb.pi != null && CharInfo[cf][2][0] < pb.pi.Length)
+					{
+						try { paintHat_behind(g, cf, cy - CharInfo[cf][2][2] + pb.pi[CharInfo[cf][2][0]].dy); } catch { }
+					}
+					try
+					{
+						if (isHead_2Fr(head))
+						{
+							int fHead = getFHead(head);
+							Part part2 = (fHead >= 0 && fHead < GameScr.parts.Length) ? GameScr.parts[fHead] : null;
+							if (part2 != null && part2.pi != null && CharInfo[cf][0][0] < part2.pi.Length)
+							{
+								SmallImage.drawSmallImage(g, part2.pi[CharInfo[cf][0][0]].id, cx + (CharInfo[cf][0][1] + part2.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + part2.pi[CharInfo[cf][0][0]].dy, num, anchor);
+							}
+						}
+						else if (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length)
+						{
+							SmallImage.drawSmallImage(g, ph.pi[CharInfo[cf][0][0]].id, cx + (CharInfo[cf][0][1] + ph.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + ph.pi[CharInfo[cf][0][0]].dy, num, anchor);
+						}
+					}
+					catch { }
+
+					try
+					{
+						if (pl != null && pl.pi != null && CharInfo[cf][1][0] < pl.pi.Length)
+						{
+							SmallImage.drawSmallImage(g, pl.pi[CharInfo[cf][1][0]].id, cx + (CharInfo[cf][1][1] + pl.pi[CharInfo[cf][1][0]].dx) * num2, cy - CharInfo[cf][1][2] + pl.pi[CharInfo[cf][1][0]].dy, num, anchor);
+						}
+					}
+					catch { }
+
+					try
+					{
+						if (pb != null && pb.pi != null && CharInfo[cf][2][0] < pb.pi.Length)
+						{
+							SmallImage.drawSmallImage(g, pb.pi[CharInfo[cf][2][0]].id, cx + (CharInfo[cf][2][1] + pb.pi[CharInfo[cf][2][0]].dx) * num2, cy - CharInfo[cf][2][2] + pb.pi[CharInfo[cf][2][0]].dy, num, anchor);
+						}
+					}
+					catch { }
+
+					try
+					{
+						if (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length)
+						{
+							paintRedEye(g, cx + (CharInfo[cf][0][1] + ph.pi[CharInfo[cf][0][0]].dx) * num2, cy - CharInfo[cf][0][2] + ph.pi[CharInfo[cf][0][0]].dy, num, anchor);
+						}
+					}
+					catch { }
+					bodyDrawnSuccessfully = (pb != null && pl != null);
+				}
+				int phDyHead = (ph != null && ph.pi != null && ph.pi.Length > 0 && CharInfo[0][0][0] < ph.pi.Length) ? ph.pi[CharInfo[0][0][0]].dy : 0;
+				ch = ((isMonkey != 1 && !isFusion) ? (CharInfo[0][0][2] + phDyHead + 10) : 60);
+				int phCfDyHead = (ph != null && ph.pi != null && CharInfo[cf][0][0] < ph.pi.Length) ? ph.pi[CharInfo[cf][0][0]].dy : 0;
+				int num4 = ((Res.abs(phCfDyHead) < 22) ? phCfDyHead : ((phCfDyHead >= 0) ? (phCfDyHead - 5) : (phCfDyHead + 5)));
+				cH_new = cy - CharInfo[cf][0][2] + num4;
+				if (pb != null && pl != null && statusMe == 1 && charID > 0 && !isMask && !isUseChargeSkill() && !isWaitMonkey && skillPaint == null && cf != 23 && bag < 0 && ((GameCanvas.gameTick + charID) % 30 == 0 || isFreez))
+				{
+					g.drawImage((cgender != 1) ? eyeTraiDat : eyeNamek, cx + -((cgender != 1) ? 2 : 2) * num2, cy - 32 + ((cgender != 1) ? 11 : 10) - cf, anchor2);
+				}
+				if (eProtect != null)
+				{
+					eProtect.paint(g);
+				}
+				if (eDanhHieu != null)
+				{
+					eDanhHieu.paint(g);
+				}
+				paintPKFlag(g);
+			}
+
+	/// <summary>
+	/// Thực hiện vẽ và hiển thị thành phần paintRedEye lên canvas đồ họa.
+	/// </summary>
+	private void paintRedEye(mGraphics g, int xx, int yy, int trans, int anchor)
+			{
+				if (head != 934 || (statusMe != 1 && statusMe != 6))
+				{
+					return;
+				}
+				if (fraRedEye == null || fraRedEye.imgFrame == null)
+				{
+					Image img = mSystem.loadImage("/redeye.png");
+					fraRedEye = new FrameImage(img, 14, 10);
+				}
+				else if (frEye[fChopmat] != -1)
+				{
+					int num = 8;
+					int num2 = 15;
+					if (trans == 2)
+					{
+						num = -8;
+					}
+					fraRedEye.drawFrame(frEye[fChopmat], xx + num, yy + num2, trans, anchor, g);
+				}
+			}
+
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của isHead_2Fr.
+	/// </summary>
+	public bool isHead_2Fr(int idHead)
+			{
+				for (int i = 0; i < Arr_Head_2Fr.Length; i++)
+				{
+					if (Arr_Head_2Fr[i][0] == idHead)
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateFHead theo chu kỳ khung hình.
+	/// </summary>
+	private void updateFHead()
+			{
+				if (isHead_2Fr(head))
+				{
+					fHead++;
+					if (fHead > 10000)
+					{
+						fHead = 0;
+					}
+				}
+				else
+				{
+					fHead = 0;
+				}
+			}
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của getFHead.
+	/// </summary>
+	private int getFHead(int idHead)
+			{
+				for (int i = 0; i < Arr_Head_2Fr.Length; i++)
+				{
+					if (Arr_Head_2Fr[i][0] == idHead)
+					{
+						return Arr_Head_2Fr[i][fHead / 4 % Arr_Head_2Fr[i].Length];
+					}
+				}
+				return idHead;
+			}
+
+}

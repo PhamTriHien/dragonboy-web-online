@@ -1,0 +1,750 @@
+using System;
+using Assets.src.g;
+/// <summary>
+/// Thành phần phân mảnh (partial) của lớp GameScr: Đảm nhiệm phân hệ chuyên trách UI (Part1).
+/// </summary>
+public partial class GameScr : mScreen, IChatable
+{
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ createMenu.
+	/// </summary>
+	public void createMenu(string[] menu, Npc npc)
+		{
+			MyVector myVector = new MyVector();
+			for (int i = 0; i < menu.Length; i++)
+			{
+				myVector.addElement(new Command(menu[i], 11057, npc));
+			}
+			GameCanvas.menu.startAt(myVector, 2);
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ doMenuInforMe.
+	/// </summary>
+	public void doMenuInforMe()
+		{
+			scrMain.clear();
+			scrInfo.clear();
+			isViewNext = false;
+			cmdBag = new Command(mResources.MENUME[0], 1100011);
+			cmdSkill = new Command(mResources.MENUME[1], 1100012);
+			cmdTiemnang = new Command(mResources.MENUME[2], 1100013);
+			cmdInfo = new Command(mResources.MENUME[3], 1100014);
+			cmdtrangbi = new Command(mResources.MENUME[4], 1100015);
+			MyVector myVector = new MyVector();
+			myVector.addElement(cmdBag);
+			myVector.addElement(cmdSkill);
+			myVector.addElement(cmdTiemnang);
+			myVector.addElement(cmdInfo);
+			myVector.addElement(cmdtrangbi);
+			GameCanvas.menu.startAt(myVector, 3);
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ doMenusynthesis.
+	/// </summary>
+	public void doMenusynthesis()
+		{
+			MyVector myVector = new MyVector();
+			myVector.addElement(new Command(mResources.SYNTHESIS[0], 110002));
+			myVector.addElement(new Command(mResources.SYNTHESIS[1], 1100032));
+			myVector.addElement(new Command(mResources.SYNTHESIS[2], 1100033));
+			GameCanvas.menu.startAt(myVector, 3);
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ playerMenu.
+	/// </summary>
+	public void playerMenu(Char c)
+		{
+			auto = 0;
+			GameCanvas.clearKeyHold();
+			if (Char.myCharz().charFocus.charID < 0 || Char.myCharz().charID < 0)
+			{
+				return;
+			}
+			MyVector vPlayerMenu = GameCanvas.panel.vPlayerMenu;
+			if (vPlayerMenu.size() > 0)
+			{
+				return;
+			}
+			if (Char.myCharz().taskMaint != null && Char.myCharz().taskMaint.taskId > 1)
+			{
+				vPlayerMenu.addElement(new Command(mResources.make_friend, 11112, Char.myCharz().charFocus));
+				vPlayerMenu.addElement(new Command(mResources.trade, 11113, Char.myCharz().charFocus));
+			}
+			if (Char.myCharz().clan != null && Char.myCharz().role < 2 && Char.myCharz().charFocus.clanID == -1)
+			{
+				vPlayerMenu.addElement(new Command(mResources.CHAR_ORDER[4], 110391));
+			}
+			if (Char.myCharz().charFocus.statusMe != 14 && Char.myCharz().charFocus.statusMe != 5)
+			{
+				if (Char.myCharz().taskMaint != null && Char.myCharz().taskMaint.taskId >= 14)
+				{
+					vPlayerMenu.addElement(new Command(mResources.CHAR_ORDER[0], 2003));
+				}
+			}
+			else if (Char.myCharz().myskill.template.type != 4)
+			{
+			}
+			if (Char.myCharz().clan != null && Char.myCharz().clan.ID == Char.myCharz().charFocus.clanID && Char.myCharz().charFocus.statusMe != 14 && Char.myCharz().taskMaint != null && Char.myCharz().taskMaint.taskId >= 14)
+			{
+				vPlayerMenu.addElement(new Command(mResources.CHAR_ORDER[1], 2004));
+			}
+			int num = Char.myCharz().nClass.skillTemplates.Length;
+			for (int i = 0; i < num; i++)
+			{
+				SkillTemplate skillTemplate = Char.myCharz().nClass.skillTemplates[i];
+				Skill skill = Char.myCharz().getSkill(skillTemplate);
+				if (skill != null && skillTemplate.isBuffToPlayer() && skill.point >= 1)
+				{
+					vPlayerMenu.addElement(new Command(skillTemplate.name, 12004, skill));
+				}
+			}
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của checkClipTopChatPopUp.
+	/// </summary>
+	private bool checkClipTopChatPopUp(int xClick, int yClick)
+		{
+			if (Equals(info2) && gI().popUpYesNo != null)
+			{
+				return false;
+			}
+			if (info2 != null && info2.info != null && info2.info.info != null && info2.info.info.charInfo != null)
+			{
+				int px = xClick - cmx;
+				int py = yClick - cmy;
+				int boxX = info2.cmx;
+				int boxY = info2.cmy;
+				int boxW = info2.info.W;
+				int boxH = info2.info.H;
+				if (px >= boxX && px <= boxX + boxW && py >= boxY && py <= boxY + boxH)
+				{
+					SoundMn.gI().buttonClick();
+					GameCanvas.panel.setTypeMessage();
+					GameCanvas.panel.show();
+					GameCanvas.panel.addLogMessage(info2.info.info);
+					GameCanvas.clearAllPointerEvent();
+					return true;
+				}
+			}
+			return false;
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của checkClickToPopup.
+	/// </summary>
+	private bool checkClickToPopup(int xClick, int yClick)
+		{
+			for (int i = 0; i < PopUp.vPopups.size(); i++)
+			{
+				PopUp popUp = (PopUp)PopUp.vPopups.elementAt(i);
+				if (inRectangle(xClick, yClick, popUp.cx, popUp.cy, popUp.cw, popUp.ch))
+				{
+					if (popUp.cy <= 24 && TileMap.isInAirMap() && Char.myCharz().cTypePk != 0)
+					{
+						return false;
+					}
+					if (popUp.isPaint)
+					{
+						popUp.doClick(10);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của checkMouseChat.
+	/// </summary>
+	public void checkMouseChat()
+		{
+			if (GameCanvas.isMouseFocus(xC, yC, 34, 34))
+			{
+				if (!TileMap.isOfflineMap())
+				{
+					mScreen.keyMouse = 15;
+				}
+			}
+			else if (GameCanvas.isMouseFocus(xHP, yHP, 40, 40))
+			{
+				if (Char.myCharz().statusMe != 14)
+				{
+					mScreen.keyMouse = 10;
+				}
+			}
+			else if (GameCanvas.isMouseFocus(xF, yF, 40, 40))
+			{
+				if (Char.myCharz().statusMe != 14)
+				{
+					mScreen.keyMouse = 5;
+				}
+			}
+			else if (cmdMenu != null && GameCanvas.isMouseFocus(cmdMenu.x, cmdMenu.y, cmdMenu.w / 2, cmdMenu.h))
+			{
+				mScreen.keyMouse = 1;
+			}
+			else
+			{
+				mScreen.keyMouse = -1;
+			}
+		}
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho initCreateCommand.
+	/// </summary>
+	public void initCreateCommand()
+		{
+		}
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateXoSo theo chu kỳ khung hình.
+	/// </summary>
+	public void updateXoSo()
+		{
+			if (tShow == 0)
+			{
+				return;
+			}
+			currXS = mSystem.currentTimeMillis();
+			if (currXS - lastXS > 1000)
+			{
+				lastXS = mSystem.currentTimeMillis();
+				secondXS++;
+			}
+			if (secondXS > 20)
+			{
+				for (int i = 0; i < winnumber.Length; i++)
+				{
+					randomNumber[i] = winnumber[i];
+				}
+				tShow--;
+				if (tShow == 0)
+				{
+					yourNumber = string.Empty;
+					info1.addInfo(strFinish, 0);
+					secondXS = 0;
+				}
+				return;
+			}
+			if (moveIndex > winnumber.Length - 1)
+			{
+				tShow--;
+				if (tShow == 0)
+				{
+					yourNumber = string.Empty;
+					info1.addInfo(strFinish, 0);
+				}
+				return;
+			}
+			if (moveIndex < randomNumber.Length)
+			{
+				if (tMove[moveIndex] == 15)
+				{
+					if (randomNumber[moveIndex] == winnumber[moveIndex] - 1)
+					{
+						delayMove[moveIndex] = 10;
+					}
+					if (randomNumber[moveIndex] == winnumber[moveIndex])
+					{
+						tMove[moveIndex] = -1;
+						moveIndex++;
+					}
+				}
+				else if (GameCanvas.gameTick % 5 == 0)
+				{
+					tMove[moveIndex]++;
+				}
+			}
+			for (int j = 0; j < winnumber.Length; j++)
+			{
+				if (tMove[j] == -1)
+				{
+					continue;
+				}
+				moveCount[j]++;
+				if (moveCount[j] > tMove[j] + delayMove[j])
+				{
+					moveCount[j] = 0;
+					randomNumber[j]++;
+					if (randomNumber[j] >= 10)
+					{
+						randomNumber[j] = 0;
+					}
+				}
+			}
+		}
+	/// <summary>
+	/// Cập nhật trạng thái logic của updateKeyChatPopUp theo chu kỳ khung hình.
+	/// </summary>
+	public void updateKeyChatPopUp()
+		{
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của isRongThanMenu.
+	/// </summary>
+	public bool isRongThanMenu()
+		{
+			if (isMeCallRongThan)
+			{
+				return true;
+			}
+			return false;
+		}
+	/// <summary>
+	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của isPaintPopup.
+	/// </summary>
+	public bool isPaintPopup()
+		{
+			if (isPaintItemInfo || isPaintInfoMe || isPaintStore || isPaintWeapon || isPaintNonNam || isPaintNonNu || isPaintAoNam || isPaintAoNu || isPaintGangTayNam || isPaintGangTayNu || isPaintQuanNam || isPaintQuanNu || isPaintGiayNam || isPaintGiayNu || isPaintLien || isPaintNhan || isPaintNgocBoi || isPaintPhu || isPaintStack || isPaintStackLock || isPaintGrocery || isPaintGroceryLock || isPaintUpGrade || isPaintConvert || isPaintSplit || isPaintUpPearl || isPaintBox || isPaintTrade || isPaintAlert || isPaintZone || isPaintTeam || isPaintClan || isPaintFindTeam || isPaintTask || isPaintFriend || isPaintEnemies || isPaintCharInMap || isPaintMessage)
+			{
+				return true;
+			}
+			return false;
+		}
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho setPopupSize.
+	/// </summary>
+	public static void setPopupSize(int w, int h)
+		{
+			if (GameCanvas.w == 128 || GameCanvas.h <= 208)
+			{
+				w = 126;
+				h = 160;
+			}
+			indexTitle = 0;
+			popupW = w;
+			popupH = h;
+			popupX = gW2 - w / 2;
+			popupY = gH2 - h / 2;
+			if (GameCanvas.isTouch && !isPaintZone && !isPaintTeam && !isPaintClan && !isPaintCharInMap && !isPaintFindTeam && !isPaintFriend && !isPaintEnemies && !isPaintTask && !isPaintMessage)
+			{
+				if (GameCanvas.h <= 240)
+				{
+					popupY -= 10;
+				}
+				if (GameCanvas.isTouch && !GameCanvas.isTouchControlSmallScreen && GameCanvas.currentScreen is GameScr)
+				{
+					popupW = 310;
+					popupX = gW / 2 - popupW / 2;
+					if (isPaintInfoMe && indexMenu > 0)
+					{
+						popupW = w;
+						popupX = gW2 - w / 2;
+					}
+				}
+			}
+			if (popupY < -10)
+			{
+				popupY = -10;
+			}
+			if (GameCanvas.h > 208 && popupY < 0)
+			{
+				popupY = 0;
+			}
+			if (GameCanvas.h == 208 && popupY < 10)
+			{
+				popupY = 10;
+			}
+		}
+	/// <summary>
+	/// Bộ xử lý sự kiện tiếp nhận và phản hồi onChatFromMe.
+	/// </summary>
+	public void onChatFromMe(string text, string to)
+		{
+			Res.outz("CHAT");
+			if (!isPaintMessage || GameCanvas.isTouch)
+			{
+				ChatTextField.gI().isShow = false;
+			}
+			if (text.Equals("gb", StringComparison.OrdinalIgnoreCase) || text.Equals("goback", StringComparison.OrdinalIgnoreCase))
+			{
+				ModGoBack.ToggleGoBack();
+				return;
+			}
+			if (text.Equals("stopmap", StringComparison.OrdinalIgnoreCase))
+			{
+				ModNextMap.StopNextMap();
+				info1.addInfo("Đã dừng Next Map", 0);
+				return;
+			}
+			if (text.StartsWith("nextmap=", StringComparison.OrdinalIgnoreCase))
+			{
+				string arg = text.Substring(8).Trim();
+				ModNextMap.useSafeMovement = true;
+				if (arg.StartsWith("safe:", StringComparison.OrdinalIgnoreCase)) arg = arg.Substring(5).Trim();
+				else if (arg.StartsWith("fast:", StringComparison.OrdinalIgnoreCase))
+				{
+					ModNextMap.useSafeMovement = false;
+					arg = arg.Substring(5).Trim();
+				}
+				if (int.TryParse(arg, out int targetMap))
+				{
+					ModNextMap.StartNextMap(targetMap);
+				}
+				else
+				{
+					info1.addInfo("Dùng nextmap=safe:ID hoặc nextmap=fast:ID", 0);
+				}
+				return;
+			}
+			if (text.Equals("td", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoHeal.HarvestMagicTreeNow();
+				return;
+			}
+			if (text.Equals("cd", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoHeal.DonateClanNow();
+				return;
+			}
+			if (text.Equals("cde", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoHeal.autoFeedPetOnAsk = !ModAutoHeal.autoFeedPetOnAsk;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Ăn đậu cho đệ tử: " + (ModAutoHeal.autoFeedPetOnAsk ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("upset", StringComparison.OrdinalIgnoreCase))
+			{
+				ModSetActivator.ToggleActive();
+				return;
+			}
+			if (text.Equals("banrac", StringComparison.OrdinalIgnoreCase))
+			{
+				ModSetActivator.StartGoSellJunkNow();
+				return;
+			}
+			if (text.Equals("iditem", StringComparison.OrdinalIgnoreCase))
+			{
+				ModSetActivator.showItemId = !ModSetActivator.showItemId;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Hiện Tên & ID Item: " + (ModSetActivator.showItemId ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.StartsWith("nhat_id", StringComparison.OrdinalIgnoreCase) || text.StartsWith("nhatid", StringComparison.OrdinalIgnoreCase))
+			{
+				string arg = text.Length > 7 ? text.Substring(text.StartsWith("nhat_id", StringComparison.OrdinalIgnoreCase) ? 7 : 6).Trim() : "";
+				if (string.IsNullOrEmpty(arg))
+				{
+					ModAutoPick.ShowInputFilterId();
+				}
+				else
+				{
+					ModAutoPick.SetFilterIds(arg);
+					ModConfig.SaveConfig();
+				}
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.StartsWith("nhat_ten", StringComparison.OrdinalIgnoreCase) || text.StartsWith("nhatten", StringComparison.OrdinalIgnoreCase))
+			{
+				string arg = text.Length > 8 ? text.Substring(text.StartsWith("nhat_ten", StringComparison.OrdinalIgnoreCase) ? 8 : 7).Trim() : "";
+				if (string.IsNullOrEmpty(arg))
+				{
+					ModAutoPick.ShowInputFilterName();
+				}
+				else
+				{
+					ModAutoPick.SetFilterNames(arg);
+					ModConfig.SaveConfig();
+				}
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("xnhat", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoPick.ClearFilters();
+				ModConfig.SaveConfig();
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("kbroly", StringComparison.OrdinalIgnoreCase) || text.Equals("broly", StringComparison.OrdinalIgnoreCase))
+			{
+				ModKiteBroly.ToggleAutoKite();
+				return;
+			}
+			if (text.Equals("kc", StringComparison.OrdinalIgnoreCase))
+			{
+				ModKiteBroly.ToggleKhinhCong();
+				return;
+			}
+			if (text.Equals("roido", StringComparison.OrdinalIgnoreCase))
+			{
+				ModDropRate.isInstantPick = !ModDropRate.isInstantPick;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Trick Rơi Đồ (Hút Tức Thì): " + (ModDropRate.isInstantPick ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("tkrd", StringComparison.OrdinalIgnoreCase))
+			{
+				GameScr.info1.addInfo("TK Rơi Đồ: " + ModDropRate.totalItemsDropped + "/" + ModDropRate.totalMobsKilled + " (" + ModDropRate.GetDropRatePercent() + "%), KH: " + ModDropRate.totalSetKHCount + ", Sao: " + ModDropRate.totalStarCount + ", " + ModDropRate.GetMobsPerMinute() + " quái/ph", 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("muabua", StringComparison.OrdinalIgnoreCase) || text.Equals("bua", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoBuyBua.StartBuyBuaNow();
+				return;
+			}
+			if (text.Equals("autobua", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoBuyBua.ToggleAutoRebuy();
+				return;
+			}
+			if (text.Equals("dich", StringComparison.OrdinalIgnoreCase) || text.Equals("vietnam", StringComparison.OrdinalIgnoreCase) || text.Equals("trans", StringComparison.OrdinalIgnoreCase))
+			{
+				ModConfig.isTranslate = !ModConfig.isTranslate;
+				ModConfig.SaveConfig();
+				ModTranslate.ApplyAllTranslations();
+				GameScr.info1.addInfo("Dịch Việt Hoá: " + (ModConfig.isTranslate ? "BẬT" : "TẮT (Gốc Server)"), 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("bg", StringComparison.OrdinalIgnoreCase) || text.Equals("phongcanh", StringComparison.OrdinalIgnoreCase))
+			{
+				ModUI.selectedTab = 5;
+				ModUIBackground.isOpen = true;
+				ModUI.uiCustomOpen = true;
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("nhanban", StringComparison.OrdinalIgnoreCase) || text.Equals("multitab", StringComparison.OrdinalIgnoreCase) || text.Equals("clone", StringComparison.OrdinalIgnoreCase))
+			{
+				ModUI.selectedTab = 10;
+				ModUI.uiCustomOpen = true;
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("hub", StringComparison.OrdinalIgnoreCase) || text.Equals("hud", StringComparison.OrdinalIgnoreCase))
+			{
+				ModFloatingHUD.isShowFloatingHUD = !ModFloatingHUD.isShowFloatingHUD;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Menu HUB Nổi: " + (ModFloatingHUD.isShowFloatingHUD ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return;
+			}
+			if (text.Equals("autochat", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoChat.Toggle();
+				return;
+			}
+			if (text.Equals("boxsort", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoBoxSort.SortNow();
+				return;
+			}
+			if (text.Equals("autoboxsort", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoBoxSort.Toggle();
+				return;
+			}
+			if (text.Equals("autopoint", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoPoint.Toggle();
+				return;
+			}
+			if (text.Equals("autoitem", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoItem.Toggle();
+				return;
+			}
+			if (text.Equals("schedule", StringComparison.OrdinalIgnoreCase))
+			{
+				ModSchedule.Toggle();
+				return;
+			}
+			if (text.Equals("autorevive", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoRevive.Toggle();
+				return;
+			}
+			if (text.Equals("autopet", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoPet.Toggle();
+				return;
+			}
+			if (text.StartsWith("autopet=", StringComparison.OrdinalIgnoreCase))
+			{
+				string[] petCfg = text.Substring(8).Split('|');
+				if (int.TryParse(petCfg[0], out int petStatus))
+				{
+					int interval = ModAutoPet.intervalMs;
+					if (petCfg.Length > 1) int.TryParse(petCfg[1], out interval);
+					ModAutoPet.Configure(petStatus, interval);
+					info1.addInfo("Auto Pet status|ms: " + ModAutoPet.status + "|" + ModAutoPet.intervalMs, 0);
+				}
+				return;
+			}
+			if (text.Equals("autofusion", StringComparison.OrdinalIgnoreCase))
+			{
+				ModAutoFusion.Toggle();
+				return;
+			}
+			if (text.StartsWith("autofusion=", StringComparison.OrdinalIgnoreCase))
+			{
+				string[] fusionCfg = text.Substring(11).Split('|');
+				if (int.TryParse(fusionCfg[0], out int fusionType))
+				{
+					int interval = ModAutoFusion.intervalMs;
+					if (fusionCfg.Length > 1) int.TryParse(fusionCfg[1], out interval);
+					ModAutoFusion.Configure(fusionType, interval);
+					info1.addInfo("Auto Fusion type|ms: " + ModAutoFusion.fusionType + "|" + ModAutoFusion.intervalMs, 0);
+				}
+				return;
+			}
+			if (text.StartsWith("schedule=", StringComparison.OrdinalIgnoreCase))
+			{
+				bool ok = ModSchedule.Configure(text.Substring(9).Trim());
+				info1.addInfo(ok ? "Lịch Auto đã đặt (HH:mm-HH:mm)" : "Sai định dạng lịch, dùng HH:mm-HH:mm", 0);
+				return;
+			}
+			if (text.StartsWith("autoitem=", StringComparison.OrdinalIgnoreCase))
+			{
+				string value = text.Substring(9).Trim();
+				int interval = ModAutoItem.intervalMs;
+				int separator = value.LastIndexOf('|');
+				if (separator >= 0 && int.TryParse(value.Substring(separator + 1).Trim(), out int parsedInterval))
+				{
+					interval = parsedInterval;
+					value = value.Substring(0, separator).Trim();
+				}
+				ModAutoItem.Configure(value, interval);
+				info1.addInfo("Auto Item: " + (ModAutoItem.isEnabled ? "ĐÃ BẬT" : "ID KHÔNG HỢP LỆ"), 0);
+				return;
+			}
+			if (text.StartsWith("autoitemhp=", StringComparison.OrdinalIgnoreCase) || text.StartsWith("autoitemmp=", StringComparison.OrdinalIgnoreCase))
+			{
+				bool hp = text.StartsWith("autoitemhp=", StringComparison.OrdinalIgnoreCase);
+				string[] cfg = text.Substring(11).Split('|');
+				if (cfg.Length >= 2 && int.TryParse(cfg[1], out int percent))
+				{
+					int interval = ModAutoItem.intervalMs;
+					if (cfg.Length > 2) int.TryParse(cfg[2], out interval);
+					ModAutoItem.Configure(cfg[0], interval);
+					ModAutoItem.conditionType = hp ? 1 : 2;
+					ModAutoItem.thresholdPercent = percent < 1 ? 1 : (percent > 99 ? 99 : percent);
+					ModConfig.SaveConfig();
+					info1.addInfo("Auto Item điều kiện " + (hp ? "HP" : "MP") + " dưới " + ModAutoItem.thresholdPercent + "%", 0);
+				}
+				return;
+			}
+			if (text.StartsWith("autopoint=", StringComparison.OrdinalIgnoreCase))
+			{
+				string[] cfg = text.Substring(10).Split('|');
+				int type, amount = ModAutoPoint.pointsPerTick, interval = ModAutoPoint.intervalMs;
+				if (cfg.Length > 0 && int.TryParse(cfg[0], out type))
+				{
+					if (cfg.Length > 1) int.TryParse(cfg[1], out amount);
+					if (cfg.Length > 2) int.TryParse(cfg[2], out interval);
+					ModAutoPoint.Configure(type, amount, interval);
+					ModAutoPoint.isEnabled = true;
+					ModConfig.SaveConfig();
+					info1.addInfo("AutoPoint type|điểm|ms: " + ModAutoPoint.targetType + "|" + ModAutoPoint.pointsPerTick + "|" + ModAutoPoint.intervalMs, 0);
+				}
+				return;
+			}
+			if (text.Equals("autofreeze", StringComparison.OrdinalIgnoreCase))
+			{
+				ModTanSat.lockedSkillTemplateId = -1;
+				ModConfig.SaveConfig();
+				info1.addInfo("Skill Freeze: TẮT", 0);
+				return;
+			}
+			if (text.StartsWith("autofreeze=", StringComparison.OrdinalIgnoreCase))
+			{
+				if (int.TryParse(text.Substring(11).Trim(), out int skillId))
+				{
+					ModTanSat.lockedSkillTemplateId = skillId;
+					ModConfig.SaveConfig();
+					info1.addInfo("Skill Freeze ID: " + skillId, 0);
+				}
+				return;
+			}
+			if (text.StartsWith("autochat=", StringComparison.OrdinalIgnoreCase))
+			{
+				string value = text.Substring(9).Trim();
+				int interval = 30000;
+				int separator = value.LastIndexOf('|');
+				if (separator >= 0 && int.TryParse(value.Substring(separator + 1).Trim(), out int parsedInterval))
+				{
+					interval = parsedInterval;
+					value = value.Substring(0, separator).Trim();
+				}
+				ModAutoChat.Configure(value, interval);
+				GameScr.info1?.addInfo("Auto Chat: " + (ModAutoChat.isEnabled ? "đã đặt nội dung" : "nội dung rỗng"), 0);
+				return;
+			}
+			if (text.Equals("tab", StringComparison.OrdinalIgnoreCase) || text.Equals("nexttab", StringComparison.OrdinalIgnoreCase))
+			{
+				DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.CycleNextTab();
+				return;
+			}
+			if (text.Equals("alltab", StringComparison.OrdinalIgnoreCase))
+			{
+				DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.OpenAllTabs();
+				return;
+			}
+			if (text.Length > 3 && text.StartsWith("tab", StringComparison.OrdinalIgnoreCase) &&
+				int.TryParse(text.Substring(3), out int tId) && tId > 0)
+			{
+					DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.SwitchToTab(tId);
+					return;
+			}
+			if (to.Equals(mResources.chat_player))
+			{
+				if (info2.playerID != Char.myCharz().charID)
+				{
+					Service.gI().chatPlayer(text, info2.playerID);
+				}
+			}
+			else if (!text.Equals(string.Empty))
+			{
+				Service.gI().chat(text);
+			}
+		}
+	/// <summary>
+	/// Bộ xử lý sự kiện tiếp nhận và phản hồi onCancelChat.
+	/// </summary>
+	public void onCancelChat()
+		{
+			if (isPaintMessage)
+			{
+				isPaintMessage = false;
+				ChatTextField.gI().center = null;
+			}
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ actMenu.
+	/// </summary>
+	public void actMenu()
+		{
+			GameCanvas.panel.setTypeMain();
+			GameCanvas.panel.show();
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ startYesNoPopUp.
+	/// </summary>
+	public void startYesNoPopUp(string info, Command cmdYes, Command cmdNo)
+		{
+			popUpYesNo = new PopUpYesNo();
+			popUpYesNo.setPopUp(info, cmdYes, cmdNo);
+		}
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ player_vs_player.
+	/// </summary>
+	public void player_vs_player(int playerId, int xu, string info, sbyte typePK)
+		{
+			Char @char = findCharInMap(playerId);
+			if (@char != null)
+			{
+				if (typePK == 3)
+				{
+					startYesNoPopUp(info, new Command(mResources.OK, 2000, @char), new Command(mResources.CLOSE, 2009, @char));
+				}
+				if (typePK == 4)
+				{
+					startYesNoPopUp(info, new Command(mResources.OK, 2005, @char), new Command(mResources.CLOSE, 2009, @char));
+				}
+			}
+		}
+
+}

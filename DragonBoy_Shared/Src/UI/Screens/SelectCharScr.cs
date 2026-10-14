@@ -1,0 +1,311 @@
+using System;
+using Assets.src.e;
+
+/// <summary>
+/// CLASS SelectCharScr: Định nghĩa và điều phối logic trong hệ thống game.
+/// </summary>
+public class SelectCharScr : mScreen, IActionListener
+{
+	public static bool isWait;
+
+	public static SelectCharScr instance;
+
+	public Char mychar;
+
+	private int indexGender;
+
+	private int cx;
+
+	private int cy;
+
+	private int dy = 45;
+
+	private Command cmdSelectSv;
+
+	private int[] bgID = new int[3] { 0, 4, 8 };
+
+	private int[] f = new int[10] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+
+	private int count;
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ SelectCharScr.
+	/// </summary>
+	public SelectCharScr()
+	{
+		try
+		{
+			loadMapFromResource(new sbyte[3] { 39, 40, 41 });
+			loadMapTableFromResource(new sbyte[3] { 39, 40, 41 });
+			for (int p = 0; p < 3; p++)
+			{
+				int bId = bgID[p];
+				int tId = bId + 1;
+				GameCanvas.loadBG(bId);
+				TileMap.tileID = tId;
+				TileMap.getTile();
+			}
+		}
+		catch (Exception ex)
+		{
+			Cout.LogError("Tao char loi " + ex.ToString());
+		}
+		cx = 168;
+		cy = 350;
+		short num = 32000;
+		SmallImage.imgNew = new Small[num];
+		SmallImage.newSmallVersion = new sbyte[num];
+		SmallImage.maxSmall = num;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ gI.
+	/// </summary>
+	public static SelectCharScr gI()
+	{
+		if (instance == null)
+		{
+			instance = new SelectCharScr();
+		}
+		return instance;
+	}
+
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadMapFromResource.
+	/// </summary>
+	public static void loadMapFromResource(sbyte[] mapID)
+	{
+		Res.outz("newwwwwwwwww =============");
+		DataInputStream dataInputStream = null;
+		for (int i = 0; i < mapID.Length; i++)
+		{
+			dataInputStream = MyStream.readFile("/mymap/" + mapID[i]);
+			MapTemplate.tmw[i] = (ushort)dataInputStream.read();
+			MapTemplate.tmh[i] = (ushort)dataInputStream.read();
+			Cout.LogError("Thong TIn : " + MapTemplate.tmw[i] + "::" + MapTemplate.tmh[i]);
+			MapTemplate.maps[i] = new int[dataInputStream.available()];
+			Cout.LogError("lent= " + MapTemplate.maps[i].Length);
+			for (int j = 0; j < MapTemplate.tmw[i] * MapTemplate.tmh[i]; j++)
+			{
+				MapTemplate.maps[i][j] = dataInputStream.read();
+			}
+			MapTemplate.types[i] = new int[MapTemplate.maps[i].Length];
+			MapTemplate.pxw[i] = MapTemplate.tmw[i] * TileMap.size;
+			MapTemplate.pxh[i] = MapTemplate.tmh[i] * TileMap.size;
+		}
+	}
+
+	/// <summary>
+	/// Khởi tạo và nạp dữ liệu cấu hình cho loadMapTableFromResource.
+	/// </summary>
+	public void loadMapTableFromResource(sbyte[] mapID)
+	{
+		if (GameCanvas.lowGraphic)
+		{
+			return;
+		}
+		DataInputStream dataInputStream = null;
+		try
+		{
+			for (int i = 0; i < mapID.Length; i++)
+			{
+				dataInputStream = MyStream.readFile("/mymap/mapTable" + mapID[i]);
+				Cout.LogError("mapTable : " + mapID[i]);
+				short num = dataInputStream.readShort();
+				MapTemplate.vCurrItem[i] = new MyVector();
+				Res.outz("nItem= " + num);
+				for (int j = 0; j < num; j++)
+				{
+					short id = dataInputStream.readShort();
+					short num2 = dataInputStream.readShort();
+					short num3 = dataInputStream.readShort();
+					if (TileMap.getBIById(id) == null)
+					{
+						continue;
+					}
+					BgItem bIById = TileMap.getBIById(id);
+					BgItem bgItem = new BgItem();
+					bgItem.id = id;
+					bgItem.idImage = bIById.idImage;
+					bgItem.dx = bIById.dx;
+					bgItem.dy = bIById.dy;
+					bgItem.x = num2 * TileMap.size;
+					bgItem.y = num3 * TileMap.size;
+					bgItem.layer = bIById.layer;
+					MapTemplate.vCurrItem[i].addElement(bgItem);
+					if (!BgItem.imgNew.containsKey(bgItem.idImage + string.Empty))
+					{
+						try
+						{
+							Image image = GameCanvas.loadImage("/mapBackGround/" + bgItem.idImage + ".png");
+							if (image == null)
+							{
+								BgItem.imgNew.put(bgItem.idImage + string.Empty, Image.createRGBImage(new int[1], 1, 1, bl: true));
+								Service.gI().getBgTemplate(bgItem.idImage);
+							}
+							else
+							{
+								BgItem.imgNew.put(bgItem.idImage + string.Empty, image);
+							}
+						}
+						catch (Exception)
+						{
+							Image image2 = GameCanvas.loadImage("/mapBackGround/" + bgItem.idImage + ".png");
+							if (image2 == null)
+							{
+								image2 = Image.createRGBImage(new int[1], 1, 1, bl: true);
+								Service.gI().getBgTemplate(bgItem.idImage);
+							}
+							BgItem.imgNew.put(bgItem.idImage + string.Empty, image2);
+						}
+						BgItem.vKeysLast.addElement(bgItem.idImage + string.Empty);
+					}
+					if (!BgItem.isExistKeyNews(bgItem.idImage + string.Empty))
+					{
+						BgItem.vKeysNew.addElement(bgItem.idImage + string.Empty);
+					}
+					bgItem.changeColor();
+				}
+			}
+		}
+		catch (Exception ex2)
+		{
+			Cout.println("LOI TAI loadMapTableFromResource" + ex2.ToString());
+		}
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ doChangeMap.
+	/// </summary>
+	public void doChangeMap()
+	{
+		if (MapTemplate.maps != null && indexGender >= 0 && indexGender < MapTemplate.maps.Length && MapTemplate.maps[indexGender] != null)
+		{
+			TileMap.maps = MapTemplate.maps[indexGender];
+			TileMap.types = MapTemplate.types[indexGender];
+			TileMap.tmw = MapTemplate.tmw[indexGender];
+			TileMap.tmh = MapTemplate.tmh[indexGender];
+			TileMap.pxw = MapTemplate.tmw[indexGender] * TileMap.size;
+			TileMap.pxh = MapTemplate.tmh[indexGender] * TileMap.size;
+		}
+		TileMap.tileID = bgID[indexGender] + 1;
+		TileMap.loadMainTile();
+		TileMap.loadTileCreatChar();
+		GameCanvas.loadBG(bgID[indexGender]);
+		GameScr.loadCamera(fullmScreen: true, cx, cy);
+	}
+
+	/// <summary>
+	/// Thiết lập giá trị hoặc trạng thái cho SetInfoChar.
+	/// </summary>
+	public void SetInfoChar(Char temp)
+	{
+		mychar = new Char();
+		indexGender = (mychar.cgender = temp.cgender);
+		mychar.head = temp.head;
+		mychar.headICON = temp.headICON;
+		mychar.body = temp.body;
+		mychar.leg = temp.leg;
+		mychar.bag = temp.bag;
+		mychar.cName = temp.cName;
+		switchToMe();
+	}
+
+	/// <summary>
+	/// Chuyển đổi màn hình hiện tại sang màn hình này làm màn hình hiển thị chính.
+	/// </summary>
+	public override void switchToMe()
+	{
+		GameCanvas.menu.showMenu = false;
+		GameCanvas.endDlg();
+		GameScr.gI().initSelectChar();
+		base.switchToMe();
+		doChangeMap();
+		Char.isLoadingMap = false;
+		ServerListScreen.countDieConnect = 0;
+		center = new Command(mResources.SELECT, this, 100, null);
+		left = new Command(mResources.BACK, this, 101, null);
+		string svName = (ServerListScreen.nameServer != null && ServerListScreen.ipSelect >= 0 && ServerListScreen.ipSelect < ServerListScreen.nameServer.Length) ? ServerListScreen.nameServer[ServerListScreen.ipSelect] : "Server";
+		cmdSelectSv = new Command(svName, this, 102, null);
+		cmdSelectSv.x = 1;
+		cmdSelectSv.y = 3;
+	}
+
+	/// <summary>
+	/// Thực hiện vẽ toàn bộ đối tượng và các lớp hiển thị lên canvas mGraphics.
+	/// </summary>
+	public override void paint(mGraphics g)
+	{
+		if (!Controller.isGet_CLIENT_INFO || isWait || Char.isLoadingMap)
+		{
+			return;
+		}
+		GameCanvas.paintBGGameScr(g);
+		g.translate(-GameScr.cmx, -GameScr.cmy);
+		for (int i = 0; i < MapTemplate.vCurrItem[indexGender].size(); i++)
+		{
+			BgItem bgItem = (BgItem)MapTemplate.vCurrItem[indexGender].elementAt(i);
+			if (bgItem.idImage != -1 && bgItem.layer == 1)
+			{
+				bgItem.paint(g);
+			}
+		}
+		TileMap.paintTilemap(g);
+		g.drawImage(TileMap.bong, GameScr.cmx + GameCanvas.hw, cy + dy + 1, 3);
+		if (mychar != null)
+		{
+			mychar.paintCharBody(g, GameScr.cmx + GameCanvas.hw, cy + dy, 1, f[count], isPaintBag: true);
+			mFont.tahoma_7b_yellow.drawString(g, mychar.cName, GameScr.cmx + GameCanvas.hw, cy - 15, mFont.CENTER, mFont.tahoma_7_greySmall);
+		}
+		g.setClip(0, 0, GameCanvas.w, GameCanvas.h);
+		base.paint(g);
+		cmdSelectSv.paint(g);
+	}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của đối tượng theo từng chu kỳ khung hình.
+	/// </summary>
+	public override void update()
+	{
+		base.update();
+		if (!Session_ME.gI().isConnected())
+		{
+			ServerListScreen.ConnectIP();
+			isWait = false;
+			count = 0;
+			return;
+		}
+		isWait = false;
+		count++;
+		if (count > f.Length - 1)
+		{
+			count = 0;
+		}
+		if (cmdSelectSv != null && cmdSelectSv.isPointerPressInside())
+		{
+			cmdSelectSv.performAction();
+		}
+	}
+
+	/// <summary>
+	/// Thực thi hành động tương tác khi người dùng kích hoạt lệnh hoặc nút bấm.
+	/// </summary>
+	public void perform(int idAction, object p)
+	{
+		switch (idAction)
+		{
+		case 100:
+			GameCanvas.serverScreen.Login_New();
+			break;
+		case 101:
+			ServerListScreen.isAutoLogin = false;
+			GameCanvas.serverScreen.switchToMe();
+			break;
+		case 102:
+			ServerScr.isShowSv_HaveChar = false;
+			Controller.isEXTRA_LINK = false;
+			GameCanvas.serverScr.switchToMe();
+			break;
+		}
+	}
+}

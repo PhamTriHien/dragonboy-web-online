@@ -1,0 +1,349 @@
+using System;
+using System.Collections.Generic;
+
+/// <summary>
+/// CLASS ModNextMapData: Định nghĩa và điều phối logic trong hệ thống game.
+/// </summary>
+public static class ModNextMapData
+{
+	// Danh sách ID bản đồ theo 3 hành tinh: Trái Đất, Namếc, Xayda
+	public static readonly int[][] planetMapIds = new int[3][]
+	{
+		new int[] { 21, 0, 1, 2, 24, 3, 4, 5, 6, 27, 28, 29, 30, 42, 47, 46, 45, 48 },
+		new int[] { 22, 7, 8, 9, 25, 11, 12, 13, 10, 31, 32, 33, 34, 43 },
+		new int[] { 23, 14, 15, 16, 26, 17, 18, 20, 19, 35, 36, 37, 38, 44 }
+	};
+
+	// Đồ thị kết nối bản đồ
+	public static readonly Dictionary<int, List<int>> mapWaypoints = new Dictionary<int, List<int>>
+	{
+		{ 0, new List<int> { 21, 1, 24, 42 } },
+		{ 21, new List<int> { 0 } },
+		{ 1, new List<int> { 0, 2, 27 } },
+		{ 2, new List<int> { 1, 3 } },
+		{ 3, new List<int> { 2, 4 } },
+		{ 4, new List<int> { 3, 5 } },
+		{ 5, new List<int> { 4, 6 } },
+		{ 6, new List<int> { 5 } },
+		{ 27, new List<int> { 1, 28 } },
+		{ 28, new List<int> { 27, 29 } },
+		{ 29, new List<int> { 28, 30 } },
+		{ 30, new List<int> { 29 } },
+		{ 42, new List<int> { 0, 47 } },
+		{ 47, new List<int> { 42, 46 } },
+		{ 46, new List<int> { 47, 45 } },
+		{ 45, new List<int> { 46, 48 } },
+		{ 48, new List<int> { 45 } },
+		{ 24, new List<int> { 0, 25, 26 } },
+
+		{ 7, new List<int> { 22, 8, 25, 43 } },
+		{ 22, new List<int> { 7 } },
+		{ 8, new List<int> { 7, 9, 31 } },
+		{ 9, new List<int> { 8, 11, 10 } },
+		{ 10, new List<int> { 9 } },
+		{ 11, new List<int> { 9, 12 } },
+		{ 12, new List<int> { 11, 13 } },
+		{ 13, new List<int> { 12 } },
+		{ 31, new List<int> { 8, 32 } },
+		{ 32, new List<int> { 31, 33 } },
+		{ 33, new List<int> { 32, 34 } },
+		{ 34, new List<int> { 33 } },
+		{ 43, new List<int> { 7 } },
+		{ 25, new List<int> { 7, 24, 26 } },
+
+		{ 14, new List<int> { 23, 15, 26, 44 } },
+		{ 23, new List<int> { 14 } },
+		{ 15, new List<int> { 14, 16, 35 } },
+		{ 16, new List<int> { 15, 17 } },
+		{ 17, new List<int> { 16, 18 } },
+		{ 18, new List<int> { 17, 20 } },
+		{ 20, new List<int> { 18, 19 } },
+		{ 19, new List<int> { 20 } },
+		{ 35, new List<int> { 15, 36 } },
+		{ 36, new List<int> { 35, 37 } },
+		{ 37, new List<int> { 36, 38 } },
+		{ 38, new List<int> { 37 } },
+		{ 44, new List<int> { 14 } },
+		{ 26, new List<int> { 14, 24, 25 } }
+	};
+
+	/// <summary>
+	/// Truy xuất và trả về dữ liệu của GetMapName.
+	/// </summary>
+	public static string GetMapName(int id)
+	{
+		switch (id)
+		{
+			case 0: return "Làng Aru";
+			case 1: return "Đồi hoa cúc";
+			case 2: return "Thung lũng tre";
+			case 3: return "Rừng nấm";
+			case 4: return "Rừng xương";
+			case 5: return "Đảo Kamê";
+			case 6: return "Đông Nam Kamê";
+			case 7: return "Làng Mori";
+			case 8: return "Đồi nấm";
+			case 9: return "Thung lũng Maima";
+			case 10: return "Thung lũng đá";
+			case 11: return "Vực cấm";
+			case 12: return "Núi Appule";
+			case 13: return "Căn cứ Fide";
+			case 14: return "Làng Kakarot";
+			case 15: return "Đồi hoang";
+			case 16: return "Làng Plant";
+			case 17: return "Rừng nguyên sinh";
+			case 18: return "Rừng cọ";
+			case 19: return "Thành phố Vegeta";
+			case 20: return "Vách núi đen";
+			case 21: return "Nhà Gôhan";
+			case 22: return "Nhà Moori";
+			case 23: return "Nhà Broly";
+			case 24: return "Trạm tàu T.Đất";
+			case 25: return "Trạm tàu Namếc";
+			case 26: return "Trạm tàu Xayda";
+			case 27: return "Rừng bamboo";
+			case 28: return "Rừng dương xỉ";
+			case 29: return "Nam Kamê";
+			case 30: return "Đảo Kamê 2";
+			case 31: return "Núi hoa vàng";
+			case 32: return "Núi hoa tím";
+			case 33: return "Nam Guru";
+			case 34: return "Đền Guru";
+			case 35: return "Rừng đá";
+			case 36: return "Thung lũng đen";
+			case 37: return "Bờ vực đen";
+			case 38: return "Căn cứ Fide 2";
+			case 42: return "Vách Aru";
+			case 43: return "Vách Moori";
+			case 44: return "Vách Kakarot";
+			case 45: return "Thần điện";
+			case 46: return "Tháp Karin";
+			case 47: return "Rừng Karin";
+			case 48: return "Thánh địa Kaio";
+			default: return "Map " + id;
+		}
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ RemoveAccents.
+	/// </summary>
+	public static string RemoveAccents(string text)
+	{
+		if (string.IsNullOrEmpty(text)) return string.Empty;
+		string[] arr1 = new string[] {
+			"á","à","ả","ã","ạ","â","ấ","ầ","ẩ","ẫ","ậ","ă","ắ","ằ","ẳ","ẵ","ặ",
+			"đ",
+			"é","è","ẻ","ẽ","ẹ","ê","ế","ề","ể","ễ","ệ",
+			"í","ì","ỉ","ĩ","ị",
+			"ó","ò","ỏ","õ","ọ","ô","ố","ồ","ổ","ỗ","ộ","ơ","ớ","ờ","ở","ỡ","ợ",
+			"ú","ù","ủ","ũ","ụ","ư","ứ","ừ","ử","ữ","ự",
+			"ý","ỳ","ỷ","ỹ","ỵ"
+		};
+		string[] arr2 = new string[] {
+			"a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a",
+			"d",
+			"e","e","e","e","e","e","e","e","e","e","e",
+			"i","i","i","i","i",
+			"o","o","o","o","o","o","o","o","o","o","o","o","o","o","o","o","o",
+			"u","u","u","u","u","u","u","u","u","u","u",
+			"y","y","y","y","y"
+		};
+		text = text.ToLower().Trim();
+		for (int i = 0; i < arr1.Length; i++)
+		{
+			text = text.Replace(arr1[i], arr2[i]);
+		}
+		return text;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ CleanName.
+	/// </summary>
+	public static string CleanName(string s)
+	{
+		if (string.IsNullOrEmpty(s)) return string.Empty;
+		s = RemoveAccents(s);
+		string res = string.Empty;
+		for (int i = 0; i < s.Length; i++)
+		{
+			char c = s[i];
+			if (char.IsLetterOrDigit(c))
+			{
+				res += c;
+			}
+		}
+		return res;
+	}
+
+	private static readonly Dictionary<int, string[]> s_MapMultilingualAliases = new Dictionary<int, string[]>
+	{
+		{ 0, new string[] { "Aru", "Desa Aru" } },
+		{ 1, new string[] { "cuc", "cúc", "krisan", "chrysanthemum" } },
+		{ 2, new string[] { "tre", "bambu", "bamboo" } },
+		{ 3, new string[] { "nam", "nấm", "jamur", "mushroom" } },
+		{ 4, new string[] { "xuong", "xương", "tulang", "bone" } },
+		{ 5, new string[] { "Kame", "Kamê", "Pulau Kame" } },
+		{ 6, new string[] { "Dong Nam", "Đông Nam", "Tenggara" } },
+		{ 7, new string[] { "Mori", "Moori", "Desa Mori" } },
+		{ 8, new string[] { "Doi nam", "Đồi nấm", "tim", "tím", "Bukit jamur" } },
+		{ 9, new string[] { "Maima", "Lembah Maima" } },
+		{ 10, new string[] { "da", "đá", "batu", "stone" } },
+		{ 11, new string[] { "Vuc cam", "Vực cấm", "Jurang terlarang" } },
+		{ 12, new string[] { "Appule", "Gunung Appule" } },
+		{ 13, new string[] { "Fide", "Frieza", "Pangkalan" } },
+		{ 14, new string[] { "Kakarot", "Desa Kakarot", "Kakarot village" } },
+		{ 15, new string[] { "Abadon", "Abadon hill", "hoang", "liar", "wild", "Bukit liar" } },
+		{ 16, new string[] { "Plant", "Desa Plant", "Plant village" } },
+		{ 17, new string[] { "nguyen sinh", "nguyên sinh", "perawan", "primeval" } },
+		{ 18, new string[] { "co", "cọ", "thong", "thông", "palem", "palm" } },
+		{ 19, new string[] { "Vegeta", "Kota Vegeta" } },
+		{ 20, new string[] { "den", "đen", "hitam", "black" } },
+		{ 21, new string[] { "Gohan", "Gôhan", "Rumah Gohan" } },
+		{ 22, new string[] { "Moori", "Mori", "Rumah Moori" } },
+		{ 23, new string[] { "Broly", "Rumah Broly" } },
+		{ 24, new string[] { "Tau", "Tàu", "Dat", "Đất", "Stasiun", "Bumi", "Earth" } },
+		{ 25, new string[] { "Tau", "Tàu", "Namec", "Namếc", "Stasiun Namec", "Namek" } },
+		{ 26, new string[] { "Tau", "Tàu", "Xayda", "Saiya", "Stasiun Saiya", "Saiyan" } },
+		{ 27, new string[] { "bamboo", "truc", "trúc", "Hutan bambu" } },
+		{ 28, new string[] { "duong xi", "dương xỉ", "pakis", "fern" } },
+		{ 29, new string[] { "Nam Kame", "Selatan Kame" } },
+		{ 30, new string[] { "Bulong", "Bulông", "Kame 2" } },
+		{ 31, new string[] { "vang", "vàng", "kuning", "yellow" } },
+		{ 32, new string[] { "tim", "tím", "ungu", "purple" } },
+		{ 33, new string[] { "Nam Guru", "Selatan Guru" } },
+		{ 34, new string[] { "Guru", "Den", "Đền", "Kuil Guru" } },
+		{ 35, new string[] { "da", "đá", "batu", "stone" } },
+		{ 36, new string[] { "den", "đen", "hitam", "black" } },
+		{ 37, new string[] { "vuc", "vực", "jurang", "abyss" } },
+		{ 38, new string[] { "Fide 2", "Frieza 2" } },
+		{ 42, new string[] { "Vach Aru", "Vách Aru", "Tebing Aru" } },
+		{ 43, new string[] { "Vach Moori", "Vách Moori", "Tebing Moori" } },
+		{ 44, new string[] { "Vach Kakarot", "Vách Kakarot", "Tebing Kakarot" } },
+		{ 45, new string[] { "Than dien", "Thần điện", "Kuil Dewa", "Kami" } },
+		{ 46, new string[] { "Thap Karin", "Tháp Karin", "Menara Karin", "Korin" } },
+		{ 47, new string[] { "Rung Karin", "Rừng Karin", "Hutan Karin" } },
+		{ 48, new string[] { "Kaio", "Thanh dia", "Thánh địa", "Planet Kaio" } }
+	};
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ MatchMapId.
+	/// </summary>
+	public static bool MatchMapId(string wpName, int targetMapId)
+	{
+		if (string.IsNullOrEmpty(wpName)) return false;
+		string cleanWp = CleanName(wpName);
+
+		// 1. So khớp với tên tiếng Việt chuẩn
+		string mName = GetMapName(targetMapId);
+		if (MatchMapName(wpName, mName)) return true;
+
+		// 2. So khớp với alias đa ngôn ngữ (Indo / Anh / Viết tắt)
+		if (s_MapMultilingualAliases.TryGetValue(targetMapId, out string[] aliases))
+		{
+			for (int i = 0; i < aliases.Length; i++)
+			{
+				string aliasClean = CleanName(aliases[i]);
+				if (aliasClean.Length > 3)
+				{
+					if (cleanWp.Contains(aliasClean) || aliasClean.Contains(cleanWp))
+					{
+						return true;
+					}
+				}
+				else
+				{
+					// Từ ngắn (<= 3 ký tự) phải so khớp cả từ, tránh 'da' ăn nhầm 'Xayda' hay 'Desa'
+					string[] tokens = cleanWp.Split(new char[] { ' ', '-', '_', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+					for (int t = 0; t < tokens.Length; t++)
+					{
+						if (tokens[t].Equals(aliasClean, StringComparison.OrdinalIgnoreCase))
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ MatchMapName.
+	/// </summary>
+	public static bool MatchMapName(string wpName, string mapName)
+	{
+		if (string.IsNullOrEmpty(wpName) || string.IsNullOrEmpty(mapName)) return false;
+		string w = CleanName(wpName);
+		string m = CleanName(mapName);
+		if (w.Contains(m) || m.Contains(w)) return true;
+
+		// Tách từ khóa quan trọng không dấu
+		string normW = RemoveAccents(wpName).ToLower();
+		string normM = RemoveAccents(mapName).ToLower();
+		string[] keywords = normM.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+		int matchCount = 0;
+		for (int i = 0; i < keywords.Length; i++)
+		{
+			if (keywords[i].Length >= 2 && normW.Contains(keywords[i]))
+			{
+				matchCount++;
+			}
+		}
+		return (keywords.Length > 0 && matchCount >= (keywords.Length > 2 ? 2 : 1));
+	}
+
+	/// <summary>
+	/// Thực thi phương thức nghiệp vụ FindMapIdByName.
+	/// </summary>
+	public static int FindMapIdByName(string name)
+	{
+		if (string.IsNullOrEmpty(name)) return -1;
+		string cleanTarget = CleanName(name);
+
+		// 1. So khớp chính xác theo danh sách ID chuẩn
+		for (int id = 0; id <= 48; id++)
+		{
+			string mName = GetMapName(id);
+			if (CleanName(mName).Equals(cleanTarget))
+			{
+				return id;
+			}
+		}
+
+		// 2. So khớp với TileMap.mapNames
+		if (TileMap.mapNames != null)
+		{
+			for (int i = 0; i < TileMap.mapNames.Length; i++)
+			{
+				if (TileMap.mapNames[i] != null && CleanName(TileMap.mapNames[i]).Equals(cleanTarget))
+				{
+					return i;
+				}
+			}
+		}
+
+		// 3. So khớp gần đúng chứa từ khóa
+		for (int id = 0; id <= 48; id++)
+		{
+			string mName = GetMapName(id);
+			if (MatchMapName(mName, name))
+			{
+				return id;
+			}
+		}
+
+		if (TileMap.mapNames != null)
+		{
+			for (int i = 0; i < TileMap.mapNames.Length; i++)
+			{
+				if (TileMap.mapNames[i] != null && MatchMapName(TileMap.mapNames[i], name))
+				{
+					return i;
+				}
+			}
+		}
+
+		return -1;
+	}
+}
