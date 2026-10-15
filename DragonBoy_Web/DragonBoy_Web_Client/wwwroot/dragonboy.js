@@ -677,22 +677,20 @@
 
             const tw = drawable.naturalWidth || drawable.width || entry.width;
             const th = drawable.naturalHeight || drawable.height || entry.height;
-            let sx = srcX * tw;
-            let sy = (1.0 - srcY - srcH) * th;
-            let sw = srcW * tw;
-            let sh = srcH * th;
+            const flipX = srcW < 0;
+            const flipY = srcH < 0;
+            const absSrcW = Math.abs(srcW);
+            const absSrcH = Math.abs(srcH);
 
-            const flipX = sw < 0;
-            const flipY = sh < 0;
-            if (flipX) {
-                sx += sw;
-                sw = -sw;
-            }
-            if (flipY) {
-                sy += sh;
-                sh = -sh;
-            }
-            if (sw <= 0.001 || sh <= 0.001 || dstW <= 0.001 || dstH <= 0.001) return;
+            const sx = Math.round(srcX * tw);
+            const sy = Math.round((1.0 - srcY - absSrcH) * th);
+            const sw = Math.round(absSrcW * tw);
+            const sh = Math.round(absSrcH * th);
+            dstX = Math.round(dstX);
+            dstY = Math.round(dstY);
+            dstW = Math.round(dstW);
+            dstH = Math.round(dstH);
+            if (sw <= 0 || sh <= 0 || dstW <= 0 || dstH <= 0) return;
 
             const prevAlpha = ctx.globalAlpha;
             ctx.globalAlpha = a;
