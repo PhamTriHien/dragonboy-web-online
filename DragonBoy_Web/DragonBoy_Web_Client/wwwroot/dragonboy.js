@@ -261,12 +261,105 @@
         }
     }
 
+    let pseudoFullscreen = false;
+    let pendingFullscreenAction = 0;
+
+    function getRootDocument() {
+        try {
+            if (window.top && window.top.document) return window.top.document;
+        } catch (_) { }
+        return document;
+    }
+
+    function getFullscreenElement() {
+        const doc = getRootDocument();
+        return doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement || null;
+    }
+
+    function isDocumentFullscreen() {
+        if (getFullscreenElement()) return true;
+        if (pseudoFullscreen) return true;
+        if (!isMobileOrTablet && window.screen && window.screen.width > 0 && window.screen.height > 0) {
+            let winW = window.innerWidth;
+            let winH = window.innerHeight;
+            try {
+                if (window.top) {
+                    winW = window.top.innerWidth || winW;
+                    winH = window.top.innerHeight || winH;
+                }
+            } catch (_) { }
+            if (Math.abs(winW - window.screen.width) <= 2 && Math.abs(winH - window.screen.height) <= 2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function applyFullscreenChange(wantFullscreen) {
+        const doc = getRootDocument();
+        const el = doc.documentElement;
+        const curEl = getFullscreenElement();
+        if (wantFullscreen) {
+            if (curEl) {
+                pendingFullscreenAction = 0;
+                return;
+            }
+            const reqFn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (reqFn) {
+                try {
+                    const res = reqFn.call(el);
+                    if (res && typeof res.then === "function") {
+                        res.then(() => {
+                            pendingFullscreenAction = 0;
+                            if (isMobileOrTablet && screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock("landscape").catch(() => { });
+                            }
+                            updateCanvasViewportSize();
+                        }).catch(() => {
+                            pendingFullscreenAction = 1;
+                        });
+                    } else {
+                        pendingFullscreenAction = 0;
+                        updateCanvasViewportSize();
+                    }
+                } catch (_) {
+                    pendingFullscreenAction = 1;
+                }
+            } else {
+                pseudoFullscreen = true;
+                pendingFullscreenAction = 0;
+                try { window.scrollTo(0, 1); } catch (_) { }
+                updateCanvasViewportSize();
+            }
+        } else {
+            pendingFullscreenAction = 0;
+            pseudoFullscreen = false;
+            if (curEl) {
+                const exitFn = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+                if (exitFn) {
+                    try {
+                        const res = exitFn.call(doc);
+                        if (res && typeof res.catch === "function") res.catch(() => { });
+                    } catch (_) { }
+                }
+            }
+            updateCanvasViewportSize();
+        }
+    }
+
     window.addEventListener("resize", updateCanvasViewportSize);
     window.addEventListener("orientationchange", () => {
         updateCanvasViewportSize();
         setTimeout(updateCanvasViewportSize, 150);
     });
     document.addEventListener("fullscreenchange", updateCanvasViewportSize);
+    document.addEventListener("webkitfullscreenchange", updateCanvasViewportSize);
+    try {
+        if (window.top && window.top.document && window.top.document !== document) {
+            window.top.document.addEventListener("fullscreenchange", updateCanvasViewportSize);
+            window.top.document.addEventListener("webkitfullscreenchange", updateCanvasViewportSize);
+        }
+    } catch (_) { }
     if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", updateCanvasViewportSize);
         window.visualViewport.addEventListener("scroll", updateCanvasViewportSize);
@@ -364,6 +457,11 @@
 
         const onUp = (e) => {
             if (kbModal.classList.contains("visible")) return;
+            if (pendingFullscreenAction !== 0) {
+                const want = pendingFullscreenAction > 0;
+                pendingFullscreenAction = 0;
+                applyFullscreenChange(want);
+            }
             const pt = toVirtualCoords(e.clientX, e.clientY);
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(1, pt.x, pt.y, e.button || 0);
@@ -389,6 +487,13 @@
 
         window.addEventListener("keydown", (e) => {
             if (document.activeElement === kbInput) return;
+            if (e.code === "F11" || (e.altKey && (e.code === "Enter" || e.code === "NumpadEnter"))) {
+                e.preventDefault();
+                if (!e.repeat) {
+                    applyFullscreenChange(!isDocumentFullscreen());
+                }
+                return;
+            }
             if (e.ctrlKey && (e.code === "KeyV" || e.code === "KeyC")) {
                 if (navigator.clipboard && navigator.clipboard.readText && e.code === "KeyV") {
                     navigator.clipboard.readText().then(t => { clipboardCache = t || ""; }).catch(() => { });
@@ -397,13 +502,17 @@
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnKeyEvent(1, e.code || "", e.key || "", e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0);
             }
-            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Space", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"].includes(e.code)) {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Space", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11"].includes(e.code)) {
                 e.preventDefault();
             }
         });
 
         window.addEventListener("keyup", (e) => {
             if (document.activeElement === kbInput) return;
+            if (e.code === "F11" || (e.altKey && (e.code === "Enter" || e.code === "NumpadEnter"))) {
+                e.preventDefault();
+                return;
+            }
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnKeyEvent(0, e.code || "", e.key || "", e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0);
             }
@@ -453,6 +562,8 @@
         if (!iframe) {
             iframe = document.createElement("iframe");
             iframe.className = "tab-iframe";
+            iframe.allow = "fullscreen; clipboard-read; clipboard-write";
+            iframe.allowFullscreen = true;
             iframe.src = `${window.location.pathname}?tab=${tabId}&embed=1`;
             tabIframesContainer.appendChild(iframe);
             childTabIframes.set(tabId, iframe);
@@ -562,21 +673,15 @@
     window.DragonBoyWeb = {
         getCanvasWidth: () => virtualW,
         getCanvasHeight: () => virtualH,
-        isFullScreen: () => !!document.fullscreenElement,
+        isFullScreen: () => isDocumentFullscreen(),
         setResolution: (w, h, fullscreen) => {
             if (w > 0 && h > 0) {
                 targetBaseW = w;
                 targetBaseH = h;
                 updateCanvasViewportSize();
             }
-            if (fullscreen && !document.fullscreenElement) {
-                document.documentElement.requestFullscreen?.().then(() => {
-                    if (isMobileOrTablet && screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock("landscape").catch(() => { });
-                    }
-                }).catch(() => { });
-            } else if (!fullscreen && document.fullscreenElement) {
-                document.exitFullscreen?.().catch(() => { });
+            if (Boolean(fullscreen) !== isDocumentFullscreen()) {
+                applyFullscreenChange(Boolean(fullscreen));
             }
         },
         setWindowTitle: (title) => {

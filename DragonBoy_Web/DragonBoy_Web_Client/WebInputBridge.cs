@@ -267,6 +267,10 @@ namespace DragonBoy_Web_Host
                 case "Tab": return KeyCode.Tab;
                 case "Escape": return KeyCode.Escape;
                 case "Space": return KeyCode.Space;
+                case "Backquote": return KeyCode.BackQuote;
+                case "Home": return KeyCode.Home;
+                case "AltLeft": return KeyCode.LeftAlt;
+                case "AltRight": return KeyCode.RightAlt;
                 case "F1": return KeyCode.F1;
                 case "F2": return KeyCode.F2;
                 case "F3": return KeyCode.F3;

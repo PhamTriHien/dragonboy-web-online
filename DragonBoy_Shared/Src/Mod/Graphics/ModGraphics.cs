@@ -83,8 +83,9 @@ public static class ModGraphics
 	{
 		try
 		{
+			bool target = !Screen.fullScreen;
 			DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.ToggleFullscreen();
-			isFullscreen = Screen.fullScreen;
+			isFullscreen = OperatingSystem.IsBrowser() ? target : Screen.fullScreen;
 			ModConfig.SaveConfig();
 		}
 		catch

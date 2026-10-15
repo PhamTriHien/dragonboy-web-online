@@ -865,13 +865,28 @@ namespace UnityEngine
             {
                 if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
                     return true;
+#if BROWSER
+                if (OperatingSystem.IsBrowser())
+                    return DragonBoy_Web_Host.WebGraphicsBackend.IsFullScreen;
+#endif
                 if (OperatingSystem.IsBrowser())
                     return ModGraphics.isFullscreen;
                 try { return Raylib.IsWindowFullscreen(); } catch { return false; }
             }
             set
             {
-                if (!Application.IsActiveTab || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser()) return;
+                if (!Application.IsActiveTab || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) return;
+#if BROWSER
+                if (OperatingSystem.IsBrowser())
+                {
+                    if (value != DragonBoy_Web_Host.WebGraphicsBackend.IsFullScreen)
+                    {
+                        DragonBoy_Web_Host.WebGraphicsBackend.SetResolution(DragonBoy_Web_Host.WebGraphicsBackend.ScreenWidth, DragonBoy_Web_Host.WebGraphicsBackend.ScreenHeight, value);
+                    }
+                    return;
+                }
+#endif
+                if (OperatingSystem.IsBrowser()) return;
                 try
                 {
                     if (value != Raylib.IsWindowFullscreen())
