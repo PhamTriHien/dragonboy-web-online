@@ -101,7 +101,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho initCommand.
 	/// </summary>
-	private void initCommand()
+	public void initCommand()
 		{
 			nCmdPlay = 0;
 			string text = Rms.loadRMSString(Rms.RMS_acc);

@@ -61,6 +61,8 @@ public partial class GameCanvas : IActionListener
 				{
 					keyHold[21] = true;
 					keyPressed[21] = true;
+					keyHold[2] = true;
+					keyPressed[2] = true;
 				}
 				break;
 			case 115:
@@ -79,6 +81,8 @@ public partial class GameCanvas : IActionListener
 				{
 					keyHold[22] = true;
 					keyPressed[22] = true;
+					keyHold[8] = true;
+					keyPressed[8] = true;
 				}
 				break;
 			case 97:
@@ -97,6 +101,8 @@ public partial class GameCanvas : IActionListener
 				{
 					keyHold[23] = true;
 					keyPressed[23] = true;
+					keyHold[4] = true;
+					keyPressed[4] = true;
 				}
 				break;
 			case 100:
@@ -115,6 +121,8 @@ public partial class GameCanvas : IActionListener
 				{
 					keyHold[24] = true;
 					keyPressed[24] = true;
+					keyHold[6] = true;
+					keyPressed[6] = true;
 				}
 				break;
 			case -38:

@@ -25,6 +25,9 @@ namespace DragonBoy_Web_Host
         [JSImport("globalThis.DragonBoyWeb.isTouchDevice")]
         internal static partial bool IsTouchDevice();
 
+        [JSImport("globalThis.DragonBoyWeb.getSafeAreaInsetsPacked")]
+        internal static partial int GetSafeAreaInsetsPacked();
+
         [JSImport("globalThis.DragonBoyWeb.isTextureLoaded")]
         internal static partial bool IsTextureLoaded(int texId);
 
@@ -47,7 +50,7 @@ namespace DragonBoy_Web_Host
         internal static partial byte[] ReadTexturePixels(int texId, int width, int height);
 
         [JSImport("globalThis.DragonBoyWeb.beginFrame")]
-        internal static partial void BeginFrame(int virtualW, int virtualH);
+        internal static partial void BeginFrame(int virtualW, int virtualH, int renderMode);
 
         [JSImport("globalThis.DragonBoyWeb.endFrame")]
         internal static partial void EndFrame();

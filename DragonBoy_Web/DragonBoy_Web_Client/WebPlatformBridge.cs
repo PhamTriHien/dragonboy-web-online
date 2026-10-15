@@ -59,7 +59,13 @@ namespace DragonBoy_Web_Host
         /// </summary>
         public (int left, int top, int right, int bottom) GetSafeAreaInsets()
         {
-            return (0, 0, 0, 0);
+            int packed = WebInterop.GetSafeAreaInsetsPacked();
+            if (packed == 0) return (0, 0, 0, 0);
+            int left = packed & 0xFF;
+            int top = (packed >> 8) & 0xFF;
+            int right = (packed >> 16) & 0xFF;
+            int bottom = (packed >> 24) & 0xFF;
+            return (left, top, right, bottom);
         }
 
         /// <summary>

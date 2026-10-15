@@ -106,8 +106,14 @@ public class Main : MonoBehaviour
 #if ANDROID || __ANDROID__
 		isPC = false;
 #else
-		isPC = !System.OperatingSystem.IsAndroid() && !System.OperatingSystem.IsIOS();
+		isPC = !System.OperatingSystem.IsAndroid() && !System.OperatingSystem.IsIOS() && !(DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current?.IsTouchDevice ?? false);
 #endif
+		if (!isPC)
+		{
+			GameCanvas.isTouch = true;
+			GameCanvas.isTouchControl = true;
+			mSystem.clientType = 2;
+		}
 		started = true;
 		if (isPC)
 		{
@@ -245,8 +251,14 @@ public class Main : MonoBehaviour
 #if ANDROID || __ANDROID__
 			isPC = false;
 #else
-			isPC = !System.OperatingSystem.IsAndroid() && !System.OperatingSystem.IsIOS();
+			isPC = !System.OperatingSystem.IsAndroid() && !System.OperatingSystem.IsIOS() && !(DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current?.IsTouchDevice ?? false);
 #endif
+			if (!isPC)
+			{
+				GameCanvas.isTouch = true;
+				GameCanvas.isTouchControl = true;
+				mSystem.clientType = 2;
+			}
 			if (isPC && Application.CurrentTabId == 1)
 			{
 				Screen.fullScreen = ModGraphics.isFullscreen;

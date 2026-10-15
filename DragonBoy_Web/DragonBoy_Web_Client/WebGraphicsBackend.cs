@@ -40,14 +40,8 @@ namespace DragonBoy_Web_Host
         /// </summary>
         public static void OnSetResolution(int width, int height, bool fullscreen)
         {
-            if (width > 0 && height > 0)
-            {
-                _virtualW = width;
-                _virtualH = height;
-            }
-            Screen.customWidth = _virtualW;
-            Screen.customHeight = _virtualH;
-            WebInterop.SetResolution(_virtualW, _virtualH, fullscreen);
+            WebInterop.SetResolution(width, height, fullscreen);
+            UpdateDynamicViewport();
         }
 
         /// <summary>
@@ -73,7 +67,7 @@ namespace DragonBoy_Web_Host
         {
             _clipOffsetStack.Clear();
             _currentOffset = Vector2.zero;
-            WebInterop.BeginFrame(_virtualW, _virtualH);
+            WebInterop.BeginFrame(_virtualW, _virtualH, ModGraphics.renderMode);
         }
 
         /// <summary>

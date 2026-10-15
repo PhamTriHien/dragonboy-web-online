@@ -161,6 +161,15 @@ public static class ModGraphics
 					GameScr.gamePad.updateZone();
 				}
 				GameScr.setSkillBarPosition();
+				if (GameCanvas.loginScr != null)
+				{
+					GameCanvas.loginScr.updatePosition();
+				}
+				if (GameCanvas.serverScreen != null && GameCanvas.currentScreen == GameCanvas.serverScreen)
+				{
+					ServerListScreen.createDeleteRMS();
+					GameCanvas.serverScreen.initCommand();
+				}
 			}
 		}
 		catch

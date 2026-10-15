@@ -25,6 +25,12 @@
 
     let virtualW = 1024;
     let virtualH = 600;
+    let targetBaseW = 1024;
+    let targetBaseH = 600;
+    let isMobileOrTablet = false;
+    let isPortraitRotated = false;
+    let safeAreaPacked = 0;
+    let lastRenderMode = -1;
     let clipDepth = 0;
     let matrixDepth = 0;
     let clipboardCache = "";
@@ -141,18 +147,130 @@
         return btoa(bin);
     }
 
-    function updateCanvasViewportSize() {
-        const w = Math.max(320, Math.floor(window.innerWidth));
-        const h = Math.max(240, Math.floor(window.innerHeight));
-        if (canvas.width !== w || canvas.height !== h) {
-            canvas.width = w;
-            canvas.height = h;
+    function detectMobileOrTabletDevice() {
+        const ua = navigator.userAgent || "";
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+            return true;
         }
-        virtualW = w;
-        virtualH = h;
+        if (navigator.userAgentData && navigator.userAgentData.mobile) {
+            return true;
+        }
+        if (/Macintosh/i.test(ua) && navigator.maxTouchPoints && navigator.maxTouchPoints > 1) {
+            return true;
+        }
+        if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && (("ontouchstart" in window) || navigator.maxTouchPoints > 0)) {
+            return true;
+        }
+        return false;
+    }
+
+    function parseCssPx(val) {
+        const n = parseFloat(val);
+        return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    function updateCanvasViewportSize() {
+        isMobileOrTablet = detectMobileOrTabletDevice();
+        const vv = window.visualViewport;
+        const cssW = Math.max(240, Math.floor((vv && vv.width > 0) ? vv.width : (window.innerWidth || document.documentElement.clientWidth || 1024)));
+        const cssH = Math.max(240, Math.floor((vv && vv.height > 0) ? vv.height : (window.innerHeight || document.documentElement.clientHeight || 600)));
+
+        isPortraitRotated = isMobileOrTablet && (cssW < cssH);
+        const landscapeW = isPortraitRotated ? cssH : cssW;
+        const landscapeH = isPortraitRotated ? cssW : cssH;
+        const shortSide = Math.min(landscapeW, landscapeH);
+
+        let baseH;
+        if (isMobileOrTablet) {
+            if (shortSide < 600) {
+                baseH = Math.min(Math.max(targetBaseH || 600, 540), 720);
+            } else {
+                baseH = Math.min(Math.max(targetBaseH || 600, 600), 900);
+            }
+        } else {
+            baseH = Math.min(Math.max(targetBaseH || 600, 600), 1080);
+        }
+
+        const aspect = landscapeW / Math.max(1, landscapeH);
+        let vh = baseH;
+        let vw = Math.round(vh * aspect);
+
+        const minW = Math.max(960, Math.round(baseH * 1.6));
+        const maxW = Math.round(baseH * 2.4);
+        if (vw < minW) {
+            vw = minW;
+            vh = Math.round(minW / Math.max(0.5, aspect));
+        } else if (vw > maxW) {
+            vw = maxW;
+            vh = Math.round(maxW / Math.max(0.5, aspect));
+        }
+
+        vw = (vw + 1) & ~1;
+        vh = (vh + 1) & ~1;
+        virtualW = vw;
+        virtualH = vh;
+
+        const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2.5);
+        const backingW = Math.max(320, Math.round(cssW * dpr));
+        const backingH = Math.max(240, Math.round(cssH * dpr));
+        if (canvas.width !== backingW || canvas.height !== backingH) {
+            canvas.width = backingW;
+            canvas.height = backingH;
+        }
+
+        try {
+            const cs = getComputedStyle(document.documentElement);
+            const rawTop = parseCssPx(cs.getPropertyValue("--sat"));
+            const rawRight = parseCssPx(cs.getPropertyValue("--sar"));
+            const rawBottom = parseCssPx(cs.getPropertyValue("--sab"));
+            const rawLeft = parseCssPx(cs.getPropertyValue("--sal"));
+
+            let effLeft = rawLeft;
+            let effTop = rawTop;
+            let effRight = rawRight;
+            let effBottom = rawBottom;
+            if (isPortraitRotated) {
+                effLeft = rawTop;
+                effTop = rawRight;
+                effRight = rawBottom;
+                effBottom = rawLeft;
+            }
+
+            const zoom = 2;
+            const scaleX = landscapeW / Math.max(1, virtualW);
+            const scaleY = landscapeH / Math.max(1, virtualH);
+            const vLeft = Math.min(120, Math.max(0, Math.round(effLeft / (scaleX * zoom))));
+            const vTop = Math.min(120, Math.max(0, Math.round(effTop / (scaleY * zoom))));
+            const vRight = Math.min(120, Math.max(0, Math.round(effRight / (scaleX * zoom))));
+            const vBottom = Math.min(120, Math.max(0, Math.round(effBottom / (scaleY * zoom))));
+            safeAreaPacked = (vLeft & 0xFF) | ((vTop & 0xFF) << 8) | ((vRight & 0xFF) << 16) | ((vBottom & 0xFF) << 24);
+        } catch (_) {
+            safeAreaPacked = 0;
+        }
+    }
+
+    function applyBaseTransform() {
+        if (isPortraitRotated) {
+            const scaleX = canvas.height / Math.max(1, virtualW);
+            const scaleY = canvas.width / Math.max(1, virtualH);
+            ctx.setTransform(0, scaleX, -scaleY, 0, canvas.width, 0);
+        } else {
+            const scaleX = canvas.width / Math.max(1, virtualW);
+            const scaleY = canvas.height / Math.max(1, virtualH);
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+        }
     }
 
     window.addEventListener("resize", updateCanvasViewportSize);
+    window.addEventListener("orientationchange", () => {
+        updateCanvasViewportSize();
+        setTimeout(updateCanvasViewportSize, 150);
+    });
+    document.addEventListener("fullscreenchange", updateCanvasViewportSize);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", updateCanvasViewportSize);
+        window.visualViewport.addEventListener("scroll", updateCanvasViewportSize);
+    }
     updateCanvasViewportSize();
 
     function getFontFamily(fontTheme) {
@@ -205,14 +323,21 @@
         return tc;
     }
 
-    // Input coordinates helper
     function toVirtualCoords(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = virtualW / Math.max(1, rect.width);
-        const scaleY = virtualH / Math.max(1, rect.height);
+        const rw = Math.max(1, rect.width);
+        const rh = Math.max(1, rect.height);
+        const relX = clientX - rect.left;
+        const relY = clientY - rect.top;
+        if (isPortraitRotated) {
+            return {
+                x: (relY / rh) * virtualW,
+                y: ((rw - relX) / rw) * virtualH
+            };
+        }
         return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
+            x: (relX / rw) * virtualW,
+            y: (relY / rh) * virtualH
         };
     }
 
@@ -439,8 +564,17 @@
         getCanvasHeight: () => virtualH,
         isFullScreen: () => !!document.fullscreenElement,
         setResolution: (w, h, fullscreen) => {
+            if (w > 0 && h > 0) {
+                targetBaseW = w;
+                targetBaseH = h;
+                updateCanvasViewportSize();
+            }
             if (fullscreen && !document.fullscreenElement) {
-                document.documentElement.requestFullscreen?.().catch(() => { });
+                document.documentElement.requestFullscreen?.().then(() => {
+                    if (isMobileOrTablet && screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock("landscape").catch(() => { });
+                    }
+                }).catch(() => { });
             } else if (!fullscreen && document.fullscreenElement) {
                 document.exitFullscreen?.().catch(() => { });
             }
@@ -448,7 +582,8 @@
         setWindowTitle: (title) => {
             if (!isEmbeddedTab && title) document.title = title;
         },
-        isTouchDevice: () => ("ontouchstart" in window) || (navigator.maxTouchPoints > 0),
+        isTouchDevice: () => isMobileOrTablet,
+        getSafeAreaInsetsPacked: () => safeAreaPacked,
 
         isTextureLoaded: (texId) => {
             const entry = textures.get(texId);
@@ -646,7 +781,7 @@
             return new Uint8Array(imgData.data.buffer);
         },
 
-        beginFrame: (vw, vh) => {
+        beginFrame: (vw, vh, renderMode) => {
             while (clipDepth > 0) {
                 ctx.restore();
                 clipDepth--;
@@ -656,10 +791,20 @@
                 matrixDepth--;
             }
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.imageSmoothingEnabled = false;
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = "#000000";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            applyBaseTransform();
+            const smooth = (renderMode === 1);
+            ctx.imageSmoothingEnabled = smooth;
+            if (smooth) {
+                ctx.imageSmoothingQuality = "high";
+            }
+            if (lastRenderMode !== renderMode) {
+                lastRenderMode = renderMode;
+                canvas.style.imageRendering = smooth ? "auto" : "pixelated";
+            }
         },
 
         endFrame: () => {
@@ -789,6 +934,9 @@
             while (matrixDepth > 0) {
                 ctx.restore();
                 matrixDepth--;
+            }
+            if (clipDepth === 0) {
+                applyBaseTransform();
             }
         },
 
