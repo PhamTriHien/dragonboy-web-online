@@ -21,6 +21,7 @@
     const kbModal = document.getElementById("mobile-keyboard-modal");
     const kbInput = document.getElementById("mobile-keyboard-input");
     const kbOkBtn = document.getElementById("mobile-keyboard-ok");
+    const kbCancelBtn = document.getElementById("mobile-keyboard-cancel");
     const tabIframesContainer = document.getElementById("tab-iframes-container");
 
     let virtualW = 1024;
@@ -170,6 +171,9 @@
     }
 
     function updateCanvasViewportSize() {
+        if (kbModal && kbModal.classList.contains("visible")) {
+            return;
+        }
         isMobileOrTablet = detectMobileOrTabletDevice();
         const vv = window.visualViewport;
         const cssW = Math.max(240, Math.floor((vv && vv.width > 0) ? vv.width : (window.innerWidth || document.documentElement.clientWidth || 1024)));
@@ -442,6 +446,7 @@
             const pt = toVirtualCoords(e.clientX, e.clientY);
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(0, pt.x, pt.y, e.button || 0);
+                wasmExports.DragonBoy_Web_Host.Program.OnInputImmediate(performance.now());
             }
             e.preventDefault();
         }, { passive: false });
@@ -457,14 +462,15 @@
 
         const onUp = (e) => {
             if (kbModal.classList.contains("visible")) return;
+            const pt = toVirtualCoords(e.clientX, e.clientY);
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(1, pt.x, pt.y, e.button || 0);
+                wasmExports.DragonBoy_Web_Host.Program.OnInputImmediate(performance.now());
+            }
             if (pendingFullscreenAction !== 0) {
                 const want = pendingFullscreenAction > 0;
                 pendingFullscreenAction = 0;
                 applyFullscreenChange(want);
-            }
-            const pt = toVirtualCoords(e.clientX, e.clientY);
-            if (wasmExports) {
-                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(1, pt.x, pt.y, e.button || 0);
             }
         };
         window.addEventListener("pointerup", onUp, { passive: true });
@@ -524,31 +530,42 @@
             }
         });
 
+        const submitSoftKeyboard = () => {
+            const val = kbInput.value;
+            kbModal.classList.remove("visible");
+            kbInput.blur();
+            canvas.focus();
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardSubmit(val, 1);
+            }
+            setTimeout(updateCanvasViewportSize, 80);
+        };
+
+        const cancelSoftKeyboard = () => {
+            const val = kbInput.value;
+            kbModal.classList.remove("visible");
+            kbInput.blur();
+            canvas.focus();
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardSubmit(val, -1);
+            }
+            setTimeout(updateCanvasViewportSize, 80);
+        };
+
         kbInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
-                if (wasmExports) {
-                    wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardCommit(kbInput.value);
-                }
-                kbModal.classList.remove("visible");
-                kbInput.blur();
-                canvas.focus();
+                submitSoftKeyboard();
                 e.preventDefault();
             } else if (e.key === "Escape") {
-                kbModal.classList.remove("visible");
-                kbInput.blur();
-                canvas.focus();
+                cancelSoftKeyboard();
                 e.preventDefault();
             }
         });
 
-        kbOkBtn.addEventListener("click", () => {
-            if (wasmExports) {
-                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnSoftKeyboardCommit(kbInput.value);
-            }
-            kbModal.classList.remove("visible");
-            kbInput.blur();
-            canvas.focus();
-        });
+        kbOkBtn.addEventListener("click", submitSoftKeyboard);
+        if (kbCancelBtn) {
+            kbCancelBtn.addEventListener("click", cancelSoftKeyboard);
+        }
     }
 
     // Multi-Tab Iframe coordination (Parent Window <-> Child Tab Iframes)
@@ -1091,9 +1108,17 @@
         showSoftKeyboard: (initialText) => {
             kbInput.value = initialText || "";
             kbModal.classList.add("visible");
-            setTimeout(() => {
+            try {
                 kbInput.focus();
                 kbInput.setSelectionRange(kbInput.value.length, kbInput.value.length);
+            } catch (_) { }
+            setTimeout(() => {
+                if (kbModal.classList.contains("visible")) {
+                    try {
+                        kbInput.focus();
+                        kbInput.setSelectionRange(kbInput.value.length, kbInput.value.length);
+                    } catch (_) { }
+                }
             }, 30);
         },
 
@@ -1101,6 +1126,7 @@
             kbModal.classList.remove("visible");
             kbInput.blur();
             canvas.focus();
+            setTimeout(updateCanvasViewportSize, 80);
         },
 
         getRelayWsUrl: (targetHost, targetPort) => {

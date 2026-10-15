@@ -158,19 +158,19 @@
 
         #mobile-keyboard-modal {
             position: fixed;
-            top: 12px;
+            top: max(10px, env(safe-area-inset-top, 10px));
             left: 50%;
             transform: translateX(-50%);
             z-index: 90;
             display: none;
             align-items: center;
             gap: 8px;
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid #ffd166;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1.5px solid #ffd166;
             border-radius: 10px;
-            padding: 8px 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-            width: min(440px, 94vw);
+            padding: 8px 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+            width: min(480px, 94vw);
         }
 
         #mobile-keyboard-modal.visible {
@@ -179,12 +179,13 @@
 
         #mobile-keyboard-input {
             flex: 1;
+            min-width: 0;
             background: #1e293b;
             color: #ffffff;
             border: 1px solid #475569;
             border-radius: 6px;
             padding: 8px 10px;
-            font-size: 15px;
+            font-size: 16px;
             outline: none;
             user-select: text;
             -webkit-user-select: text;
@@ -199,6 +200,19 @@
             font-weight: 700;
             font-size: 14px;
             cursor: pointer;
+            white-space: nowrap;
+        }
+
+        #mobile-keyboard-cancel {
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #64748b;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -210,8 +224,9 @@
     <div id="tab-iframes-container"></div>
 
     <div id="mobile-keyboard-modal">
-        <input id="mobile-keyboard-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Nhập nội dung..." />
+        <input id="mobile-keyboard-input" type="text" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Nhập nội dung..." />
         <button id="mobile-keyboard-ok" type="button">Xong</button>
+        <button id="mobile-keyboard-cancel" type="button">Đóng</button>
     </div>
 
     <div id="loading-overlay">
@@ -225,7 +240,7 @@
 
     <div id="app" style="display:none"></div>
 
-    <script src="dragonboy.js?v=4"></script>
+    <script src="dragonboy.js?v=5"></script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script>
         window.DragonBoyWeb.bootBlazor();

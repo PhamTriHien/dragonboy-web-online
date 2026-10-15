@@ -247,6 +247,97 @@ namespace DragonBoy_Web_Host
             {
                 activeField.setText(text);
             }
+            if (TField.kb != null)
+            {
+                TField.kb.text = text;
+            }
+            if (ipKeyboard.tk != null)
+            {
+                ipKeyboard.tk.text = text;
+            }
+            if (ChatTextField.gI() != null && ChatTextField.gI().isShow && ChatTextField.gI().right != null)
+            {
+                ChatTextField.gI().right.caption = string.IsNullOrEmpty(text) ? mResources.CLOSE : mResources.DELETE;
+            }
+        }
+
+        /// <summary>
+        /// Xử lý xác nhận (Xong/Enter) hoặc đóng (Hủy/Escape) bàn phím ảo trên thiết bị di động.
+        /// </summary>
+        [JSExport]
+        public static void OnSoftKeyboardSubmit(string text, int isDone)
+        {
+            try
+            {
+                TouchScreenKeyboard.visible = false;
+                if (isDone > 0)
+                {
+                    if (text != null)
+                    {
+                        OnSoftKeyboardCommit(text);
+                    }
+                    if (ipKeyboard.tk != null)
+                    {
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            ipKeyboard.tk.text = text;
+                            ipKeyboard.tk.done = true;
+                            ipKeyboard.update();
+                        }
+                        else
+                        {
+                            ipKeyboard.tk = null;
+                            if (GameCanvas.panel != null && GameCanvas.panel.isShow && GameCanvas.panel.chatTField != null && GameCanvas.panel.chatTField.isShow)
+                                GameCanvas.panel.chatTField.close();
+                            else if (GameCanvas.panel2 != null && GameCanvas.panel2.isShow && GameCanvas.panel2.chatTField != null && GameCanvas.panel2.chatTField.isShow)
+                                GameCanvas.panel2.chatTField.close();
+                            else if (ChatTextField.gI() != null && ChatTextField.gI().isShow)
+                                ChatTextField.gI().close();
+                        }
+                        return;
+                    }
+                    if (GameCanvas.panel != null && GameCanvas.panel.isShow && GameCanvas.panel.chatTField != null && GameCanvas.panel.chatTField.isShow)
+                    {
+                        if (!string.IsNullOrEmpty(text)) GameCanvas.panel.chatTField.sendChat();
+                        else GameCanvas.panel.chatTField.close();
+                        return;
+                    }
+                    if (GameCanvas.panel2 != null && GameCanvas.panel2.isShow && GameCanvas.panel2.chatTField != null && GameCanvas.panel2.chatTField.isShow)
+                    {
+                        if (!string.IsNullOrEmpty(text)) GameCanvas.panel2.chatTField.sendChat();
+                        else GameCanvas.panel2.chatTField.close();
+                        return;
+                    }
+                    if (ChatTextField.gI() != null && ChatTextField.gI().isShow)
+                    {
+                        if (!string.IsNullOrEmpty(text)) ChatTextField.gI().sendChat();
+                        else ChatTextField.gI().close();
+                        return;
+                    }
+                    if (TField.kb != null)
+                    {
+                        TField.kb.text = text ?? string.Empty;
+                        TField.kb.done = true;
+                    }
+                }
+                else
+                {
+                    ipKeyboard.tk = null;
+                    if (GameCanvas.panel != null && GameCanvas.panel.isShow && GameCanvas.panel.chatTField != null && GameCanvas.panel.chatTField.isShow && string.IsNullOrEmpty(GameCanvas.panel.chatTField.tfChat?.getText()))
+                    {
+                        GameCanvas.panel.chatTField.close();
+                    }
+                    else if (GameCanvas.panel2 != null && GameCanvas.panel2.isShow && GameCanvas.panel2.chatTField != null && GameCanvas.panel2.chatTField.isShow && string.IsNullOrEmpty(GameCanvas.panel2.chatTField.tfChat?.getText()))
+                    {
+                        GameCanvas.panel2.chatTField.close();
+                    }
+                    else if (ChatTextField.gI() != null && ChatTextField.gI().isShow && string.IsNullOrEmpty(ChatTextField.gI().tfChat?.getText()))
+                    {
+                        ChatTextField.gI().close();
+                    }
+                }
+            }
+            catch { }
         }
 
         /// <summary>

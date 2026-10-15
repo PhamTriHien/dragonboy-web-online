@@ -195,7 +195,7 @@ public class mScreen
 	{
 		g.translate(-g.getTranslateX(), -g.getTranslateY());
 		g.setClip(0, 0, GameCanvas.w, GameCanvas.h + 1);
-		if ((!ChatTextField.gI().isShow || !Main.isPC) && GameCanvas.currentDialog == null && !GameCanvas.menu.showMenu)
+		if (!ChatTextField.gI().isShow && GameCanvas.currentDialog == null && !GameCanvas.menu.showMenu)
 		{
 			GameCanvas.paintz.paintCmdBar(g, left, center, right);
 		}

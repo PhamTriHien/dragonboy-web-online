@@ -59,6 +59,29 @@ namespace DragonBoy_Web_Host
                     GameTabRegistry.DeleteTab(tabId);
                 };
 
+                TouchScreenKeyboard.OpenHandler = (text, t, b1, b2, type, b3, caption) =>
+                {
+                    if (WebInterop.IsTouchDevice())
+                    {
+                        TouchScreenKeyboard.visible = true;
+                        WebInterop.ShowSoftKeyboard(text ?? string.Empty);
+                    }
+                    return new TouchScreenKeyboard
+                    {
+                        active = true,
+                        done = false,
+                        text = text ?? string.Empty
+                    };
+                };
+                TouchScreenKeyboard.ClearHandler = () =>
+                {
+                    TouchScreenKeyboard.visible = false;
+                    if (WebInterop.IsTouchDevice())
+                    {
+                        WebInterop.HideSoftKeyboard();
+                    }
+                };
+
                 WebInterop.SetLoadingProgress("Đang nạp dữ liệu đã lưu trên trình duyệt...", 10);
                 WebStorageSync.HydrateFromBrowserStorage();
 
@@ -146,6 +169,24 @@ namespace DragonBoy_Web_Host
             {
                 Console.WriteLine("[OnBrowserFrame] Error: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Thực thi tức thời chu kỳ xử lý đầu vào ngay trong sự kiện User Gesture của trình duyệt (kích hoạt đồng bộ Bàn phím ảo & Fullscreen trên thiết bị di động).
+        /// </summary>
+        [JSExport]
+        public static void OnInputImmediate(double timestampMs)
+        {
+            if (!_isInitialized || global::Main.main == null) return;
+            try
+            {
+                WebGraphicsBackend.UpdateDynamicViewport();
+                EventPump.ProcessInput(global::Main.main);
+                global::Main.main.FixedUpdate();
+                global::Main.main.Update();
+                WebInputBridge.EndFrameInputReset();
+            }
+            catch { }
         }
 
         /// <summary>

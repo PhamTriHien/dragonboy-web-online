@@ -29,18 +29,34 @@ public partial class TField : IActionListener
 	/// </summary>
 	public static TField GetActive()
 	{
+		if (GameCanvas.panel != null && GameCanvas.panel.isShow && GameCanvas.panel.chatTField != null && GameCanvas.panel.chatTField.isShow && GameCanvas.panel.chatTField.tfChat != null)
+		{
+			return GameCanvas.panel.chatTField.tfChat;
+		}
+		if (GameCanvas.panel2 != null && GameCanvas.panel2.isShow && GameCanvas.panel2.chatTField != null && GameCanvas.panel2.chatTField.isShow && GameCanvas.panel2.chatTField.tfChat != null)
+		{
+			return GameCanvas.panel2.chatTField.tfChat;
+		}
+		if (ChatTextField.gI() != null && ChatTextField.gI().isShow && ChatTextField.gI().tfChat != null)
+		{
+			return ChatTextField.gI().tfChat;
+		}
 		if (currentTField != null && currentTField._isFocus)
 		{
 			return currentTField;
+		}
+		if (GameCanvas.currentDialog is InputDlg inputDlg)
+		{
+			if (inputDlg.tfInput != null && inputDlg.tfInput._isFocus) return inputDlg.tfInput;
 		}
 		if (GameCanvas.currentScreen is LoginScr loginScr)
 		{
 			if (loginScr.tfUser != null && loginScr.tfUser._isFocus) return loginScr.tfUser;
 			if (loginScr.tfPass != null && loginScr.tfPass._isFocus) return loginScr.tfPass;
 		}
-		if (GameCanvas.currentDialog is InputDlg inputDlg)
+		if (GameCanvas.currentScreen is CreateCharScr && CreateCharScr.tAddName != null && CreateCharScr.tAddName._isFocus)
 		{
-			if (inputDlg.tfInput != null && inputDlg.tfInput._isFocus) return inputDlg.tfInput;
+			return CreateCharScr.tAddName;
 		}
 		return null;
 	}
@@ -558,7 +574,7 @@ public partial class TField : IActionListener
 				{
 					kb.text = text;
 				}
-				if (text == string.Empty)
+				if (text == string.Empty && (!TouchScreenKeyboard.visible || currentTField != this))
 				{
 					TouchScreenKeyboard.Clear();
 				}

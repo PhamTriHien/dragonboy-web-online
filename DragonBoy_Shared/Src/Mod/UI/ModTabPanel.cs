@@ -98,7 +98,11 @@ public sealed class ModTabPanel
         ModUI.PaintNativeButton(x, y + 23, bw, ActionBtnHeight, "Mở", SelectedTab == Application.CurrentTabId, g);
         ModUI.PaintNativeButton(rightBtnX, y + 23, bw, ActionBtnHeight, "Dừng", false, g);
         ModUI.PaintNativeButton(x, y + 44, bw, ActionBtnHeight, "Xóa", false, g);
-        ModUI.PaintNativeButton(rightBtnX, y + 44, bw, ActionBtnHeight, "PiP", false, g);
+        string pipLabel = OperatingSystem.IsBrowser()
+            ? (ModGraphics.isFullscreen ? "Thoát Full" : "Full màn")
+            : "PiP";
+        bool pipActive = OperatingSystem.IsBrowser() && ModGraphics.isFullscreen;
+        ModUI.PaintNativeButton(rightBtnX, y + 44, bw, ActionBtnHeight, pipLabel, pipActive, g);
 
         GameTabStatus.TabInfo selInfo = GameTabStatus.GetTabInfo(SelectedTab);
         bool selOnline = selInfo.IsAlive && selInfo.isOnline;
@@ -205,7 +209,14 @@ public sealed class ModTabPanel
         else if (Hit(rightBtnX, y + 44, bw, ActionBtnHeight))
         {
             SoundMn.gI()?.buttonClick();
-            PlatformService.Current.RequestPip();
+            if (OperatingSystem.IsBrowser())
+            {
+                ModGraphics.ToggleFullscreen();
+            }
+            else
+            {
+                PlatformService.Current.RequestPip();
+            }
         }
         else if (showDataActions && height >= 102 && Hit(x, y + 82, bw, ActionBtnHeight))
         {

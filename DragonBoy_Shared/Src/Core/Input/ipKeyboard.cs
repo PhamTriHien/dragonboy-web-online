@@ -5,7 +5,7 @@ using System;
 /// </summary>
 public class ipKeyboard
 {
-	private static TouchScreenKeyboard tk;
+	public static TouchScreenKeyboard tk;
 
 	public static int TEXT;
 
@@ -13,7 +13,7 @@ public class ipKeyboard
 
 	public static int PASS = 2;
 
-	private static Command act;
+	public static Command act;
 
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ openKeyBoard.

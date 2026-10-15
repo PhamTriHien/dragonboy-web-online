@@ -39,6 +39,14 @@ public class InputDlg : Dialog
 		left = new Command(mResources.CLOSE, GameCanvas.gI(), 8882, null);
 		center = ok;
 		show();
+		if (!Main.isPC)
+		{
+			tfInput.setFocusWithKb(isFocus: true);
+		}
+		else
+		{
+			tfInput.setFocus(isFocus: true);
+		}
 	}
 
 	/// <summary>
