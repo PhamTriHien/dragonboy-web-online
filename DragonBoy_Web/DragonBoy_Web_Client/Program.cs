@@ -7,12 +7,18 @@ using UnityEngine;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Điểm vào chính và bộ điều phối vòng lặp khung hình cho phiên bản trình duyệt (.NET 8 WebAssembly).
+    /// </summary>
     public static partial class Program
     {
         private static bool _isInitialized;
         private static double _lastTimestampMs;
         private static double _fixedAccumulatorMs;
 
+        /// <summary>
+        /// Khởi tạo VFS từ bộ nhớ trình duyệt, tải gói tài nguyên khởi động và khởi chạy DragonBoy Engine.
+        /// </summary>
         public static async System.Threading.Tasks.Task Main(string[] args)
         {
             try
@@ -66,7 +72,6 @@ namespace DragonBoy_Web_Host
                     global::Main.main = new global::Main();
                 }
 
-                // Khởi chạy Start() của Main (sẽ tự động đọc mod_config.ini, khởi tạo GameMidlet & GameCanvas)
                 global::Main.main.Start();
 
                 if (Application.CurrentTabId > 1)
@@ -91,6 +96,9 @@ namespace DragonBoy_Web_Host
             await System.Threading.Tasks.Task.Delay(Timeout.Infinite);
         }
 
+        /// <summary>
+        /// Thực thi một chu kỳ mô phỏng vật lý, cập nhật logic và kết xuất đồ họa được gọi từ requestAnimationFrame hoặc Web Worker.
+        /// </summary>
         [JSExport]
         public static void OnBrowserFrame(double timestampMs, int renderEnabled)
         {
@@ -143,6 +151,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Đồng bộ trạng thái HUB và các tệp dùng chung khi tab trình duyệt được kích hoạt hiển thị.
+        /// </summary>
         [JSExport]
         public static void OnTabActivated(int keepHubOpen, int bx, int by)
         {
@@ -166,6 +177,9 @@ namespace DragonBoy_Web_Host
             catch { }
         }
 
+        /// <summary>
+        /// Xử lý yêu cầu dừng hoạt động của tab hiện tại từ cửa sổ quản lý đa tab.
+        /// </summary>
         [JSExport]
         public static void OnTabStopRequested()
         {

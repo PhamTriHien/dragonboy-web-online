@@ -2,6 +2,9 @@ using System.Runtime.InteropServices.JavaScript;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Khai báo các phương thức cầu nối JSImport giao tiếp trực tiếp giữa .NET 8 WebAssembly và đối tượng globalThis.DragonBoyWeb trên trình duyệt.
+    /// </summary>
     public static partial class WebInterop
     {
         [JSImport("globalThis.DragonBoyWeb.getCanvasWidth")]

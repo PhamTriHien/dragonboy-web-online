@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Hạ tầng kết xuất đồ họa 2D chuyển tiếp các lệnh vẽ của Engine sang HTML5 Canvas 2D qua WebInterop.
+    /// </summary>
     public static class WebGraphicsBackend
     {
         private static int _nextTextureId = 1;
@@ -24,11 +27,17 @@ namespace DragonBoy_Web_Host
             set => _targetFrameRate = value > 0 ? value : 60;
         }
 
+        /// <summary>
+        /// Thiết lập độ phân giải khung vẽ và trạng thái toàn màn hình.
+        /// </summary>
         public static void SetResolution(int width, int height, bool fullscreen)
         {
             OnSetResolution(width, height, fullscreen);
         }
 
+        /// <summary>
+        /// Cập nhật kích thước khung vẽ ảo và đồng bộ với HTML5 Canvas.
+        /// </summary>
         public static void OnSetResolution(int width, int height, bool fullscreen)
         {
             if (width > 0 && height > 0)
@@ -41,6 +50,9 @@ namespace DragonBoy_Web_Host
             WebInterop.SetResolution(_virtualW, _virtualH, fullscreen);
         }
 
+        /// <summary>
+        /// Đồng bộ kích thước khung vẽ theo kích thước hiển thị thực tế của cửa sổ trình duyệt.
+        /// </summary>
         public static void UpdateDynamicViewport()
         {
             int cw = WebInterop.GetCanvasWidth();
@@ -54,6 +66,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Khởi đầu khung hình vẽ mới trên HTML5 Canvas.
+        /// </summary>
         public static void BeginFrame()
         {
             _clipOffsetStack.Clear();
@@ -61,11 +76,17 @@ namespace DragonBoy_Web_Host
             WebInterop.BeginFrame(_virtualW, _virtualH);
         }
 
+        /// <summary>
+        /// Kết thúc khung hình vẽ và khôi phục trạng thái ngữ cảnh Canvas.
+        /// </summary>
         public static void EndFrame()
         {
             WebInterop.EndFrame();
         }
 
+        /// <summary>
+        /// Đăng ký texture tải bất đồng bộ theo URL với kích thước logic xác định trước.
+        /// </summary>
         public static int RegisterLazyTexture(string url, int width, int height)
         {
             int texId = _nextTextureId++;
@@ -73,6 +94,9 @@ namespace DragonBoy_Web_Host
             return texId;
         }
 
+        /// <summary>
+        /// Tạo texture trên trình duyệt từ mảng byte PNG/JPEG và trích xuất kích thước ảnh.
+        /// </summary>
         public static bool LoadImageFromBytes(Texture2D tex, byte[] data)
         {
             if (tex == null || data == null || data.Length < 8) return false;
@@ -85,12 +109,18 @@ namespace DragonBoy_Web_Host
             return true;
         }
 
+        /// <summary>
+        /// Kiểm tra xem texture trên trình duyệt đã tải hoàn tất dữ liệu hình ảnh hay chưa.
+        /// </summary>
         public static bool IsTextureLoaded(Texture2D tex)
         {
             if (tex == null || tex.WebTextureId <= 0) return false;
             return WebInterop.IsTextureLoaded(tex.WebTextureId);
         }
 
+        /// <summary>
+        /// Phóng đại hoặc thu nhỏ texture theo thuật toán láng giềng gần nhất (Nearest-Neighbor) trên Canvas.
+        /// </summary>
         public static void ScaleTextureNN(Texture2D tex, int newWidth, int newHeight)
         {
             if (tex == null || newWidth <= 0 || newHeight <= 0) return;
@@ -105,6 +135,9 @@ namespace DragonBoy_Web_Host
             tex.height = newHeight;
         }
 
+        /// <summary>
+        /// Tạo texture mới đã hòa trộn màu (source-atop) trực tiếp trên GPU Canvas2D.
+        /// </summary>
         public static Texture2D BlendTexture(Texture2D srcTex, float level, int rgb)
         {
             if (srcTex == null || srcTex.WebTextureId <= 0 || srcTex.width <= 0 || srcTex.height <= 0)
@@ -122,6 +155,9 @@ namespace DragonBoy_Web_Host
             };
         }
 
+        /// <summary>
+        /// Đẩy mảng điểm ảnh RGBA từ bộ đệm CPU của Texture2D lên Canvas 2D trên trình duyệt.
+        /// </summary>
         public static void ApplyPixelBuffer(Texture2D tex)
         {
             if (tex == null || tex.width <= 0 || tex.height <= 0) return;
@@ -145,6 +181,9 @@ namespace DragonBoy_Web_Host
             tex.WebTextureId = texId;
         }
 
+        /// <summary>
+        /// Đọc dữ liệu điểm ảnh RGBA từ Canvas 2D trên trình duyệt về bộ đệm pixelBuffer của Texture2D khi cần lấy mẫu màu.
+        /// </summary>
         public static void EnsurePixelBufferLoaded(Texture2D tex)
         {
             if (tex == null || tex.width <= 0 || tex.height <= 0) return;
@@ -169,6 +208,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Vẽ một vùng cắt từ Texture2D lên vùng chữ nhật trên màn hình với hệ số nhân màu tint.
+        /// </summary>
         public static void DrawTexture(Rect screenRect, Texture texture, Rect sourceRect, Color tint)
         {
             float destX = screenRect.x;
@@ -216,6 +258,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Vẽ hình chữ nhật đặc màu hoặc phủ Texture2D với tọa độ cộng dồn theo nhóm GUI hiện tại.
+        /// </summary>
         public static void DrawTextureSolid(Rect position, Texture image, Color color, float groupOffsetX, float groupOffsetY)
         {
             float dx = position.x + groupOffsetX;
@@ -233,16 +278,25 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Vẽ hình tròn đặc màu tại tâm và bán kính chỉ định.
+        /// </summary>
         public static void DrawCircle(float centerX, float centerY, float radius, Color c)
         {
             WebInterop.DrawCircle(centerX, centerY, radius, c.r, c.g, c.b, c.a, fill: true);
         }
 
+        /// <summary>
+        /// Vẽ đường viền hình tròn tại tâm và bán kính chỉ định.
+        /// </summary>
         public static void DrawCircleOutline(float centerX, float centerY, float radius, Color c)
         {
             WebInterop.DrawCircle(centerX, centerY, radius, c.r, c.g, c.b, c.a, fill: false);
         }
 
+        /// <summary>
+        /// Đo kích thước chiều rộng và chiều cao của chuỗi văn bản theo GUIStyle và bộ đệm kích thước chữ.
+        /// </summary>
         public static Vector2 MeasureText(string text, GUIStyle style)
         {
             if (string.IsNullOrEmpty(text)) return Vector2.zero;
@@ -260,6 +314,9 @@ namespace DragonBoy_Web_Host
             return new Vector2(w, fontSize + 4f);
         }
 
+        /// <summary>
+        /// Vẽ nhãn văn bản lên Canvas 2D theo định dạng phông chữ, màu sắc và căn lề của GUIStyle.
+        /// </summary>
         public static void DrawLabel(Rect position, string text, GUIStyle style, float groupOffsetX, float groupOffsetY, Color defaultColor)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -304,6 +361,9 @@ namespace DragonBoy_Web_Host
                 alignCode);
         }
 
+        /// <summary>
+        /// Bắt đầu một vùng cắt (clipping group) mới trên Canvas 2D và lưu trạng thái dịch chuyển tọa độ.
+        /// </summary>
         public static void BeginGroup(Rect position)
         {
             _clipOffsetStack.Push(_currentOffset);
@@ -314,6 +374,9 @@ namespace DragonBoy_Web_Host
             WebInterop.PushClipRect(sx, sy, sw, sh);
         }
 
+        /// <summary>
+        /// Kết thúc vùng cắt hiện tại và khôi phục trạng thái dịch chuyển tọa độ trước đó.
+        /// </summary>
         public static void EndGroup()
         {
             if (_clipOffsetStack.Count > 0)
@@ -327,26 +390,41 @@ namespace DragonBoy_Web_Host
             WebInterop.PopClipRect();
         }
 
+        /// <summary>
+        /// Xoay ma trận biến đổi 2D trên Canvas quanh tâm chỉ định một góc tính bằng độ.
+        /// </summary>
         public static void RotateAroundPivot(float angle, Vector2 pivot)
         {
             WebInterop.RotateAroundPivot(angle, pivot.x, pivot.y);
         }
 
+        /// <summary>
+        /// Khôi phục ma trận biến đổi gần nhất trên ngăn xếp Canvas 2D.
+        /// </summary>
         public static void RestoreMatrix()
         {
             WebInterop.RestoreMatrix();
         }
 
+        /// <summary>
+        /// Đặt lại toàn bộ ngăn xếp ma trận biến đổi về trạng thái gốc.
+        /// </summary>
         public static void ResetMatrixStack()
         {
             WebInterop.ResetMatrixStack();
         }
 
+        /// <summary>
+        /// Xóa bộ nhớ đệm đo kích thước chuỗi văn bản khi đổi bộ phông chữ hoặc độ phóng đại.
+        /// </summary>
         public static void InvalidateFontCache()
         {
             _textWidthCache.Clear();
         }
 
+        /// <summary>
+        /// Trích xuất nhanh chiều rộng và chiều cao từ header nhị phân của ảnh PNG hoặc JPEG.
+        /// </summary>
         public static void ParseImageDimensions(byte[] data, out int width, out int height)
         {
             width = 1;

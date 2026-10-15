@@ -1,3 +1,8 @@
+/**
+ * Module trình điều khiển phía trình duyệt cho DragonBoy WebAssembly.
+ * Quản lý HTML5 Canvas 2D renderer, kho lưu trữ ảo IndexedDB/localStorage, sự kiện bàn phím/chuột/cảm ứng,
+ * điều phối đa Tab qua iframe và nạp runtime .NET 8 WebAssembly.
+ */
 (function () {
     "use strict";
 

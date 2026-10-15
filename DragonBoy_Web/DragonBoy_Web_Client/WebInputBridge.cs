@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Cầu nối tiếp nhận và ánh xạ sự kiện chuột, cảm ứng, con lăn và bàn phím từ trình duyệt sang hệ thống Input của Engine.
+    /// </summary>
     public static partial class WebInputBridge
     {
         private static Vector3 _mousePos = Vector3.zero;
@@ -35,6 +38,9 @@ namespace DragonBoy_Web_Host
         public static bool GetKey(KeyCode key) => _keysHeld.Contains(key);
         public static bool GetKeyDown(KeyCode key) => _keysDown.Contains(key);
 
+        /// <summary>
+        /// Đọc giá trị trục con lăn chuột trong khung hình hiện tại.
+        /// </summary>
         public static float GetAxis(string axisName)
         {
             if (axisName == "Mouse ScrollWheel")
@@ -44,6 +50,9 @@ namespace DragonBoy_Web_Host
             return 0f;
         }
 
+        /// <summary>
+        /// Đặt lại trạng thái nhấn/nhả chuột và phím tức thời sau khi kết thúc mỗi khung hình.
+        /// </summary>
         public static void EndFrameInputReset()
         {
             for (int i = 0; i < 3; i++)
@@ -55,6 +64,9 @@ namespace DragonBoy_Web_Host
             _wheelDelta = 0f;
         }
 
+        /// <summary>
+        /// Phát các sự kiện bàn phím đang chờ trong hàng đợi vào vòng lặp OnGUI của Main.
+        /// </summary>
         public static void ProcessInput(global::Main mainGame)
         {
             if (mainGame == null) return;
@@ -72,6 +84,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Tiếp nhận sự kiện con trỏ chuột hoặc chạm cảm ứng từ trình duyệt.
+        /// </summary>
         [JSExport]
         public static void OnPointerEvent(int type, double virtualX, double virtualY, int button)
         {
@@ -93,12 +108,18 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Tiếp nhận sự kiện cuộn con lăn chuột từ trình duyệt.
+        /// </summary>
         [JSExport]
         public static void OnWheelEvent(double deltaY)
         {
             _wheelDelta = (float)(-deltaY * 0.01);
         }
 
+        /// <summary>
+        /// Tiếp nhận sự kiện bàn phím vật lý từ trình duyệt và chuyển đổi sang KeyCode / ký tự Unicode.
+        /// </summary>
         [JSExport]
         public static void OnKeyEvent(int isDown, string code, string keyStr, int ctrl, int shift, int alt)
         {
@@ -155,6 +176,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Đồng bộ nội dung văn bản từ bàn phím ảo trên thiết bị di động vào ô nhập liệu TField đang mở.
+        /// </summary>
         [JSExport]
         public static void OnSoftKeyboardCommit(string text)
         {
@@ -166,6 +190,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Ánh xạ mã phím KeyboardEvent.code của trình duyệt sang enum KeyCode của Engine.
+        /// </summary>
         private static KeyCode MapBrowserKey(string code, string keyStr)
         {
             switch (code)

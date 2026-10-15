@@ -205,6 +205,9 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
+/// <summary>
+/// Chuyển tiếp luồng gói tin nhị phân từ WebSocket của trình duyệt sang kết nối TCP của máy chủ game.
+/// </summary>
 static async System.Threading.Tasks.Task PumpWebSocketToTcpAsync(WebSocket ws, NetworkStream netStream, CancellationToken ct)
 {
     byte[] buf = ArrayPool<byte>.Shared.Rent(65536);
@@ -228,6 +231,9 @@ static async System.Threading.Tasks.Task PumpWebSocketToTcpAsync(WebSocket ws, N
     }
 }
 
+/// <summary>
+/// Chuyển tiếp luồng dữ liệu từ kết nối TCP của máy chủ game sang WebSocket nhị phân của trình duyệt.
+/// </summary>
 static async System.Threading.Tasks.Task PumpTcpToWebSocketAsync(NetworkStream netStream, WebSocket ws, CancellationToken ct)
 {
     byte[] buf = ArrayPool<byte>.Shared.Rent(65536);
@@ -250,6 +256,9 @@ static async System.Threading.Tasks.Task PumpTcpToWebSocketAsync(NetworkStream n
     }
 }
 
+/// <summary>
+/// Xác định đường dẫn thư mục gốc DragonBoy_Shared chứa Assets và Backgrounds.
+/// </summary>
 static string ResolveSharedRoot(string contentRoot)
 {
     string[] candidates =
@@ -272,6 +281,9 @@ static string ResolveSharedRoot(string contentRoot)
     return candidates[0];
 }
 
+/// <summary>
+/// Đóng gói bảng kích thước ảnh PNG và các tệp dữ liệu nhị phân cốt lõi vào gói khởi động (/api/startup-pack).
+/// </summary>
 static byte[] BuildStartupPack(string assetsDir, string customLogoPath)
 {
     var pngDimensions = new List<(string relPath, short w, short h)>(4096);
@@ -349,6 +361,9 @@ static byte[] BuildStartupPack(string assetsDir, string customLogoPath)
     return ms.ToArray();
 }
 
+/// <summary>
+/// Đọc nhanh chiều rộng và chiều cao từ header IHDR 24-byte của tệp PNG.
+/// </summary>
 static bool TryReadPngDimensions(string filePath, out int width, out int height)
 {
     width = 1;

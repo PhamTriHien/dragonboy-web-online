@@ -7,6 +7,9 @@ using UnityEngine;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Quản lý nạp tài nguyên đồ họa, phông chữ và dữ liệu nhị phân cho phiên bản trình duyệt WebAssembly.
+    /// </summary>
     public static class WebAssetLoader
     {
         private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
@@ -14,6 +17,9 @@ namespace DragonBoy_Web_Host
         private static readonly Dictionary<string, byte[]> _binaryAssets = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Texture2D> _textureCache = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Tải và giải nén gói tài nguyên khởi động (/api/startup-pack) vào bộ nhớ đệm và hệ thống tệp ảo VFS.
+        /// </summary>
         public static async System.Threading.Tasks.Task InitializeStartupPackAsync()
         {
             string baseUrl = WebInterop.GetHttpBaseUrl().TrimEnd('/');
@@ -63,6 +69,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Nạp đối tượng tài nguyên (Texture2D, TextAsset, Font) với cơ chế fallback đa mức zoom (x2 -> x1 -> x3 -> x4).
+        /// </summary>
         public static object Load(string cleanPath, string withoutRes, Type type)
         {
             if (string.IsNullOrEmpty(cleanPath)) return null;
@@ -187,11 +196,17 @@ namespace DragonBoy_Web_Host
             return null;
         }
 
+        /// <summary>
+        /// Thực hiện yêu cầu HTTP bất đồng bộ phục vụ lớp tương thích WWW trên trình duyệt.
+        /// </summary>
         public static void FetchWwwAsync(string url, Action<byte[], string, string> onComplete)
         {
             _ = FetchWwwInternalAsync(url, onComplete);
         }
 
+        /// <summary>
+        /// Tải nội dung từ URL qua cổng proxy CORS và trả kết quả về callback.
+        /// </summary>
         private static async System.Threading.Tasks.Task FetchWwwInternalAsync(string url, Action<byte[], string, string> onComplete)
         {
             try
@@ -212,6 +227,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Tải tệp từ URL về hệ thống tệp ảo VFS và đồng bộ xuống bộ nhớ trình duyệt kèm tiến trình phần trăm.
+        /// </summary>
         public static async System.Threading.Tasks.Task DownloadFileToVfsAsync(string url, string targetVfsPath, Action<int> onProgress, Action<bool> onComplete)
         {
             try

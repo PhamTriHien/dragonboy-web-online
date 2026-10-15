@@ -45,6 +45,9 @@ public partial class GameCanvas : IActionListener
 	private static bool skyColorSampled = true;
 	private static Image skySampleImage;
 
+	/// <summary>
+	/// Kiểm tra trạng thái sẵn sàng của texture ảnh nền trên GPU hoặc trình duyệt.
+	/// </summary>
 	private static bool IsBgImageReady(Image img)
 	{
 		if (img == null || img.texture == null)
@@ -58,6 +61,9 @@ public partial class GameCanvas : IActionListener
 #endif
 	}
 
+	/// <summary>
+	/// Lấy mẫu lại màu đỉnh (colorTop), màu đáy (colorBotton) và màu bầu trời (skyColor) ngay khi ảnh nền tải xong.
+	/// </summary>
 	public static void RefreshPendingBgColors()
 	{
 		if (!skyColorSampled && skySampleImage != null && IsBgImageReady(skySampleImage))

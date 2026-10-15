@@ -4,10 +4,16 @@ using System.Text;
 
 namespace DragonBoy_Web_Host
 {
+    /// <summary>
+    /// Đồng bộ hệ thống tệp ảo (VFS) của WebAssembly với IndexedDB và localStorage trên trình duyệt.
+    /// </summary>
     public static class WebStorageSync
     {
         private static bool _isHydrating;
 
+        /// <summary>
+        /// Khôi phục toàn bộ dữ liệu RMS và cấu hình đã lưu từ bộ nhớ trình duyệt vào VFS khi khởi động.
+        /// </summary>
         public static void HydrateFromBrowserStorage()
         {
             _isHydrating = true;
@@ -29,6 +35,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Làm mới các tệp trạng thái đa tab dùng chung từ localStorage.
+        /// </summary>
         public static void RefreshSharedFilesFromLocalStorage()
         {
             if (_isHydrating) return;
@@ -45,6 +54,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Giải mã chuỗi dữ liệu lưu trữ và ghi vào hệ thống tệp ảo trong bộ nhớ.
+        /// </summary>
         private static void ApplyPayloadToVfs(string payload)
         {
             if (string.IsNullOrEmpty(payload)) return;
@@ -83,6 +95,9 @@ namespace DragonBoy_Web_Host
             }
         }
 
+        /// <summary>
+        /// Đồng bộ tệp nhị phân vừa ghi trong VFS xuống bộ nhớ trình duyệt.
+        /// </summary>
         public static void OnFileSaved(string vfsPath, byte[] data)
         {
             if (_isHydrating || string.IsNullOrEmpty(vfsPath) || data == null) return;
@@ -94,6 +109,9 @@ namespace DragonBoy_Web_Host
             catch { }
         }
 
+        /// <summary>
+        /// Đồng bộ tệp văn bản vừa ghi trong VFS xuống bộ nhớ trình duyệt.
+        /// </summary>
         public static void OnTextFileSaved(string vfsPath, string content)
         {
             if (_isHydrating || string.IsNullOrEmpty(vfsPath) || content == null) return;
@@ -105,6 +123,9 @@ namespace DragonBoy_Web_Host
             catch { }
         }
 
+        /// <summary>
+        /// Xóa tệp tương ứng khỏi bộ nhớ trình duyệt khi tệp trong VFS bị xóa.
+        /// </summary>
         public static void OnFileDeleted(string vfsPath)
         {
             if (_isHydrating || string.IsNullOrEmpty(vfsPath)) return;
@@ -116,6 +137,9 @@ namespace DragonBoy_Web_Host
             catch { }
         }
 
+        /// <summary>
+        /// Chuẩn hóa đường dẫn tệp trong VFS về định dạng dấu gạch chéo chuẩn.
+        /// </summary>
         private static string NormalizeVfsPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return "/rms";
