@@ -41,6 +41,7 @@ public partial class GameCanvas : IActionListener
 				g.fillRect(0, 0, w, h);
 				return;
 			}
+			RefreshPendingBgColors();
 			if (colorTop != null && colorTop.Length > 0 && colorTop[colorTop.Length - 1] != 0)
 			{
 				g.setColor(colorTop[colorTop.Length - 1]);

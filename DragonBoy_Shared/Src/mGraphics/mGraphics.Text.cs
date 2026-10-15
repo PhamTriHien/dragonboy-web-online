@@ -208,6 +208,10 @@ public partial class mGraphics
 	/// </summary>
 	public static int getIntByColor(Color cl)
 		{
+			if (cl.a <= 0.01f)
+			{
+				return 0;
+			}
 			float num = cl.r * 255f;
 			float num2 = cl.b * 255f;
 			float num3 = cl.g * 255f;

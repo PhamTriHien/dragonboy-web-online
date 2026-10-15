@@ -171,7 +171,8 @@
     }
 
     function getTintedSource(entry, r, g, b) {
-        const source = entry.canvas || (entry.loaded ? entry.img : null);
+        if (!entry.loaded) return null;
+        const source = entry.canvas || entry.img;
         if (!source) return null;
         if (r >= 0.99 && g >= 0.99 && b >= 0.99) return source;
 
@@ -439,6 +440,11 @@
         },
         isTouchDevice: () => ("ontouchstart" in window) || (navigator.maxTouchPoints > 0),
 
+        isTextureLoaded: (texId) => {
+            const entry = textures.get(texId);
+            return !!(entry && entry.loaded);
+        },
+
         registerLazyTexture: (texId, url, width, height) => {
             const entry = {
                 img: null,
@@ -454,11 +460,12 @@
             img.decoding = "async";
             img.onload = () => {
                 entry.loaded = true;
-                if (img.naturalWidth > 0) entry.width = img.naturalWidth;
-                if (img.naturalHeight > 0) entry.height = img.naturalHeight;
+                if ((!entry.width || entry.width <= 1) && img.naturalWidth > 0) entry.width = img.naturalWidth;
+                if ((!entry.height || entry.height <= 1) && img.naturalHeight > 0) entry.height = img.naturalHeight;
                 if (entry.pendingScales.length > 0) {
-                    for (const fn of entry.pendingScales) fn();
+                    const tasks = entry.pendingScales.slice();
                     entry.pendingScales.length = 0;
+                    for (const fn of tasks) fn();
                 }
             };
             img.src = url;
@@ -481,12 +488,13 @@
             const img = new Image();
             img.onload = () => {
                 entry.loaded = true;
-                if (img.naturalWidth > 0) entry.width = img.naturalWidth;
-                if (img.naturalHeight > 0) entry.height = img.naturalHeight;
+                if ((!entry.width || entry.width <= 1) && img.naturalWidth > 0) entry.width = img.naturalWidth;
+                if ((!entry.height || entry.height <= 1) && img.naturalHeight > 0) entry.height = img.naturalHeight;
                 URL.revokeObjectURL(blobUrl);
                 if (entry.pendingScales.length > 0) {
-                    for (const fn of entry.pendingScales) fn();
+                    const tasks = entry.pendingScales.slice();
                     entry.pendingScales.length = 0;
+                    for (const fn of tasks) fn();
                 }
             };
             img.src = blobUrl;
@@ -507,7 +515,7 @@
                 ctx: dstCtx,
                 width: targetW,
                 height: targetH,
-                loaded: true,
+                loaded: false,
                 pendingScales: []
             };
             textures.set(dstTexId, dstEntry);
@@ -518,16 +526,78 @@
             const performScale = () => {
                 const srcDrawable = srcEntry.canvas || srcEntry.img;
                 if (srcDrawable) {
+                    const sw = srcDrawable.naturalWidth || srcDrawable.width || srcEntry.width;
+                    const sh = srcDrawable.naturalHeight || srcDrawable.height || srcEntry.height;
                     dstCtx.clearRect(0, 0, targetW, targetH);
                     dstCtx.imageSmoothingEnabled = false;
-                    dstCtx.drawImage(srcDrawable, 0, 0, srcEntry.width, srcEntry.height, 0, 0, targetW, targetH);
+                    dstCtx.drawImage(srcDrawable, 0, 0, sw, sh, 0, 0, targetW, targetH);
+                    dstEntry.loaded = true;
+                    if (dstEntry.tintCache) dstEntry.tintCache.clear();
+                    if (dstEntry.pendingScales.length > 0) {
+                        const tasks = dstEntry.pendingScales.slice();
+                        dstEntry.pendingScales.length = 0;
+                        for (const fn of tasks) fn();
+                    }
                 }
             };
 
-            if (srcEntry.loaded || srcEntry.canvas) {
+            if (srcEntry.loaded) {
                 performScale();
             } else if (srcEntry.pendingScales) {
                 srcEntry.pendingScales.push(performScale);
+            }
+        },
+
+        blendTexture: (dstTexId, srcTexId, targetW, targetH, level, r, g, b) => {
+            const dstCanvas = document.createElement("canvas");
+            dstCanvas.width = targetW;
+            dstCanvas.height = targetH;
+            const dstCtx = dstCanvas.getContext("2d");
+            dstCtx.imageSmoothingEnabled = false;
+
+            const dstEntry = {
+                img: null,
+                canvas: dstCanvas,
+                ctx: dstCtx,
+                width: targetW,
+                height: targetH,
+                loaded: false,
+                pendingScales: []
+            };
+            textures.set(dstTexId, dstEntry);
+
+            const srcEntry = textures.get(srcTexId);
+            if (!srcEntry) return;
+
+            const performBlend = () => {
+                const srcDrawable = srcEntry.canvas || srcEntry.img;
+                if (srcDrawable) {
+                    const sw = srcDrawable.naturalWidth || srcDrawable.width || srcEntry.width;
+                    const sh = srcDrawable.naturalHeight || srcDrawable.height || srcEntry.height;
+                    dstCtx.clearRect(0, 0, targetW, targetH);
+                    dstCtx.imageSmoothingEnabled = false;
+                    dstCtx.globalCompositeOperation = "source-over";
+                    dstCtx.drawImage(srcDrawable, 0, 0, sw, sh, 0, 0, targetW, targetH);
+                    if (level > 0.001) {
+                        dstCtx.globalCompositeOperation = "source-atop";
+                        dstCtx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, Math.max(0, level))})`;
+                        dstCtx.fillRect(0, 0, targetW, targetH);
+                        dstCtx.globalCompositeOperation = "source-over";
+                    }
+                    dstEntry.loaded = true;
+                    if (dstEntry.tintCache) dstEntry.tintCache.clear();
+                    if (dstEntry.pendingScales.length > 0) {
+                        const tasks = dstEntry.pendingScales.slice();
+                        dstEntry.pendingScales.length = 0;
+                        for (const fn of tasks) fn();
+                    }
+                }
+            };
+
+            if (srcEntry.loaded) {
+                performBlend();
+            } else if (srcEntry.pendingScales) {
+                srcEntry.pendingScales.push(performBlend);
             }
         },
 
@@ -553,12 +623,13 @@
             const clamped = new Uint8ClampedArray(rgbaBytes.buffer, rgbaBytes.byteOffset, rgbaBytes.byteLength);
             const imgData = new ImageData(clamped, width, height);
             entry.ctx.putImageData(imgData, 0, 0);
+            entry.loaded = true;
             if (entry.tintCache) entry.tintCache.clear();
         },
 
         readTexturePixels: (texId, width, height) => {
             const entry = textures.get(texId);
-            if (!entry) return new Uint8Array(width * height * 4);
+            if (!entry || !entry.loaded) return new Uint8Array(width * height * 4);
             const c = ensureTextureCanvas(entry);
             if (!c || !entry.ctx) return new Uint8Array(width * height * 4);
             const imgData = entry.ctx.getImageData(0, 0, width, height);
@@ -595,12 +666,12 @@
 
         drawTexture: (texId, dstX, dstY, dstW, dstH, srcX, srcY, srcW, srcH, r, g, b, a) => {
             const entry = textures.get(texId);
-            if (!entry) return;
+            if (!entry || !entry.loaded) return;
             const drawable = getTintedSource(entry, r, g, b);
             if (!drawable) return;
 
-            const tw = entry.width;
-            const th = entry.height;
+            const tw = drawable.naturalWidth || drawable.width || entry.width;
+            const th = drawable.naturalHeight || drawable.height || entry.height;
             let sx = srcX * tw;
             let sy = (1.0 - srcY - srcH) * th;
             let sw = srcW * tw;

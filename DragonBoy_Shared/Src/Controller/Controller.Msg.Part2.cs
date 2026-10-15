@@ -506,6 +506,10 @@ public partial class Controller : IMessageHandler
 						GameCanvas.endDlg();
 						SplashScr.imgLogo = null;
 						SmallImage.loadBigRMS();
+						TileMap.tileDataCache.Clear();
+						TileMap.lastTileID = -1;
+						GameCanvas.bgDataCache.Clear();
+						TileMap.lastBgID = -1;
 						mSystem.gcc();
 						ServerListScreen.bigOk = true;
 						ServerListScreen.loadScreen = true;

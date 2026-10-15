@@ -149,7 +149,7 @@ public class BgItem
 		if (image != null && image.getRealImageWidth() > 4)
 		{
 			sbyte[] array = Rms.loadRMS("x" + mGraphics.zoomLevel + "blend" + idImage + "layer" + layer + "_t" + TileMap.tileID);
-			if (array == null)
+			if (array == null || array.Length == 0)
 			{
 				imgNew.put(blendKey, BgItemMn.blendImage(image, layer, idImage));
 				return;

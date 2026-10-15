@@ -85,6 +85,12 @@ namespace DragonBoy_Web_Host
             return true;
         }
 
+        public static bool IsTextureLoaded(Texture2D tex)
+        {
+            if (tex == null || tex.WebTextureId <= 0) return false;
+            return WebInterop.IsTextureLoaded(tex.WebTextureId);
+        }
+
         public static void ScaleTextureNN(Texture2D tex, int newWidth, int newHeight)
         {
             if (tex == null || newWidth <= 0 || newHeight <= 0) return;
@@ -99,6 +105,23 @@ namespace DragonBoy_Web_Host
             tex.height = newHeight;
         }
 
+        public static Texture2D BlendTexture(Texture2D srcTex, float level, int rgb)
+        {
+            if (srcTex == null || srcTex.WebTextureId <= 0 || srcTex.width <= 0 || srcTex.height <= 0)
+            {
+                return null;
+            }
+            int b = rgb & 0xFF;
+            int g = (rgb >> 8) & 0xFF;
+            int r = (rgb >> 16) & 0xFF;
+            int dstId = _nextTextureId++;
+            WebInterop.BlendTexture(dstId, srcTex.WebTextureId, srcTex.width, srcTex.height, level, r, g, b);
+            return new Texture2D(srcTex.width, srcTex.height, allocatePixelBuffer: false)
+            {
+                WebTextureId = dstId
+            };
+        }
+
         public static void ApplyPixelBuffer(Texture2D tex)
         {
             if (tex == null || tex.width <= 0 || tex.height <= 0) return;
@@ -106,21 +129,17 @@ namespace DragonBoy_Web_Host
             if (pixels == null || pixels.Length < tex.width * tex.height) return;
             int width = tex.width;
             int height = tex.height;
+            int total = width * height;
             int texId = tex.WebTextureId > 0 ? tex.WebTextureId : _nextTextureId++;
-            byte[] rgba = new byte[width * height * 4];
-            for (int y = 0; y < height; y++)
+            byte[] rgba = new byte[total * 4];
+            for (int i = 0; i < total; i++)
             {
-                int srcRow = (height - 1 - y) * width;
-                int dstRow = y * width * 4;
-                for (int x = 0; x < width; x++)
-                {
-                    Color c = pixels[srcRow + x];
-                    int idx = dstRow + (x << 2);
-                    rgba[idx] = (byte)System.Math.Clamp((int)(c.r * 255f), 0, 255);
-                    rgba[idx + 1] = (byte)System.Math.Clamp((int)(c.g * 255f), 0, 255);
-                    rgba[idx + 2] = (byte)System.Math.Clamp((int)(c.b * 255f), 0, 255);
-                    rgba[idx + 3] = (byte)System.Math.Clamp((int)(c.a * 255f), 0, 255);
-                }
+                Color c = pixels[i];
+                int idx = i << 2;
+                rgba[idx] = (byte)System.Math.Clamp((int)(c.r * 255f), 0, 255);
+                rgba[idx + 1] = (byte)System.Math.Clamp((int)(c.g * 255f), 0, 255);
+                rgba[idx + 2] = (byte)System.Math.Clamp((int)(c.b * 255f), 0, 255);
+                rgba[idx + 3] = (byte)System.Math.Clamp((int)(c.a * 255f), 0, 255);
             }
             WebInterop.UploadRgbaPixels(texId, rgba, width, height);
             tex.WebTextureId = texId;
@@ -129,31 +148,25 @@ namespace DragonBoy_Web_Host
         public static void EnsurePixelBufferLoaded(Texture2D tex)
         {
             if (tex == null || tex.width <= 0 || tex.height <= 0) return;
+            if (tex.WebTextureId <= 0 || !WebInterop.IsTextureLoaded(tex.WebTextureId)) return;
             int width = tex.width;
             int height = tex.height;
-            Color[] destPixels = new Color[width * height];
-            if (tex.WebTextureId > 0)
+            int total = width * height;
+            byte[] rgba = WebInterop.ReadTexturePixels(tex.WebTextureId, width, height);
+            if (rgba != null && rgba.Length >= total * 4)
             {
-                byte[] rgba = WebInterop.ReadTexturePixels(tex.WebTextureId, width, height);
-                if (rgba != null && rgba.Length >= width * height * 4)
+                Color[] destPixels = new Color[total];
+                for (int i = 0; i < total; i++)
                 {
-                    for (int y = 0; y < height; y++)
-                    {
-                        int srcRow = y * width * 4;
-                        int dstRow = (height - 1 - y) * width;
-                        for (int x = 0; x < width; x++)
-                        {
-                            int idx = srcRow + (x << 2);
-                            destPixels[dstRow + x] = new Color(
-                                rgba[idx] / 255f,
-                                rgba[idx + 1] / 255f,
-                                rgba[idx + 2] / 255f,
-                                rgba[idx + 3] / 255f);
-                        }
-                    }
+                    int idx = i << 2;
+                    destPixels[i] = new Color(
+                        rgba[idx] / 255f,
+                        rgba[idx + 1] / 255f,
+                        rgba[idx + 2] / 255f,
+                        rgba[idx + 3] / 255f);
                 }
+                tex.SetPixels(destPixels);
             }
-            tex.SetPixels(destPixels);
         }
 
         public static void DrawTexture(Rect screenRect, Texture texture, Rect sourceRect, Color tint)

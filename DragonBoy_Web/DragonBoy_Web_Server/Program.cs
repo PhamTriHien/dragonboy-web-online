@@ -288,14 +288,36 @@ static byte[] BuildStartupPack(string assetsDir, string customLogoPath)
             }
         }
 
-        string dataDir = Path.Combine(assetsDir, "data");
-        if (Directory.Exists(dataDir))
+        string[] binaryDirs =
         {
-            foreach (string file in Directory.EnumerateFiles(dataDir, "*", SearchOption.AllDirectories))
+            Path.Combine(assetsDir, "data"),
+            Path.Combine(assetsDir, "mymap"),
+            Path.Combine(assetsDir, "myfont"),
+            Path.Combine(assetsDir, "x2", "effectdata"),
+            Path.Combine(assetsDir, "x1", "effectdata")
+        };
+
+        foreach (string dirPath in binaryDirs)
+        {
+            if (!Directory.Exists(dirPath)) continue;
+            foreach (string file in Directory.EnumerateFiles(dirPath, "*", SearchOption.AllDirectories))
             {
+                string ext = Path.GetExtension(file);
+                if (ext.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+                    ext.Equals(".meta", StringComparison.OrdinalIgnoreCase) ||
+                    ext.Equals(".bytes", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 string rel = Path.GetRelativePath(assetsDir, file).Replace('\\', '/');
                 bundledFiles.Add((rel, File.ReadAllBytes(file)));
             }
+        }
+
+        string infoFile = Path.Combine(assetsDir, "info");
+        if (File.Exists(infoFile))
+        {
+            bundledFiles.Add(("info", File.ReadAllBytes(infoFile)));
         }
     }
 

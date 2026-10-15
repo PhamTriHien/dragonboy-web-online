@@ -545,6 +545,15 @@ public partial class mGraphics
 	public static Image blend(Image img0, float level, int rgb)
 		{
 			if (img0 == null || img0.texture == null) return null;
+#if BROWSER
+			Texture2D blendedTex = DragonBoy_Web_Host.WebGraphicsBackend.BlendTexture(img0.texture, level, rgb);
+			if (blendedTex == null) return img0;
+			Image webImg = new Image();
+			webImg.texture = blendedTex;
+			webImg.w = blendedTex.width;
+			webImg.h = blendedTex.height;
+			return webImg;
+#else
 			int num = rgb & 0xFF;
 			int num2 = (rgb >> 8) & 0xFF;
 			int num3 = (rgb >> 16) & 0xFF;
@@ -579,6 +588,7 @@ public partial class mGraphics
 			Image.setTextureQuality(image.texture);
 			image.texture.Apply();
 			return image;
+#endif
 		}
 
 	/// <summary>

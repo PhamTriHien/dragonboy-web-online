@@ -121,7 +121,10 @@ public class BgItemMn
 			}
 		}
 		byte[] byteArray = getByteArray(image);
-		Rms.saveRMS("x" + mGraphics.zoomLevel + "blend" + idImage + "layer" + layer, ArrayCast.cast(byteArray));
+		if (byteArray != null && byteArray.Length > 0)
+		{
+			Rms.saveRMS("x" + mGraphics.zoomLevel + "blend" + idImage + "layer" + layer, ArrayCast.cast(byteArray));
+		}
 		return image;
 	}
 
@@ -152,7 +155,7 @@ public class BgItemMn
 			if (bgItem.idImage == id && !bgItem.isNotBlend() && bgItem.layer != 2 && bgItem.layer != 4 && !BgItem.imgNew.containsKey(blendKey))
 			{
 				sbyte[] array = Rms.loadRMS("x" + mGraphics.zoomLevel + "blend" + id + "layer" + bgItem.layer + "_t" + TileMap.tileID);
-				if (array == null)
+				if (array == null || array.Length == 0)
 				{
 					BgItem.imgNew.put(blendKey, blendImage(img, bgItem.layer, bgItem.idImage));
 					continue;

@@ -22,6 +22,9 @@ namespace DragonBoy_Web_Host
         [JSImport("globalThis.DragonBoyWeb.isTouchDevice")]
         internal static partial bool IsTouchDevice();
 
+        [JSImport("globalThis.DragonBoyWeb.isTextureLoaded")]
+        internal static partial bool IsTextureLoaded(int texId);
+
         [JSImport("globalThis.DragonBoyWeb.registerLazyTexture")]
         internal static partial void RegisterLazyTexture(int texId, string url, int width, int height);
 
@@ -30,6 +33,9 @@ namespace DragonBoy_Web_Host
 
         [JSImport("globalThis.DragonBoyWeb.scaleTextureNN")]
         internal static partial void ScaleTextureNN(int dstTexId, int srcTexId, int srcW, int srcH, int targetW, int targetH);
+
+        [JSImport("globalThis.DragonBoyWeb.blendTexture")]
+        internal static partial void BlendTexture(int dstTexId, int srcTexId, int targetW, int targetH, double level, int r, int g, int b);
 
         [JSImport("globalThis.DragonBoyWeb.uploadRgbaPixels")]
         internal static partial void UploadRgbaPixels(int texId, byte[] rgbaBytes, int width, int height);

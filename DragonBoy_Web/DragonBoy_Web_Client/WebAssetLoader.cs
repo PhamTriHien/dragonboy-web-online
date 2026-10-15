@@ -72,33 +72,75 @@ namespace DragonBoy_Web_Host
                 return new Font { name = Path.GetFileNameWithoutExtension(cleanPath) };
             }
 
-            if (_textureCache.TryGetValue(cleanPath, out Texture2D cachedTex))
+            string baseClean = cleanPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                ? cleanPath.Substring(0, cleanPath.Length - 4)
+                : cleanPath;
+            string baseNoRes = withoutRes.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                ? withoutRes.Substring(0, withoutRes.Length - 4)
+                : withoutRes;
+            string withoutZoom = baseNoRes;
+            if (withoutZoom.StartsWith("x1/", StringComparison.OrdinalIgnoreCase) ||
+                withoutZoom.StartsWith("x2/", StringComparison.OrdinalIgnoreCase) ||
+                withoutZoom.StartsWith("x3/", StringComparison.OrdinalIgnoreCase) ||
+                withoutZoom.StartsWith("x4/", StringComparison.OrdinalIgnoreCase))
             {
-                return cachedTex;
+                withoutZoom = withoutZoom.Substring(3);
             }
 
             if (type == typeof(TextAsset) || cleanPath.StartsWith("data/", StringComparison.OrdinalIgnoreCase))
             {
-                if (_binaryAssets.TryGetValue(cleanPath, out byte[] dataBytes))
+                string[] textCandidates =
                 {
-                    return new TextAsset(dataBytes);
-                }
-                if (_binaryAssets.TryGetValue(withoutRes, out byte[] dataBytes2))
+                    cleanPath,
+                    withoutRes,
+                    withoutZoom,
+                    "x2/" + withoutZoom,
+                    "x1/" + withoutZoom,
+                    "x3/" + withoutZoom,
+                    "x4/" + withoutZoom,
+                    "data/" + cleanPath,
+                    "data/" + withoutRes,
+                    "data/" + withoutZoom
+                };
+
+                for (int i = 0; i < textCandidates.Length; i++)
                 {
-                    return new TextAsset(dataBytes2);
+                    string tc = textCandidates[i];
+                    if (_binaryAssets.TryGetValue(tc, out byte[] dataBytes))
+                    {
+                        return new TextAsset(dataBytes);
+                    }
+                    if (_binaryAssets.TryGetValue(tc + ".bytes", out byte[] dataBytesExt))
+                    {
+                        return new TextAsset(dataBytesExt);
+                    }
+                    string vfsCandidate = "/Assets/" + tc;
+                    if (File.Exists(vfsCandidate))
+                    {
+                        return new TextAsset(File.ReadAllBytes(vfsCandidate));
+                    }
                 }
-                string vfsCandidate = "/Assets/" + cleanPath;
-                if (File.Exists(vfsCandidate))
-                {
-                    return new TextAsset(File.ReadAllBytes(vfsCandidate));
-                }
+                return null;
             }
 
+            string cacheKey = cleanPath + "@" + mGraphics.zoomLevel;
+            if (_textureCache.TryGetValue(cacheKey, out Texture2D cachedTex))
+            {
+                return cachedTex;
+            }
+
+            string preferredZoom = "x" + mGraphics.zoomLevel + "/";
             string[] candidates =
             {
-                cleanPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? cleanPath : cleanPath + ".png",
-                withoutRes.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? withoutRes : withoutRes + ".png",
-                "res/" + (withoutRes.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? withoutRes : withoutRes + ".png")
+                preferredZoom + withoutZoom + ".png",
+                baseNoRes + ".png",
+                baseClean + ".png",
+                "res/" + baseNoRes + ".png",
+                "x2/" + withoutZoom + ".png",
+                "x1/" + withoutZoom + ".png",
+                "x3/" + withoutZoom + ".png",
+                "x4/" + withoutZoom + ".png",
+                withoutZoom + ".png"
             };
 
             for (int i = 0; i < candidates.Length; i++)
@@ -106,12 +148,33 @@ namespace DragonBoy_Web_Host
                 string key = candidates[i];
                 if (_imageDimensions.TryGetValue(key, out var dims))
                 {
-                    int texId = WebGraphicsBackend.RegisterLazyTexture("/game-assets/" + key, dims.width, dims.height);
-                    var tex = new Texture2D(dims.width, dims.height, allocatePixelBuffer: false)
+                    int targetW = dims.width;
+                    int targetH = dims.height;
+                    if (mGraphics.zoomLevel == 2)
+                    {
+                        if (key.StartsWith("x1/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetW = dims.width * 2;
+                            targetH = dims.height * 2;
+                        }
+                        else if (key.StartsWith("x3/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetW = System.Math.Max(1, (dims.width * 2 + 1) / 3);
+                            targetH = System.Math.Max(1, (dims.height * 2 + 1) / 3);
+                        }
+                        else if (key.StartsWith("x4/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetW = System.Math.Max(1, (dims.width + 1) / 2);
+                            targetH = System.Math.Max(1, (dims.height + 1) / 2);
+                        }
+                    }
+
+                    int texId = WebGraphicsBackend.RegisterLazyTexture("/game-assets/" + key, targetW, targetH);
+                    var tex = new Texture2D(targetW, targetH, allocatePixelBuffer: false)
                     {
                         WebTextureId = texId
                     };
-                    _textureCache[cleanPath] = tex;
+                    _textureCache[cacheKey] = tex;
                     return tex;
                 }
             }

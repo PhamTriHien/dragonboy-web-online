@@ -14,6 +14,9 @@ public class BgData
 	public int[] bgH;
 	public int[] colorTop;
 	public int[] colorBotton;
+	public bool[] bgLayerColorSampled;
+	public bool skyColorSampled;
+	public Image skySampleImage;
 	public int[] layerSpeed;
 	public int[] moveX;
 	public int[] moveXSpeed;
@@ -38,6 +41,84 @@ public class BgData
 public partial class GameCanvas : IActionListener
 {
 	public static System.Collections.Generic.Dictionary<string, BgData> bgDataCache = new System.Collections.Generic.Dictionary<string, BgData>();
+	private static bool[] bgLayerColorSampled;
+	private static bool skyColorSampled = true;
+	private static Image skySampleImage;
+
+	private static bool IsBgImageReady(Image img)
+	{
+		if (img == null || img.texture == null)
+		{
+			return false;
+		}
+#if BROWSER
+		return DragonBoy_Web_Host.WebGraphicsBackend.IsTextureLoaded(img.texture);
+#else
+		return true;
+#endif
+	}
+
+	public static void RefreshPendingBgColors()
+	{
+		if (!skyColorSampled && skySampleImage != null && IsBgImageReady(skySampleImage))
+		{
+			int[] skyData = new int[1];
+			skySampleImage.getRGB(ref skyData, 0, 1, mGraphics.getRealImageWidth(skySampleImage) / 2, 0, 1, 1);
+			if (skyData[0] != 0)
+			{
+				skyColor = skyData[0];
+			}
+			skyColorSampled = true;
+		}
+		if (imgBG == null || colorTop == null || colorBotton == null || bgLayerColorSampled == null)
+		{
+			return;
+		}
+		int count = System.Math.Min(nBg, imgBG.Length);
+		for (int i = 0; i < count; i++)
+		{
+			if (i >= bgLayerColorSampled.Length || bgLayerColorSampled[i])
+			{
+				continue;
+			}
+			Image layerImg = imgBG[i];
+			if (layerImg == null)
+			{
+				bgLayerColorSampled[i] = true;
+				continue;
+			}
+			if (!IsBgImageReady(layerImg))
+			{
+				continue;
+			}
+			int realW = mGraphics.getRealImageWidth(layerImg);
+			int realH = mGraphics.getRealImageHeight(layerImg);
+			if (realW > 0 && realH > 0)
+			{
+				int[] sample = new int[1];
+				layerImg.getRGB(ref sample, 0, 1, realW / 2, 0, 1, 1);
+				if (sample[0] != 0)
+				{
+					colorTop[i] = sample[0];
+				}
+				sample[0] = 0;
+				layerImg.getRGB(ref sample, 0, 1, realW / 2, realH - 1, 1, 1);
+				if (sample[0] != 0)
+				{
+					colorBotton[i] = sample[0];
+				}
+				if (i < bgW.Length && bgW[i] <= 0)
+				{
+					bgW[i] = mGraphics.getImageWidth(layerImg);
+				}
+				if (i < bgH.Length && bgH[i] <= 0)
+				{
+					bgH[i] = mGraphics.getImageHeight(layerImg);
+				}
+			}
+			bgLayerColorSampled[i] = true;
+		}
+	}
 
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho loadBG.
@@ -80,6 +161,9 @@ public partial class GameCanvas : IActionListener
 					bgH = cached.bgH;
 					colorTop = cached.colorTop;
 					colorBotton = cached.colorBotton;
+					bgLayerColorSampled = cached.bgLayerColorSampled;
+					skyColorSampled = cached.skyColorSampled;
+					skySampleImage = cached.skySampleImage;
 					imgCaycot = cached.imgCaycot;
 					imgSun = cached.imgSun;
 					imgSun2 = cached.imgSun2;
@@ -87,13 +171,14 @@ public partial class GameCanvas : IActionListener
 					sunX = cached.sunX;
 					sunY = cached.sunY;
 					sunX2 = cached.sunX2;
-					cloudX = (cached.cloudX != null) ? (int[])cached.cloudX.Clone() : null;
-					cloudY = (cached.cloudY != null) ? (int[])cached.cloudY.Clone() : null;
+					cloudX = (cached.cloudX != null) ? (int[])cloudX.Clone() : null;
+					cloudY = (cached.cloudY != null) ? (int[])cloudY.Clone() : null;
 					imgCloud = cached.imgCloud;
 					if (cached.imgWaterflow != null)
 					{
 						TileMap.imgWaterflow = cached.imgWaterflow;
 					}
+					RefreshPendingBgColors();
 					getYBackground(typeBg);
 					if (typeBg == 4)
 					{
@@ -203,6 +288,8 @@ public partial class GameCanvas : IActionListener
 					nBg = 4;
 					break;
 				}
+				skyColorSampled = true;
+				skySampleImage = null;
 				if (typeBG <= 16)
 				{
 					skyColor = StaticObj.SKYCOLOR[typeBg];
@@ -216,14 +303,28 @@ public partial class GameCanvas : IActionListener
 						{
 							path = "/bg/b" + typeBg + 3 + "-" + TileMap.bgType + ".png";
 						}
-						int[] data = new int[1];
+						skyColor = StaticObj.SKYCOLOR[StaticObj.SKYCOLOR.Length - 1];
 						Image image = loadImageRMS(path);
-						image.getRGB(ref data, 0, 1, mGraphics.getRealImageWidth(image) / 2, 0, 1, 1);
-						skyColor = data[0];
+						skySampleImage = image;
+						if (IsBgImageReady(image))
+						{
+							int[] data = new int[1];
+							image.getRGB(ref data, 0, 1, mGraphics.getRealImageWidth(image) / 2, 0, 1, 1);
+							if (data[0] != 0)
+							{
+								skyColor = data[0];
+							}
+							skyColorSampled = true;
+						}
+						else
+						{
+							skyColorSampled = (image == null);
+						}
 					}
 					catch (Exception)
 					{
 						skyColor = StaticObj.SKYCOLOR[StaticObj.SKYCOLOR.Length - 1];
+						skyColorSampled = true;
 					}
 				}
 				colorTop = new int[StaticObj.SKYCOLOR.Length];
@@ -243,6 +344,7 @@ public partial class GameCanvas : IActionListener
 				bgH = new int[nBg];
 				colorBotton = new int[nBg];
 				colorTop = new int[nBg];
+				bgLayerColorSampled = new bool[nBg];
 				int defaultBgSky = (typeBg >= 0 && typeBg < StaticObj.SKYCOLOR.Length) ? StaticObj.SKYCOLOR[typeBg] : skyColor;
 				for (int iInit = 0; iInit < nBg; iInit++)
 				{
@@ -259,20 +361,29 @@ public partial class GameCanvas : IActionListener
 					{
 						if (imgBG[j] != null)
 						{
-							int[] data2 = new int[1];
-							imgBG[j].getRGB(ref data2, 0, 1, mGraphics.getRealImageWidth(imgBG[j]) / 2, 0, 1, 1);
-							if (data2[0] != 0) colorTop[j] = data2[0];
-							data2 = new int[1];
-							imgBG[j].getRGB(ref data2, 0, 1, mGraphics.getRealImageWidth(imgBG[j]) / 2, mGraphics.getRealImageHeight(imgBG[j]) - 1, 1, 1);
-							if (data2[0] != 0) colorBotton[j] = data2[0];
 							bgW[j] = mGraphics.getImageWidth(imgBG[j]);
 							bgH[j] = mGraphics.getImageHeight(imgBG[j]);
+							if (IsBgImageReady(imgBG[j]))
+							{
+								int[] data2 = new int[1];
+								imgBG[j].getRGB(ref data2, 0, 1, mGraphics.getRealImageWidth(imgBG[j]) / 2, 0, 1, 1);
+								if (data2[0] != 0) colorTop[j] = data2[0];
+								data2 = new int[1];
+								imgBG[j].getRGB(ref data2, 0, 1, mGraphics.getRealImageWidth(imgBG[j]) / 2, mGraphics.getRealImageHeight(imgBG[j]) - 1, 1, 1);
+								if (data2[0] != 0) colorBotton[j] = data2[0];
+								bgLayerColorSampled[j] = true;
+							}
 						}
 						else if (nBg > 1)
 						{
 							imgBG[j] = loadImageRMS("/bg/b" + typeBg + "0.png");
 							bgW[j] = mGraphics.getImageWidth(imgBG[j]);
 							bgH[j] = mGraphics.getImageHeight(imgBG[j]);
+							bgLayerColorSampled[j] = (imgBG[j] == null);
+						}
+						else
+						{
+							bgLayerColorSampled[j] = true;
 						}
 					}
 				}
@@ -288,20 +399,29 @@ public partial class GameCanvas : IActionListener
 						imgBG[k] = loadImageRMS(path2);
 						if (imgBG[k] != null)
 						{
-							int[] data3 = new int[1];
-							imgBG[k].getRGB(ref data3, 0, 1, mGraphics.getRealImageWidth(imgBG[k]) / 2, 0, 1, 1);
-							if (data3[0] != 0) colorTop[k] = data3[0];
-							data3 = new int[1];
-							imgBG[k].getRGB(ref data3, 0, 1, mGraphics.getRealImageWidth(imgBG[k]) / 2, mGraphics.getRealImageHeight(imgBG[k]) - 1, 1, 1);
-							if (data3[0] != 0) colorBotton[k] = data3[0];
 							bgW[k] = mGraphics.getImageWidth(imgBG[k]);
 							bgH[k] = mGraphics.getImageHeight(imgBG[k]);
+							if (IsBgImageReady(imgBG[k]))
+							{
+								int[] data3 = new int[1];
+								imgBG[k].getRGB(ref data3, 0, 1, mGraphics.getRealImageWidth(imgBG[k]) / 2, 0, 1, 1);
+								if (data3[0] != 0) colorTop[k] = data3[0];
+								data3 = new int[1];
+								imgBG[k].getRGB(ref data3, 0, 1, mGraphics.getRealImageWidth(imgBG[k]) / 2, mGraphics.getRealImageHeight(imgBG[k]) - 1, 1, 1);
+								if (data3[0] != 0) colorBotton[k] = data3[0];
+								bgLayerColorSampled[k] = true;
+							}
 						}
 						else if (nBg > 1)
 						{
 							imgBG[k] = loadImageRMS("/bg/b" + typeBg + "0.png");
 							bgW[k] = mGraphics.getImageWidth(imgBG[k]);
 							bgH[k] = mGraphics.getImageHeight(imgBG[k]);
+							bgLayerColorSampled[k] = (imgBG[k] == null);
+						}
+						else
+						{
+							bgLayerColorSampled[k] = true;
 						}
 					}
 				}
@@ -454,6 +574,9 @@ public partial class GameCanvas : IActionListener
 				newBgData.bgH = bgH;
 				newBgData.colorTop = colorTop;
 				newBgData.colorBotton = colorBotton;
+				newBgData.bgLayerColorSampled = bgLayerColorSampled;
+				newBgData.skyColorSampled = skyColorSampled;
+				newBgData.skySampleImage = skySampleImage;
 				newBgData.layerSpeed = (layerSpeed != null) ? (int[])layerSpeed.Clone() : null;
 				newBgData.moveX = (moveX != null) ? (int[])moveX.Clone() : null;
 				newBgData.moveXSpeed = (moveXSpeed != null) ? (int[])moveXSpeed.Clone() : null;
