@@ -234,8 +234,11 @@ public class GamePad
 			{
 				xM = (xC = 54);
 				yM = (yC = GameCanvas.h - 54);
-				isGamePad = false;
-				resetHold();
+				if (isGamePad)
+				{
+					isGamePad = false;
+					resetHold();
+				}
 			}
 		}
 		catch (Exception)

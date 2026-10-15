@@ -119,6 +119,8 @@ namespace DragonBoy_Web_Host
 
                 WebGraphicsBackend.UpdateDynamicViewport();
 
+                EventPump.ProcessInput(global::Main.main);
+
                 _fixedAccumulatorMs += dtMs;
                 int maxSteps = 5;
                 while (_fixedAccumulatorMs >= 16.0 && maxSteps-- > 0)
@@ -133,14 +135,9 @@ namespace DragonBoy_Web_Host
                 if (renderEnabled != 0)
                 {
                     WebGraphicsBackend.BeginFrame();
-                    EventPump.ProcessInput(global::Main.main);
                     Event.current.type = EventType.Repaint;
                     global::Main.main.OnGUI();
                     WebGraphicsBackend.EndFrame();
-                }
-                else
-                {
-                    EventPump.ProcessInput(global::Main.main);
                 }
 
                 WebInputBridge.EndFrameInputReset();

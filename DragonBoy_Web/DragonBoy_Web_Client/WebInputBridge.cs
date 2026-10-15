@@ -65,12 +65,13 @@ namespace DragonBoy_Web_Host
         }
 
         /// <summary>
-        /// Phát các sự kiện bàn phím đang chờ trong hàng đợi vào vòng lặp OnGUI của Main.
+        /// Phát các sự kiện bàn phím và chuột đang chờ vào vòng lặp OnGUI của Main trước khi chạy FixedUpdate.
         /// </summary>
         public static void ProcessInput(global::Main mainGame)
         {
             if (mainGame == null) return;
 
+            bool pointerHandled = false;
             while (_keyQueue.Count > 0)
             {
                 QueuedKeyEvent ev = _keyQueue.Dequeue();
@@ -81,6 +82,20 @@ namespace DragonBoy_Web_Host
                 Event.current.shift = ev.Shift;
                 Event.current.alt = ev.Alt;
                 mainGame.OnGUI();
+                if (!pointerHandled)
+                {
+                    pointerHandled = true;
+                    EndFrameInputReset();
+                }
+            }
+
+            if (!pointerHandled && (_mouseDown[0] || _mouseUp[0] || _mouseHeld[0] || _wheelDelta != 0f))
+            {
+                Event.current.type = EventType.Layout;
+                Event.current.keyCode = KeyCode.None;
+                Event.current.character = '\0';
+                mainGame.OnGUI();
+                EndFrameInputReset();
             }
         }
 
@@ -130,10 +145,20 @@ namespace DragonBoy_Web_Host
 
             if (isDown != 0)
             {
+                bool wasHeld = kc != KeyCode.None && _keysHeld.Contains(kc);
                 if (kc != KeyCode.None)
                 {
                     _keysHeld.Add(kc);
-                    _keysDown.Add(kc);
+                    if (!wasHeld)
+                    {
+                        _keysDown.Add(kc);
+                    }
+                }
+
+                bool isTextFocused = ChatTextField.gI().isShow || TField.GetActive() != null;
+                if (wasHeld && !isTextFocused)
+                {
+                    return;
                 }
 
                 char ch = '\0';
@@ -172,8 +197,42 @@ namespace DragonBoy_Web_Host
                 if (kc != KeyCode.None)
                 {
                     _keysHeld.Remove(kc);
+                    _keyQueue.Enqueue(new QueuedKeyEvent
+                    {
+                        Type = EventType.KeyUp,
+                        Key = kc,
+                        Character = '\0',
+                        Ctrl = isCtrl,
+                        Shift = isShift,
+                        Alt = isAlt
+                    });
                 }
             }
+        }
+
+        /// <summary>
+        /// Giải phóng toàn bộ trạng thái phím giữ và chuột khi cửa sổ trình duyệt mất tiêu điểm (blur).
+        /// </summary>
+        [JSExport]
+        public static void OnBlurReset()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                _mouseHeld[i] = false;
+                _mouseDown[i] = false;
+                _mouseUp[i] = false;
+            }
+            _keysHeld.Clear();
+            _keysDown.Clear();
+            _keyQueue.Clear();
+            _wheelDelta = 0f;
+            try
+            {
+                GameCanvas.clearKeyHold();
+                GameCanvas.clearKeyPressed();
+                GameCanvas.clearAllPointerEvent();
+            }
+            catch { }
         }
 
         /// <summary>

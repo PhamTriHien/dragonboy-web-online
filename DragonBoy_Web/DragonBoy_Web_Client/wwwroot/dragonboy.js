@@ -243,10 +243,15 @@
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(1, pt.x, pt.y, e.button || 0);
             }
-            e.preventDefault();
         };
-        canvas.addEventListener("pointerup", onUp, { passive: false });
-        canvas.addEventListener("pointercancel", onUp, { passive: false });
+        window.addEventListener("pointerup", onUp, { passive: true });
+        window.addEventListener("pointercancel", onUp, { passive: true });
+
+        window.addEventListener("blur", () => {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnBlurReset();
+            }
+        });
 
         canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
