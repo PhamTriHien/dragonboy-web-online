@@ -311,6 +311,7 @@ public partial class TField
 				}
 				if (kb.done && cmdDoneAction != null)
 				{
+					kb.done = false;
 					cmdDoneAction.performAction();
 				}
 			}

@@ -10,6 +10,7 @@ public static class ModSchedule
 	public static int endMinute = 0;
 	private static long nextCheck;
 	private static bool lastWindow;
+	private static bool hasEvaluatedWindow;
 
 	/// <summary>
 	/// Cấu hình tham số và thiết lập hoạt động cho module.
@@ -19,12 +20,21 @@ public static class ModSchedule
 		string[] parts = (value ?? string.Empty).Split('-');
 		int start, end;
 		if (parts.Length != 2 || !TryMinute(parts[0], out start) || !TryMinute(parts[1], out end)) return false;
+		ApplyPreset(start, end);
+		return true;
+	}
+
+	/// <summary>
+	/// Thiết lập mốc phút bắt đầu và kết thúc cho lịch tự động và buộc kiểm tra lại ngay lập tức.
+	/// </summary>
+	public static void ApplyPreset(int start, int end)
+	{
 		startMinute = start;
 		endMinute = end;
 		isEnabled = true;
+		hasEvaluatedWindow = false;
 		nextCheck = 0;
 		ModConfig.SaveConfig();
-		return true;
 	}
 
 	/// <summary>
@@ -46,6 +56,7 @@ public static class ModSchedule
 	public static void Toggle()
 	{
 		isEnabled = !isEnabled;
+		hasEvaluatedWindow = false;
 		nextCheck = 0;
 		ModConfig.SaveConfig();
 		GameScr.info1.addInfo("Lịch Auto: " + (isEnabled ? "BẬT" : "TẮT"), 0);
@@ -62,7 +73,8 @@ public static class ModSchedule
 		nextCheck = now + 1000;
 		int current = DateTime.Now.Hour * 60 + DateTime.Now.Minute;
 		bool inWindow = startMinute == endMinute ? true : (startMinute < endMinute ? current >= startMinute && current < endMinute : current >= startMinute || current < endMinute);
-		if (inWindow == lastWindow) return;
+		if (hasEvaluatedWindow && inWindow == lastWindow) return;
+		hasEvaluatedWindow = true;
 		lastWindow = inWindow;
 		ModTanSat.autoTanSat = inWindow;
 		ModAutoPick.autoPick = inWindow;

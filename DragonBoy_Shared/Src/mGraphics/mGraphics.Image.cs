@@ -375,6 +375,13 @@ public partial class mGraphics
 	/// </summary>
 	public void drawRegion2(Image image, float x0, float y0, int w, int h, int transform, int x, int y, int anchor)
 		{
+			if (image == null || image.texture == null) return;
+#if BROWSER
+			if (OperatingSystem.IsBrowser() && !DragonBoy_Web_Host.WebGraphicsBackend.IsTextureLoaded(image.texture))
+			{
+				return;
+			}
+#endif
 			GUI.color = image.colorBlend;
 			if (isTranslate)
 			{

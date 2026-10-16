@@ -473,30 +473,21 @@ public static class ModUIAutomation
 		int schedW = (w - 6) / 3;
 		if (px >= x && px <= x + schedW && py >= curY - 2 && py <= curY + 18)
 		{
-			ModSchedule.startMinute = 0;
-			ModSchedule.endMinute = 0;
-			ModSchedule.isEnabled = true;
-			ModConfig.SaveConfig();
+			ModSchedule.ApplyPreset(0, 0);
 			GameScr.info1.addInfo("Lịch Auto: Cả ngày", 0);
 			SoundMn.gI().buttonClick();
 			return true;
 		}
 		if (px >= x + schedW + 3 && px <= x + (schedW + 3) * 2 && py >= curY - 2 && py <= curY + 18)
 		{
-			ModSchedule.startMinute = 8 * 60;
-			ModSchedule.endMinute = 18 * 60;
-			ModSchedule.isEnabled = true;
-			ModConfig.SaveConfig();
+			ModSchedule.ApplyPreset(8 * 60, 18 * 60);
 			GameScr.info1.addInfo("Lịch Auto: 08:00 - 18:00", 0);
 			SoundMn.gI().buttonClick();
 			return true;
 		}
 		if (px >= x + (schedW + 3) * 2 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
-			ModSchedule.startMinute = 22 * 60;
-			ModSchedule.endMinute = 6 * 60;
-			ModSchedule.isEnabled = true;
-			ModConfig.SaveConfig();
+			ModSchedule.ApplyPreset(22 * 60, 6 * 60);
 			GameScr.info1.addInfo("Lịch Auto: 22:00 - 06:00", 0);
 			SoundMn.gI().buttonClick();
 			return true;

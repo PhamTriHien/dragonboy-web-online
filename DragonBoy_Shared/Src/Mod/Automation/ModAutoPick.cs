@@ -36,6 +36,11 @@ public class AutoPickActionListener : IActionListener
 				ModConfig.SaveConfig();
 				SoundMn.gI().buttonClick();
 			}
+			if (ModAutoPick.reopenModUiAfterInput)
+			{
+				ModAutoPick.reopenModUiAfterInput = false;
+				ModUI.uiCustomOpen = true;
+			}
 		}
 		catch
 		{
@@ -164,17 +169,23 @@ public static class ModAutoPick
 		GameScr.info1.addInfo("Đã xóa toàn bộ lọc ID và Tên nhặt", 0);
 	}
 
+	public static bool reopenModUiAfterInput = false;
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ ShowInputFilterId.
 	/// </summary>
 	public static void ShowInputFilterId()
 	{
 		if (GameCanvas.inputDlg == null) return;
+		reopenModUiAfterInput = ModUI.uiCustomOpen;
+		ModUI.uiCustomOpen = false;
+		ModMenu.modMenuOpen = false;
 		GameCanvas.inputDlg.show("Nhập danh sách ID cần nhặt (cách nhau dấu phẩy hoặc khoảng trắng):", new Command("OK", listener, AutoPickActionListener.ACTION_SET_FILTER_IDS, null), TField.INPUT_TYPE_ANY);
 		if (GameCanvas.inputDlg.tfInput != null)
 		{
 			GameCanvas.inputDlg.tfInput.setMaxTextLenght(150);
 			GameCanvas.inputDlg.tfInput.setText(filterIdsRaw);
+			if (!Main.isPC) GameCanvas.inputDlg.tfInput.setFocusWithKb(isFocus: true);
 		}
 	}
 
@@ -184,11 +195,15 @@ public static class ModAutoPick
 	public static void ShowInputFilterName()
 	{
 		if (GameCanvas.inputDlg == null) return;
+		reopenModUiAfterInput = ModUI.uiCustomOpen;
+		ModUI.uiCustomOpen = false;
+		ModMenu.modMenuOpen = false;
 		GameCanvas.inputDlg.show("Nhập từ khóa tên item cần nhặt (cách nhau dấu phẩy):", new Command("OK", listener, AutoPickActionListener.ACTION_SET_FILTER_NAMES, null), TField.INPUT_TYPE_ANY);
 		if (GameCanvas.inputDlg.tfInput != null)
 		{
 			GameCanvas.inputDlg.tfInput.setMaxTextLenght(150);
 			GameCanvas.inputDlg.tfInput.setText(filterNameRaw);
+			if (!Main.isPC) GameCanvas.inputDlg.tfInput.setFocusWithKb(isFocus: true);
 		}
 	}
 

@@ -57,17 +57,23 @@ public static class ModAutoItem
 		GameScr.info1.addInfo("Auto Item: " + (isEnabled ? "BẬT" : "TẮT"), 0);
 	}
 
+	private static bool reopenModUiAfterInput;
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ ShowInputItemIds.
 	/// </summary>
 	public static void ShowInputItemIds()
 	{
 		if (GameCanvas.inputDlg == null) return;
+		reopenModUiAfterInput = ModUI.uiCustomOpen;
+		ModUI.uiCustomOpen = false;
+		ModMenu.modMenuOpen = false;
 		GameCanvas.inputDlg.show("Nhập danh sách ID item cần tự dùng (cách nhau dấu phẩy):", new Command("OK", new AutoItemActionListener(), 1, null), TField.INPUT_TYPE_ANY);
 		if (GameCanvas.inputDlg.tfInput != null)
 		{
 			GameCanvas.inputDlg.tfInput.setMaxTextLenght(150);
 			GameCanvas.inputDlg.tfInput.setText(itemIdsRaw);
+			if (!Main.isPC) GameCanvas.inputDlg.tfInput.setFocusWithKb(isFocus: true);
 		}
 	}
 
@@ -95,6 +101,11 @@ public static class ModAutoItem
 				else
 				{
 					GameCanvas.endDlg();
+				}
+				if (reopenModUiAfterInput)
+				{
+					reopenModUiAfterInput = false;
+					ModUI.uiCustomOpen = true;
 				}
 			}
 			catch

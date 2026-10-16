@@ -279,6 +279,12 @@ public static class ModBackground
 			{
 				File.Delete(filePath);
 			}
+#if BROWSER
+			if (OperatingSystem.IsBrowser())
+			{
+				DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(filePath);
+			}
+#endif
 		}
 		catch
 		{

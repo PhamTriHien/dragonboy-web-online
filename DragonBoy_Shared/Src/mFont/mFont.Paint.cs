@@ -20,17 +20,19 @@ public partial class mFont
 			x--;
 			if (id > 24)
 			{
-				Color[] array = new Color[6]
+				Color[] array = new Color[7]
 				{
 					setColor(6029312),
 					setColor(7169025),
 					setColor(7680),
 					setColor(0),
 					setColor(9264),
-					setColor(6029312)
+					setColor(6029312),
+					setColor(5197647)
 				};
-				color1 = array[id - 25];
-				color2 = array[id - 25];
+				int idx = System.Math.Clamp(id - 25, 0, array.Length - 1);
+				color1 = array[idx];
+				color2 = array[idx];
 				_drawString(g, st, x + 1, y, align);
 				_drawString(g, st, x - 1, y, align);
 				_drawString(g, st, x, y - 1, align);

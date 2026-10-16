@@ -218,9 +218,8 @@ public static class ModAutoBuyBua
 			if (now - lastAutoCheckTime > 30000) // Kiểm tra mỗi 30 giây
 			{
 				lastAutoCheckTime = now;
-				// Nếu đã từng mua thành công và đã hết thời hạn gói (hoặc không còn bùa)
 				long durationMs = (selectedPackage == 0) ? 3600000L : ((selectedPackage == 1) ? 28800000L : 2592000000L);
-				if (lastBuySuccessTime > 0 && now - lastBuySuccessTime > durationMs)
+				if (lastBuySuccessTime == 0 || now - lastBuySuccessTime > durationMs)
 				{
 					StartBuyBuaNow();
 					return;
@@ -390,7 +389,7 @@ public static class ModAutoBuyBua
 				break;
 
 			case AutoBuyBuaState.ReturningToFarm:
-				if (savedFarmMapId > 0)
+				if (savedFarmMapId >= 0)
 				{
 					if (TileMap.mapID == savedFarmMapId && !Char.isLoadingMap && !Char.ischangingMap)
 					{
@@ -458,7 +457,7 @@ public static class ModAutoBuyBua
 		}
 		GameCanvas.menu.showMenu = false;
 
-		if (savedFarmMapId > 0)
+		if (savedFarmMapId >= 0)
 		{
 			currentState = AutoBuyBuaState.ReturningToFarm;
 			stateTimer = mSystem.currentTimeMillis();

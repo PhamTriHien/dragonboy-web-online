@@ -51,7 +51,7 @@ namespace DragonBoy_Web_Host
         }
 
         /// <summary>
-        /// Đặt lại trạng thái nhấn/nhả chuột và phím tức thời sau khi kết thúc mỗi khung hình.
+        /// Đặt lại trạng thái nhấn/nhả chuột và con lăn tức thời sau khi xử lý sự kiện con trỏ.
         /// </summary>
         public static void EndFrameInputReset()
         {
@@ -60,8 +60,15 @@ namespace DragonBoy_Web_Host
                 _mouseDown[i] = false;
                 _mouseUp[i] = false;
             }
-            _keysDown.Clear();
             _wheelDelta = 0f;
+        }
+
+        /// <summary>
+        /// Đặt lại trạng thái phím vừa nhấn (KeyDown) sau khi vòng lặp vật lý FixedUpdate đã xử lý phím tắt.
+        /// </summary>
+        public static void ResetKeyDownFlags()
+        {
+            _keysDown.Clear();
         }
 
         /// <summary>
@@ -71,7 +78,6 @@ namespace DragonBoy_Web_Host
         {
             if (mainGame == null) return;
 
-            bool pointerHandled = false;
             while (_keyQueue.Count > 0)
             {
                 QueuedKeyEvent ev = _keyQueue.Dequeue();
@@ -82,14 +88,9 @@ namespace DragonBoy_Web_Host
                 Event.current.shift = ev.Shift;
                 Event.current.alt = ev.Alt;
                 mainGame.OnGUI();
-                if (!pointerHandled)
-                {
-                    pointerHandled = true;
-                    EndFrameInputReset();
-                }
             }
 
-            if (!pointerHandled && (_mouseDown[0] || _mouseUp[0] || _mouseHeld[0] || _wheelDelta != 0f))
+            if (_mouseDown[0] || _mouseUp[0] || _mouseHeld[0] || _wheelDelta != 0f || global::Main.isPC)
             {
                 Event.current.type = EventType.Layout;
                 Event.current.keyCode = KeyCode.None;
@@ -115,6 +116,18 @@ namespace DragonBoy_Web_Host
             {
                 _mouseHeld[btn] = true;
                 _mouseDown[btn] = true;
+                if (btn == 0 && global::Main.main != null)
+                {
+                    try
+                    {
+                        Event.current.type = EventType.Layout;
+                        Event.current.keyCode = KeyCode.None;
+                        Event.current.character = '\0';
+                        global::Main.main.OnGUI();
+                        _mouseDown[0] = false;
+                    }
+                    catch { }
+                }
             }
             else if (type == 1)
             {
@@ -129,7 +142,11 @@ namespace DragonBoy_Web_Host
         [JSExport]
         public static void OnWheelEvent(double deltaY)
         {
-            _wheelDelta = (float)(-deltaY * 0.01);
+            if (deltaY == 0) return;
+            float step = (float)(-deltaY * 0.01);
+            if (step > 0f && step < 0.1f) step = 0.1f;
+            else if (step < 0f && step > -0.1f) step = -0.1f;
+            _wheelDelta += step;
         }
 
         /// <summary>
@@ -283,6 +300,12 @@ namespace DragonBoy_Web_Host
                             ipKeyboard.tk.text = text;
                             ipKeyboard.tk.done = true;
                             ipKeyboard.update();
+                            if (GameCanvas.panel != null && GameCanvas.panel.isShow && GameCanvas.panel.chatTField != null && GameCanvas.panel.chatTField.isShow)
+                                GameCanvas.panel.chatTField.isShow = false;
+                            if (GameCanvas.panel2 != null && GameCanvas.panel2.isShow && GameCanvas.panel2.chatTField != null && GameCanvas.panel2.chatTField.isShow)
+                                GameCanvas.panel2.chatTField.isShow = false;
+                            if (ChatTextField.gI() != null && ChatTextField.gI().isShow)
+                                ChatTextField.gI().isShow = false;
                         }
                         else
                         {

@@ -43,17 +43,23 @@ public static class ModAutoChat
     /// </summary>
     public static void Stop() { isEnabled = false; nextSendAt = 0; }
 
+    private static bool reopenModUiAfterInput;
+
     /// <summary>
     /// Thực thi phương thức nghiệp vụ ShowInputChatMessage.
     /// </summary>
     public static void ShowInputChatMessage()
     {
         if (GameCanvas.inputDlg == null) return;
+        reopenModUiAfterInput = ModUI.uiCustomOpen;
+        ModUI.uiCustomOpen = false;
+        ModMenu.modMenuOpen = false;
         GameCanvas.inputDlg.show("Nhập nội dung Auto Chat:", new Command("OK", new AutoChatActionListener(), 1, null), TField.INPUT_TYPE_ANY);
         if (GameCanvas.inputDlg.tfInput != null)
         {
             GameCanvas.inputDlg.tfInput.setMaxTextLenght(100);
             GameCanvas.inputDlg.tfInput.setText(message ?? string.Empty);
+            if (!Main.isPC) GameCanvas.inputDlg.tfInput.setFocusWithKb(isFocus: true);
         }
     }
 
@@ -80,6 +86,11 @@ public static class ModAutoChat
                 else
                 {
                     GameCanvas.endDlg();
+                }
+                if (reopenModUiAfterInput)
+                {
+                    reopenModUiAfterInput = false;
+                    ModUI.uiCustomOpen = true;
                 }
             }
             catch

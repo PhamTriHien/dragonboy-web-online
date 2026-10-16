@@ -16,13 +16,26 @@ public static class ModConfig
 		{
 			try
 			{
-#if BROWSER
-				if (OperatingSystem.IsBrowser())
+				if (OperatingSystem.IsBrowser() || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || Application.CurrentTabId > 1)
 				{
-					return Path.Combine(Application.persistentDataPath, "mod_config.ini");
+					string dir = Application.persistentDataPath;
+					if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+					{
+						Directory.CreateDirectory(dir);
+					}
+					return Path.Combine(dir, "mod_config.ini");
 				}
-#endif
-				return Path.Combine(Application.dataPath, "../mod_config.ini");
+				string legacyDesktop = Path.Combine(Application.dataPath, "../mod_config.ini");
+				if (File.Exists(legacyDesktop))
+				{
+					return legacyDesktop;
+				}
+				string pDir = Application.persistentDataPath;
+				if (!string.IsNullOrEmpty(pDir) && !Directory.Exists(pDir))
+				{
+					Directory.CreateDirectory(pDir);
+				}
+				return Path.Combine(pDir, "mod_config.ini");
 			}
 			catch
 			{

@@ -97,20 +97,6 @@ public partial class LoginScr : mScreen, IActionListener
 			{
 				doChangeTip();
 			}
-			if (isLogin2 && !isRes)
-			{
-				tfUser.isPaintCarret = false;
-				tfPass.isPaintCarret = false;
-				tfUser.update();
-				tfPass.update();
-			}
-			else
-			{
-				tfUser.name = ((mResources.language != 2) ? (mResources.phone + "/") : string.Empty) + mResources.email;
-				tfPass.name = mResources.password;
-				tfUser.update();
-				tfPass.update();
-			}
 			if (GameCanvas.isTouch)
 			{
 				if (isRes)

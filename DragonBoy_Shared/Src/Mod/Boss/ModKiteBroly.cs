@@ -137,6 +137,8 @@ public static class ModKiteBroly
 		return false;
 	}
 
+	private static int khinhCongMapId = -1;
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ DoKhinhCong.
 	/// </summary>
@@ -145,8 +147,9 @@ public static class ModKiteBroly
 		Char me = Char.myCharz();
 		if (me == null || me.isDie) return;
 
-		if (khinhCongY == -1)
+		if (khinhCongY == -1 || khinhCongMapId != TileMap.mapID || (TileMap.pxh > 0 && khinhCongY > TileMap.pxh))
 		{
+			khinhCongMapId = TileMap.mapID;
 			khinhCongY = me.cy;
 		}
 

@@ -266,6 +266,8 @@ public static class ModSetActivator
 		return false;
 	}
 
+	private static long lastFullNonJunkWarnTime = 0;
+
 	/// <summary>
 	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của IsJunkItem.
 	/// </summary>
@@ -277,6 +279,22 @@ public static class ModSetActivator
 		if (minStarToKeep > 0 && GetItemStarCount(item) >= minStarToKeep) return false;
 
 		return true;
+	}
+
+	/// <summary>
+	/// Kiểm tra xem trong hành trang có ít nhất một vật phẩm rác có thể bán được hay không.
+	/// </summary>
+	public static bool HasSellableJunkInBag(Char me)
+	{
+		if (me == null || me.arrItemBag == null) return false;
+		for (int i = 0; i < me.arrItemBag.Length; i++)
+		{
+			if (me.arrItemBag[i] != null && IsJunkItem(me.arrItemBag[i]))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/// <summary>
@@ -395,11 +413,21 @@ public static class ModSetActivator
 					break;
 				}
 
+				ModDropRate.ScanBagForSpecialItems(me);
+
 				// Kiểm tra hành trang nếu bật Auto Bán Rác
 				if (autoSellJunk && GetFreeBagSlots() <= 1)
 				{
-					GameScr.info1.addInfo("Hành trang đã đầy! Tự động lưu bãi và đi bán đồ rác tại Urôn...", 0);
-					StartGoSellJunkNow();
+					if (HasSellableJunkInBag(me))
+					{
+						GameScr.info1.addInfo("Hành trang đã đầy! Tự động lưu bãi và đi bán đồ rác tại Urôn...", 0);
+						StartGoSellJunkNow();
+					}
+					else if (now - lastFullNonJunkWarnTime > 30000)
+					{
+						lastFullNonJunkWarnTime = now;
+						GameScr.info1.addInfo("Hành trang đã đầy vật phẩm giá trị (không còn đồ rác để bán)!", 0);
+					}
 				}
 				break;
 

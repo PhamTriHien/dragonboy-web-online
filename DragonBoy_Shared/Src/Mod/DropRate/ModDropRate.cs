@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Module Tối Ưu Tỉ Lệ Rơi Đồ: Tự động nhặt vật phẩm tức thì (Instant Pick), hồi sinh đánh quái và khóa mục tiêu kết liễu.
@@ -16,6 +17,9 @@ public static class ModDropRate
 	public static int totalSetKHCount = 0;
 	public static int totalStarCount = 0;
 	public static long sessionStartTime = 0;
+
+	private static bool bagBaselineInitialized = false;
+	private static readonly HashSet<Item> countedBagItems = new HashSet<Item>();
 
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho InitSession.
@@ -38,8 +42,49 @@ public static class ModDropRate
 		totalSetKHCount = 0;
 		totalStarCount = 0;
 		sessionStartTime = mSystem.currentTimeMillis();
+		bagBaselineInitialized = false;
+		countedBagItems.Clear();
 		GameScr.info1.addInfo("Đã đặt lại thống kê rơi đồ!", 0);
 		SoundMn.gI().buttonClick();
+	}
+
+	/// <summary>
+	/// Quét hành trang nhân vật để ghi nhận các trang bị Đồ Kích Hoạt và Đồ Sao mới nhặt được.
+	/// </summary>
+	public static void ScanBagForSpecialItems(Char me)
+	{
+		if (me == null || me.arrItemBag == null) return;
+		if (!bagBaselineInitialized)
+		{
+			bagBaselineInitialized = true;
+			for (int i = 0; i < me.arrItemBag.Length; i++)
+			{
+				if (me.arrItemBag[i] != null) countedBagItems.Add(me.arrItemBag[i]);
+			}
+			return;
+		}
+		for (int i = 0; i < me.arrItemBag.Length; i++)
+		{
+			Item item = me.arrItemBag[i];
+			if (item == null || item.template == null || !countedBagItems.Add(item)) continue;
+			if (item.template.type >= 0 && item.template.type <= 4)
+			{
+				if (ModSetActivator.IsSetKichHoat(item))
+				{
+					totalSetKHCount++;
+					GameScr.info1?.addInfo("NHẶT ĐỒ KÍCH HOẠT: [" + item.template.id + "] " + item.template.name + "!", 0);
+				}
+				else
+				{
+					int stars = ModSetActivator.GetItemStarCount(item);
+					if (stars > 0)
+					{
+						totalStarCount++;
+						GameScr.info1?.addInfo("NHẶT ĐỒ SAO: [" + item.template.id + "] " + item.template.name + " (" + stars + " Sao)!", 0);
+					}
+				}
+			}
+		}
 	}
 
 	/// <summary>
@@ -84,10 +129,6 @@ public static class ModDropRate
 		Char me = Char.myCharz();
 		int myId = (me != null) ? me.charID : -1;
 
-		// Kiểm tra quyền sở hữu hợp lệ:
-		// - Thuộc về chính nhân vật (playerId == myId)
-		// - Đồ rơi tự do / của chung (playerId == -1 || playerId == 0)
-		// - Đồ hào quang đặc biệt rơi từ quái như Ngọc Rồng (playerId == -2)
 		bool isMyItem = (item.playerId == myId || item.playerId == -1 || item.playerId == -2 || item.playerId == 0);
 		if (!isMyItem)
 		{
@@ -96,27 +137,6 @@ public static class ModDropRate
 
 		totalItemsDropped++;
 
-		// Phân loại vật phẩm trang bị / kích hoạt / sao
-		if (item.template != null && item.template.type >= 0 && item.template.type <= 4)
-		{
-			// Kiểm tra nếu là trang bị
-			Item fakeItem = new Item();
-			fakeItem.template = item.template;
-
-			// Kiểm tra đồ kích hoạt
-			if (ModSetActivator.IsSetKichHoat(fakeItem))
-			{
-				totalSetKHCount++;
-				GameScr.info1.addInfo("RƠI ĐỒ KÍCH HOẠT: [" + item.template.id + "] " + item.template.name + "!", 0);
-			}
-			else if (ModSetActivator.GetItemStarCount(fakeItem) > 0)
-			{
-				totalStarCount++;
-				GameScr.info1.addInfo("RƠI ĐỒ SAO: [" + item.template.id + "] " + item.template.name + " (" + ModSetActivator.GetItemStarCount(fakeItem) + " Sao)!", 0);
-			}
-		}
-
-		// TRICK ZERO-LATENCY INSTANT PICK: Hút đồ ngay tức thì tại tick 0
 		if (isInstantPick)
 		{
 			if (ModAutoPick.ShouldPickItem(item))
@@ -135,6 +155,6 @@ public static class ModDropRate
 	/// </summary>
 	public static void Update()
 	{
-		// ModDropRate update
+		ScanBagForSpecialItems(Char.myCharz());
 	}
 }

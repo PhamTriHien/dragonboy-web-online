@@ -224,7 +224,10 @@ namespace UnityEngine
             }
 #endif
 
-            if (type == typeof(Font))
+            if (type == typeof(Font) ||
+                cleanPath.StartsWith("FontSys/", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
             {
                 return new Font { name = System.IO.Path.GetFileNameWithoutExtension(cleanPath) };
             }

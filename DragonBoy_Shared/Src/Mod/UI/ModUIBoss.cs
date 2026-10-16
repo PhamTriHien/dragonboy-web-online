@@ -136,19 +136,13 @@ public static class ModUIBoss
 		{
 			if (px >= uiX + 4 && px <= uiX + 4 + r2W)
 			{
-				ModKiteBroly.isAutoKite = !ModKiteBroly.isAutoKite;
-				ModConfig.SaveConfig();
-				GameScr.info1.addInfo("Né Broly: " + (ModKiteBroly.isAutoKite ? "BẬT" : "TẮT"), 0);
-				SoundMn.gI().buttonClick();
+				ModKiteBroly.ToggleAutoKite();
 				return true;
 			}
 
 			if (px >= uiX + 8 + r2W && px <= uiX + 8 + r2W * 2)
 			{
-				ModKiteBroly.isKhinhCong = !ModKiteBroly.isKhinhCong;
-				ModConfig.SaveConfig();
-				GameScr.info1.addInfo("Khinh công Broly: " + (ModKiteBroly.isKhinhCong ? "BẬT" : "TẮT"), 0);
-				SoundMn.gI().buttonClick();
+				ModKiteBroly.ToggleKhinhCong();
 				return true;
 			}
 

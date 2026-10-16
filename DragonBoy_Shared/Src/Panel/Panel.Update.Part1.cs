@@ -290,14 +290,22 @@ public partial class Panel : IActionListener, IChatable
 	/// </summary>
 	public void updateScroolMouse(int a)
 		{
-			bool flag = false;
-			if (GameCanvas.pxMouse > wScroll)
+			if (a == 0) return;
+			if (scroll != null && GameCanvas.pxMouse >= scroll.xPos && GameCanvas.pxMouse <= scroll.xPos + scroll.width)
+			{
+				scroll.cmtoY -= a * 12;
+				if (scroll.cmtoY > scroll.cmyLim) scroll.cmtoY = scroll.cmyLim;
+				if (scroll.cmtoY < 0) scroll.cmtoY = 0;
+				return;
+			}
+			if (GameCanvas.pxMouse < xScroll || GameCanvas.pxMouse > xScroll + wScroll)
 			{
 				return;
 			}
+			bool flag = false;
 			if (indexMouse == -1)
 			{
-				indexMouse = selected;
+				indexMouse = selected >= 0 ? selected : (cmtoY / 12);
 			}
 			if (a > 0)
 			{
@@ -308,6 +316,11 @@ public partial class Panel : IActionListener, IChatable
 			{
 				indexMouse += -a;
 				flag = true;
+			}
+			int maxIndex = System.Math.Max(0, (cmyLim + 11) / 12);
+			if (indexMouse > maxIndex)
+			{
+				indexMouse = maxIndex;
 			}
 			if (indexMouse < 0)
 			{

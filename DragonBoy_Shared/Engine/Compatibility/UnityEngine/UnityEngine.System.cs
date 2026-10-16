@@ -406,6 +406,7 @@ namespace UnityEngine
             set
             {
                 _targetFrameRate = value;
+                try { DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current?.SetTargetFrameRate(value); } catch { }
                 if (IsActiveTab && !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS() && !OperatingSystem.IsBrowser())
                 {
                     try { Raylib.SetTargetFPS(value); } catch { }
@@ -688,12 +689,14 @@ namespace UnityEngine
         private static float groupOffsetX = 0;
         private static float groupOffsetY = 0;
         private static bool isScissorActive = false;
+        private static readonly System.Collections.Generic.Stack<(float x, float y)> _groupOffsetStack = new System.Collections.Generic.Stack<(float, float)>();
 
         /// <summary>
         /// Thực thi phương thức nghiệp vụ BeginGroup.
         /// </summary>
         public static void BeginGroup(Rect position)
         {
+            _groupOffsetStack.Push((groupOffsetX, groupOffsetY));
             groupOffsetX += position.x;
             groupOffsetY += position.y;
 #if BROWSER
@@ -745,12 +748,21 @@ namespace UnityEngine
         /// </summary>
         public static void EndGroup()
         {
+            if (_groupOffsetStack.Count > 0)
+            {
+                var prev = _groupOffsetStack.Pop();
+                groupOffsetX = prev.x;
+                groupOffsetY = prev.y;
+            }
+            else
+            {
+                groupOffsetX = 0f;
+                groupOffsetY = 0f;
+            }
 #if BROWSER
             if (OperatingSystem.IsBrowser())
             {
                 DragonBoy_Web_Host.WebGraphicsBackend.EndGroup();
-                groupOffsetX = 0;
-                groupOffsetY = 0;
                 return;
             }
 #endif
@@ -758,8 +770,6 @@ namespace UnityEngine
             if (OperatingSystem.IsAndroid())
             {
                 DragonBoy_Android_Host.AndroidGraphicsBackend.EndGroup();
-                groupOffsetX = 0;
-                groupOffsetY = 0;
                 return;
             }
 #endif
@@ -771,8 +781,6 @@ namespace UnityEngine
                     isScissorActive = false;
                 }
             }
-            groupOffsetX = 0;
-            groupOffsetY = 0;
         }
 
         /// <summary>

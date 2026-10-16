@@ -350,6 +350,10 @@ public partial class Session_ME
 		{
 			Uri relayUri = DragonBoy_Web_Host.WebNetworkConfig.BuildRelayUri(targetHost, targetPort);
 			await ws.ConnectAsync(relayUri, cts.Token);
+			if (_ws != ws || cts.IsCancellationRequested)
+			{
+				return;
+			}
 			timeConnected = currentTimeMillis();
 			connecting = false;
 			await WsSendRawMessageAsync(ws, new Message(-27), cts.Token);
@@ -361,7 +365,7 @@ public partial class Session_ME
 		{
 			Console.WriteLine($"[WS NET EX] {ex.GetType().Name}: {ex.Message}");
 			await System.Threading.Tasks.Task.Delay(100);
-			if (!isCancel && messageHandler != null)
+			if (_ws == ws && !cts.IsCancellationRequested && !isCancel && messageHandler != null)
 			{
 				close();
 				messageHandler.onConnectionFail(isMainSession);
@@ -539,7 +543,7 @@ public partial class Session_ME
 		var reader = new WsStreamReader(ws);
 		try
 		{
-			while (connected && !ct.IsCancellationRequested && ws.State == System.Net.WebSockets.WebSocketState.Open)
+			while (connected && !ct.IsCancellationRequested && _ws == ws && ws.State == System.Net.WebSockets.WebSocketState.Open)
 			{
 				Message message = await WsReadMessageAsync(reader, ct);
 				if (message == null) break;
@@ -560,7 +564,7 @@ public partial class Session_ME
 				Console.WriteLine($"[WS COLLECTOR EX] {ex.Message}");
 			}
 		}
-		if (!connected || ct.IsCancellationRequested)
+		if (!connected || ct.IsCancellationRequested || _ws != ws)
 		{
 			return;
 		}

@@ -470,6 +470,10 @@ public partial class GameCanvas : IActionListener
 			{
 				panel.updateScroolMouse(a);
 			}
+			if (panel2 != null && panel2.isShow)
+			{
+				panel2.updateScroolMouse(a);
+			}
 		}
 
 	/// <summary>

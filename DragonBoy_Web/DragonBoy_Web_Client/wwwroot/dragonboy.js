@@ -371,8 +371,11 @@
     updateCanvasViewportSize();
 
     function getFontFamily(fontTheme) {
-        if (fontTheme === 1) return "'DragonBoyFont1', sans-serif";
-        if (fontTheme === 2) return "'DragonBoyFont2', sans-serif";
+        if (fontTheme === 1) return "Tahoma, Verdana, sans-serif";
+        if (fontTheme === 2) return "'Segoe UI', system-ui, sans-serif";
+        if (fontTheme === 3) return "Consolas, 'Courier New', monospace";
+        if (fontTheme === 10) return "'DragonBoyFont1', sans-serif";
+        if (fontTheme === 20) return "'DragonBoyFont2', sans-serif";
         return "'DragonBoyFont0', sans-serif";
     }
 
@@ -446,7 +449,6 @@
             const pt = toVirtualCoords(e.clientX, e.clientY);
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.WebInputBridge.OnPointerEvent(0, pt.x, pt.y, e.button || 0);
-                wasmExports.DragonBoy_Web_Host.Program.OnInputImmediate(performance.now());
             }
             e.preventDefault();
         }, { passive: false });
@@ -661,12 +663,34 @@
 
     function startGameLoops() {
         let lastRafTime = 0;
+        let lastRenderTime = 0;
 
         function onRaf(timestamp) {
             lastRafTime = performance.now();
-            const isTabVisible = !document.hidden && (isEmbeddedTab || activeVisibleTabId === 1);
+            let isChildActive = true;
+            if (isEmbeddedTab) {
+                try {
+                    if (window.frameElement) {
+                        isChildActive = window.frameElement.classList.contains("active");
+                    }
+                } catch (_) { }
+            }
+            const isTabVisible = !document.hidden && (isEmbeddedTab ? isChildActive : activeVisibleTabId === 1);
             if (wasmExports) {
-                wasmExports.DragonBoy_Web_Host.Program.OnBrowserFrame(lastRafTime, isTabVisible ? 1 : 0);
+                let shouldRender = isTabVisible;
+                if (shouldRender) {
+                    const targetFps = wasmExports.DragonBoy_Web_Host.Program.GetTargetFrameRate() || 60;
+                    if (targetFps > 0 && targetFps < 58) {
+                        const minFrameInterval = (1000.0 / targetFps) - 2.0;
+                        if (lastRafTime - lastRenderTime < minFrameInterval) {
+                            shouldRender = false;
+                        }
+                    }
+                    if (shouldRender) {
+                        lastRenderTime = lastRafTime;
+                    }
+                }
+                wasmExports.DragonBoy_Web_Host.Program.OnBrowserFrame(lastRafTime, shouldRender ? 1 : 0);
             }
             requestAnimationFrame(onRaf);
         }

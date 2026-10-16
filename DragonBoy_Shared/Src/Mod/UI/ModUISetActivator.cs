@@ -38,11 +38,11 @@ public static class ModUISetActivator
 		mFont.tahoma_7_green2.drawString(g, "BÃI ÚP & BỘ LỌC TRANG BỊ:", uiX + 10, listY + 4, mFont.LEFT);
 
 		// Bãi úp đã lưu
-		string spotText = (ModSetActivator.savedFarmMapId > 0)
+		string spotText = (ModSetActivator.savedFarmMapId >= 0)
 			? (ModNextMap.GetMapName(ModSetActivator.savedFarmMapId) + " [K." + ModSetActivator.savedFarmZoneId + "] (" + ModSetActivator.savedFarmX + ", " + ModSetActivator.savedFarmY + ")")
 			: "(Chưa lưu - Bấm 'Lưu Bãi' để lưu)";
 		mFont.tahoma_7_grey.drawString(g, "- Bãi úp: ", uiX + 10, listY + 18, mFont.LEFT);
-		(ModSetActivator.savedFarmMapId > 0 ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, spotText, uiX + 56, listY + 18, mFont.LEFT);
+		(ModSetActivator.savedFarmMapId >= 0 ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, spotText, uiX + 56, listY + 18, mFont.LEFT);
 
 		// 4 nút lọc: Lọc Đồ Sao | Hút Tức Thì | Hồi Sinh Đánh | Khóa Kết Liễu
 		int w4 = (listW - 20) / 4;
@@ -213,7 +213,7 @@ public static class ModUISetActivator
 							ModAutoBuyBua.StartBuyBuaNow();
 							break;
 						case 3:
-							if (ModSetActivator.savedFarmMapId > 0)
+							if (ModSetActivator.savedFarmMapId >= 0)
 							{
 								ModSetActivator.currentState = ModSetActivator.SetActivatorState.ReturningToFarm;
 								ModNextMap.StartNextMap(ModSetActivator.savedFarmMapId);

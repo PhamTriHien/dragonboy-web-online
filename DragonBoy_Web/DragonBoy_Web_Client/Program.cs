@@ -149,6 +149,7 @@ namespace DragonBoy_Web_Host
                 while (_fixedAccumulatorMs >= 16.0 && maxSteps-- > 0)
                 {
                     global::Main.main.FixedUpdate();
+                    WebInputBridge.ResetKeyDownFlags();
                     _fixedAccumulatorMs -= 16.0;
                 }
                 if (_fixedAccumulatorMs > 32.0) _fixedAccumulatorMs = 0;
@@ -172,6 +173,12 @@ namespace DragonBoy_Web_Host
         }
 
         /// <summary>
+        /// Trả về mức giới hạn FPS mục tiêu hiện tại để vòng lặp trình duyệt điều tiết nhịp vẽ.
+        /// </summary>
+        [JSExport]
+        public static int GetTargetFrameRate() => WebGraphicsBackend.TargetFrameRate;
+
+        /// <summary>
         /// Thực thi tức thời chu kỳ xử lý đầu vào ngay trong sự kiện User Gesture của trình duyệt (kích hoạt đồng bộ Bàn phím ảo & Fullscreen trên thiết bị di động).
         /// </summary>
         [JSExport]
@@ -183,6 +190,8 @@ namespace DragonBoy_Web_Host
                 WebGraphicsBackend.UpdateDynamicViewport();
                 EventPump.ProcessInput(global::Main.main);
                 global::Main.main.FixedUpdate();
+                WebInputBridge.ResetKeyDownFlags();
+                _fixedAccumulatorMs = System.Math.Max(-16.0, _fixedAccumulatorMs - 16.0);
                 global::Main.main.Update();
                 WebInputBridge.EndFrameInputReset();
             }
@@ -200,16 +209,20 @@ namespace DragonBoy_Web_Host
             {
                 WebStorageSync.RefreshSharedFilesFromLocalStorage();
                 GameTabStatus.RefreshAllTabs(force: true);
+                ModBackground.Update();
                 if (keepHubOpen != 0)
                 {
                     ModFloatingHUD.isShowFloatingHUD = true;
                     ModFloatingHUD.isExpanded = true;
-                    ModUI.uiCustomOpen = true;
                     if (bx >= 0 && by >= 0)
                     {
                         ModFloatingHUD.bubbleX = bx;
                         ModFloatingHUD.bubbleY = by;
                     }
+                }
+                else
+                {
+                    ModFloatingHUD.isExpanded = false;
                 }
             }
             catch { }

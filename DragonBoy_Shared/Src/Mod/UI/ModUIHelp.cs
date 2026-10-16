@@ -491,6 +491,85 @@ public static class ModUIHelp
 			{
 				DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.OpenAllTabs();
 			}
+			else if (cmd.StartsWith("nhat_id"))
+			{
+				ModAutoPick.ShowInputFilterId();
+			}
+			else if (cmd.StartsWith("nhat_ten"))
+			{
+				ModAutoPick.ShowInputFilterName();
+			}
+			else if (cmd.StartsWith("nextmap="))
+			{
+				ModUI.selectedTab = 7;
+				ModUI.uiCustomOpen = true;
+			}
+			else if (cmd.Equals("stopmap"))
+			{
+				ModNextMap.StopNextMap();
+			}
+			else if (cmd.Equals("tabN"))
+			{
+				DragonBoy_Net8_Native.Engine.Platform.PlatformService.Current.CycleNextTab();
+			}
+			else if (cmd.StartsWith("autochat"))
+			{
+				ModAutoChat.Toggle();
+			}
+			else if (cmd.Equals("boxsort"))
+			{
+				ModAutoBoxSort.SortNow();
+				GameScr.info1?.addInfo("Đã gửi lệnh sắp xếp rương.", 0);
+			}
+			else if (cmd.Equals("autoboxsort"))
+			{
+				ModAutoBoxSort.Toggle();
+			}
+			else if (cmd.StartsWith("autopoint"))
+			{
+				ModAutoPoint.Toggle();
+			}
+			else if (cmd.Equals("autofreeze"))
+			{
+				ModTanSat.lockedSkillTemplateId = -1;
+				ModConfig.SaveConfig();
+				GameScr.info1?.addInfo("Đã bỏ khóa skill cố định (dùng luân phiên).", 0);
+			}
+			else if (cmd.Equals("autoitemhp"))
+			{
+				ModAutoItem.conditionType = 1;
+				ModAutoItem.thresholdPercent = 50;
+				ModConfig.SaveConfig();
+				GameScr.info1?.addInfo("Auto Item: Đã đặt điều kiện dùng khi HP < 50%", 0);
+			}
+			else if (cmd.Equals("autoitemmp"))
+			{
+				ModAutoItem.conditionType = 2;
+				ModAutoItem.thresholdPercent = 50;
+				ModConfig.SaveConfig();
+				GameScr.info1?.addInfo("Auto Item: Đã đặt điều kiện dùng khi KI < 50%", 0);
+			}
+			else if (cmd.StartsWith("autoitem"))
+			{
+				if (ModAutoItem.itemIds.Count == 0) ModAutoItem.ShowInputItemIds();
+				else ModAutoItem.Toggle();
+			}
+			else if (cmd.StartsWith("schedule"))
+			{
+				ModSchedule.Toggle();
+			}
+			else if (cmd.Equals("autorevive"))
+			{
+				ModAutoRevive.Toggle();
+			}
+			else if (cmd.StartsWith("autopet"))
+			{
+				ModAutoPet.Toggle();
+			}
+			else if (cmd.StartsWith("autofusion"))
+			{
+				ModAutoFusion.Toggle();
+			}
 			else if (cmd.Contains("F11"))
 			{
 				ModGraphics.ToggleFullscreen();

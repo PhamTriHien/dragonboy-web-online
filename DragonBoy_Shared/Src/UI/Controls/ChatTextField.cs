@@ -105,10 +105,15 @@ public class ChatTextField : IActionListener
 		ActionChat actionChat = delegate(string str)
 		{
 			tfChat.justReturnFromTextBox = false;
-			tfChat.setText(str);
-			parentScreen.onChatFromMe(str, to);
-			tfChat.setText(string.Empty);
-			right.caption = mResources.CLOSE;
+			if (parentScreen != null)
+			{
+				tfChat.setText(str);
+				parentScreen.onChatFromMe(str, to);
+				tfChat.setText(string.Empty);
+				tfChat.clearKb();
+				right.caption = mResources.CLOSE;
+			}
+			isShow = false;
 		};
 		cmdChat.actionChat = actionChat;
 		cmdChat2 = new Command();

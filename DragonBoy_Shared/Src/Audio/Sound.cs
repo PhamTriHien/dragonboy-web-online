@@ -274,7 +274,10 @@ public class Sound
 	/// </summary>
 	public static void sTopSoundRun()
 	{
-		SoundRun.GetComponent<AudioSource>().Stop();
+		if (SoundRun != null)
+		{
+			SoundRun.GetComponent<AudioSource>().Stop();
+		}
 	}
 
 	/// <summary>
@@ -294,7 +297,7 @@ public class Sound
 	/// </summary>
 	public static void playSoundNatural(int id, float volume, bool isLoop)
 	{
-		if (GameCanvas.isPlaySound && !(SoundBGLoop == null))
+		if (GameCanvas.isPlaySound && !(SoundWater == null))
 		{
 			SoundWater.GetComponent<AudioSource>().loop = isLoop;
 			SoundWater.GetComponent<AudioSource>().clip = music[id];
@@ -308,7 +311,10 @@ public class Sound
 	/// </summary>
 	public static void stopSoundNatural(int id)
 	{
-		SoundWater.GetComponent<AudioSource>().Stop();
+		if (SoundWater != null)
+		{
+			SoundWater.GetComponent<AudioSource>().Stop();
+		}
 	}
 
 	/// <summary>

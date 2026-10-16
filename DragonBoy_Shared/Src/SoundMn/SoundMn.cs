@@ -200,7 +200,7 @@ public partial class SoundMn
 		{
 			if (!Char.myCharz().me)
 			{
-				volume /= 2f;
+				volumn /= 2f;
 			}
 			if (volumn <= 0f)
 			{
@@ -470,7 +470,7 @@ public partial class SoundMn
 		{
 			if (!Char.myCharz().me)
 			{
-				volume /= 2f;
+				volumn /= 2f;
 				if (volumn <= 0f)
 				{
 					volumn = 0.01f;

@@ -136,7 +136,7 @@ public partial class Panel : IActionListener, IChatable
 				{
 					for (int i = 0; i < pointerDownLastX.Length; i++)
 					{
-						pointerDownLastX[0] = GameCanvas.py;
+						pointerDownLastX[i] = GameCanvas.py;
 					}
 					pointerDownFirstX = GameCanvas.py;
 					pointerIsDowning = true;

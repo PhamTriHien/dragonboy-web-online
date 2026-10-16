@@ -252,7 +252,7 @@ public class Session_ME2 : ISession
 				{
 					sbyte b4 = dis.ReadSByte();
 					sbyte b5 = dis.ReadSByte();
-					num = (b4 & 0xFF00) | (b5 & 0xFF);
+					num = ((b4 & 0xFF) << 8) | (b5 & 0xFF);
 				}
 				sbyte[] array = new sbyte[num];
 				int num2 = 0;
@@ -525,7 +525,8 @@ public class Session_ME2 : ISession
 				}
 				else
 				{
-					dos.Write((ushort)num);
+					dos.Write((sbyte)(num >> 8));
+					dos.Write((sbyte)(num & 0xFF));
 				}
 				if (getKeyComplete)
 				{
@@ -533,6 +534,13 @@ public class Session_ME2 : ISession
 					{
 						sbyte value2 = writeKey(data[i]);
 						dos.Write(value2);
+					}
+				}
+				else
+				{
+					for (int i = 0; i < data.Length; i++)
+					{
+						dos.Write(data[i]);
 					}
 				}
 				sendByteCount += 5 + data.Length;
@@ -549,7 +557,8 @@ public class Session_ME2 : ISession
 				}
 				else
 				{
-					dos.Write((ushort)0);
+					dos.Write((sbyte)0);
+					dos.Write((sbyte)0);
 				}
 				sendByteCount += 5;
 			}
@@ -769,6 +778,10 @@ public class Session_ME2 : ISession
 		{
 			Uri relayUri = DragonBoy_Web_Host.WebNetworkConfig.BuildRelayUri(targetHost, targetPort);
 			await ws.ConnectAsync(relayUri, cts.Token);
+			if (_ws != ws || cts.IsCancellationRequested)
+			{
+				return;
+			}
 			timeConnected = currentTimeMillis();
 			connecting = false;
 			await WsSendRawMessageAsync(ws, new Message(-27), cts.Token);
@@ -778,7 +791,7 @@ public class Session_ME2 : ISession
 		}
 		catch (Exception)
 		{
-			if (messageHandler != null)
+			if (_ws == ws && !cts.IsCancellationRequested && !isCancel && messageHandler != null)
 			{
 				close();
 				messageHandler.onConnectionFail(isMainSession);
@@ -947,7 +960,7 @@ public class Session_ME2 : ISession
 		var reader = new WsStreamReader2(ws);
 		try
 		{
-			while (connected && !ct.IsCancellationRequested && ws.State == System.Net.WebSockets.WebSocketState.Open)
+			while (connected && !ct.IsCancellationRequested && _ws == ws && ws.State == System.Net.WebSockets.WebSocketState.Open)
 			{
 				Message message = await WsReadMessageAsync(reader, ct);
 				if (message == null) break;
@@ -964,7 +977,7 @@ public class Session_ME2 : ISession
 		catch (Exception)
 		{
 		}
-		if (!connected || ct.IsCancellationRequested)
+		if (!connected || ct.IsCancellationRequested || _ws != ws)
 		{
 			return;
 		}

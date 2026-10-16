@@ -584,10 +584,7 @@ public static class ModNextMap
 			{
 				if (GameCanvas.isPointerClick || GameCanvas.isPointerJustRelease)
 				{
-					/// <summary>
-					/// Thực thi phương thức nghiệp vụ Map.
-					/// </summary>
-					ModUI.selectedTab = 6; // Tab Next Map (0-indexed: 6 = Tab 7)
+					ModUI.selectedTab = 7;
 					ModUI.uiCustomOpen = true;
 					SoundMn.gI().buttonClick();
 					GameCanvas.clearAllPointerEvent();

@@ -357,6 +357,7 @@ public static class ModMenu
 
 			GameTabStatus.UpdateCurrentTab();
 			ModGraphics.UpdateResolutionWatcher();
+			ModBackground.Update();
 
 			if (Application.IsActiveTab)
 			{

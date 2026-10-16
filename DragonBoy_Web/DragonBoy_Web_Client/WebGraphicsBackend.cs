@@ -288,6 +288,21 @@ namespace DragonBoy_Web_Host
             WebInterop.DrawCircle(centerX, centerY, radius, c.r, c.g, c.b, c.a, fill: false);
         }
 
+        private static int ResolveEffectiveFontCode(GUIStyle style)
+        {
+            int theme = ModGraphics.fontTheme;
+            if (theme == 1) return 1;
+            if (theme == 2) return 2;
+            if (theme == 3) return 3;
+            string fname = style?.font?.name;
+            if (!string.IsNullOrEmpty(fname))
+            {
+                if (fname.IndexOf("staccato", StringComparison.OrdinalIgnoreCase) >= 0) return 20;
+                if (fname.IndexOf("chelthm", StringComparison.OrdinalIgnoreCase) >= 0) return 10;
+            }
+            return 0;
+        }
+
         /// <summary>
         /// Đo kích thước chiều rộng và chiều cao của chuỗi văn bản theo GUIStyle và bộ đệm kích thước chữ.
         /// </summary>
@@ -297,11 +312,11 @@ namespace DragonBoy_Web_Host
             int fontSize = (style != null && style.fontSize > 0)
                 ? (style.fontSize * mGraphics.zoomLevel)
                 : Font.GetDefaultFontSize(style?.font);
-            int theme = ModGraphics.fontTheme;
-            var key = (theme, fontSize, text);
+            int fontCode = ResolveEffectiveFontCode(style);
+            var key = (fontCode, fontSize, text);
             if (!_textWidthCache.TryGetValue(key, out float w))
             {
-                w = (float)WebInterop.MeasureTextWidth(text, fontSize, theme);
+                w = (float)WebInterop.MeasureTextWidth(text, fontSize, fontCode);
                 if (_textWidthCache.Count > 4096) _textWidthCache.Clear();
                 _textWidthCache[key] = w;
             }
@@ -343,6 +358,7 @@ namespace DragonBoy_Web_Host
                 }
             }
 
+            int fontCode = ResolveEffectiveFontCode(style);
             WebInterop.DrawText(
                 text,
                 px,
@@ -350,7 +366,7 @@ namespace DragonBoy_Web_Host
                 position.width,
                 position.height,
                 fontSize,
-                ModGraphics.fontTheme,
+                fontCode,
                 col.r, col.g, col.b, col.a,
                 alignCode);
         }

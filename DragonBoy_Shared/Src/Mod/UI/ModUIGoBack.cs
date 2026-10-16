@@ -38,11 +38,11 @@ public static class ModUIGoBack
 		mFont.tahoma_7_green2.drawString(g, "VỊ TRÍ GOBACK ĐÃ LƯU:", uiX + 10, listY + 4, mFont.LEFT);
 
 		// Bản đồ
-		string mapText = (ModGoBack.savedMapId > 0)
+		string mapText = (ModGoBack.savedMapId >= 0)
 			? (ModNextMap.GetMapName(ModGoBack.savedMapId) + " (" + ModGoBack.savedMapId + ")")
 			: "(Chưa lưu - sẽ tự định khi chết)";
 		mFont.tahoma_7_grey.drawString(g, "- Bản đồ: ", uiX + 10, listY + 20, mFont.LEFT);
-		(ModGoBack.savedMapId > 0 ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, mapText, uiX + 56, listY + 20, mFont.LEFT);
+		(ModGoBack.savedMapId >= 0 ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, mapText, uiX + 56, listY + 20, mFont.LEFT);
 
 		// Khu vực
 		string zoneText = (ModGoBack.savedZoneId >= 0)

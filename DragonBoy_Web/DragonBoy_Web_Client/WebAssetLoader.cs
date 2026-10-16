@@ -76,7 +76,10 @@ namespace DragonBoy_Web_Host
         {
             if (string.IsNullOrEmpty(cleanPath)) return null;
 
-            if (type == typeof(Font))
+            if (type == typeof(Font) ||
+                cleanPath.StartsWith("FontSys/", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
             {
                 return new Font { name = Path.GetFileNameWithoutExtension(cleanPath) };
             }

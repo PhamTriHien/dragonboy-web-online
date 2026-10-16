@@ -79,11 +79,7 @@ public class Scroll
 	/// </summary>
 	public ScrollResult updateKey()
 	{
-		if (styleUPDOWN)
-		{
-			return updateKeyScrollUpDown(isGetNow: false);
-		}
-		return updateKeyScrollLeftRight();
+		return updateKey(isGetSelectNow: false);
 	}
 
 	/// <summary>
@@ -91,6 +87,22 @@ public class Scroll
 	/// </summary>
 	public ScrollResult updateKey(bool isGetSelectNow)
 	{
+		if (GameCanvas.pXYScrollMouse != 0 && GameCanvas.pxMouse >= xPos && GameCanvas.pxMouse <= xPos + width && GameCanvas.pyMouse >= yPos && GameCanvas.pyMouse <= yPos + height)
+		{
+			if (styleUPDOWN)
+			{
+				cmtoY -= GameCanvas.pXYScrollMouse * 18;
+				if (cmtoY < 0) cmtoY = 0;
+				if (cmtoY > cmyLim) cmtoY = cmyLim;
+			}
+			else
+			{
+				cmtoX -= GameCanvas.pXYScrollMouse * 18;
+				if (cmtoX < 0) cmtoX = 0;
+				if (cmtoX > cmxLim) cmtoX = cmxLim;
+			}
+			GameCanvas.pXYScrollMouse = 0;
+		}
 		if (styleUPDOWN)
 		{
 			return updateKeyScrollUpDown(isGetSelectNow);

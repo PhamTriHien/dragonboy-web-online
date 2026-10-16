@@ -185,7 +185,7 @@ public class Main : MonoBehaviour
 			{
 				_suppressInputFrames--;
 			}
-			else
+			else if (!System.OperatingSystem.IsBrowser() || !Event.current.type.Equals(EventType.Repaint))
 			{
 				checkInput();
 			}
@@ -409,26 +409,43 @@ public class Main : MonoBehaviour
 	/// </summary>
 	private void checkInput()
 	{
-		if (Input.GetMouseButtonDown(0))
+		if (Event.current.type != EventType.KeyDown && Event.current.type != EventType.KeyUp)
 		{
-			Vector3 mousePosition = Input.mousePosition;
-			GameMidlet.gameCanvas.pointerPressed((int)(mousePosition.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
-			lastMousePos.x = mousePosition.x / (float)mGraphics.zoomLevel;
-			lastMousePos.y = mousePosition.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
-		}
-		if (Input.GetMouseButton(0))
-		{
-			Vector3 mousePosition2 = Input.mousePosition;
-			GameMidlet.gameCanvas.pointerDragged((int)(mousePosition2.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition2.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
-			lastMousePos.x = mousePosition2.x / (float)mGraphics.zoomLevel;
-			lastMousePos.y = mousePosition2.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
-		}
-		if (Input.GetMouseButtonUp(0))
-		{
-			Vector3 mousePosition3 = Input.mousePosition;
-			lastMousePos.x = mousePosition3.x / (float)mGraphics.zoomLevel;
-			lastMousePos.y = mousePosition3.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
-			GameMidlet.gameCanvas.pointerReleased((int)(mousePosition3.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition3.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
+			if (Input.GetMouseButtonDown(0))
+			{
+				Vector3 mousePosition = Input.mousePosition;
+				GameMidlet.gameCanvas.pointerPressed((int)(mousePosition.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
+				lastMousePos.x = mousePosition.x / (float)mGraphics.zoomLevel;
+				lastMousePos.y = mousePosition.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
+			}
+			else if (Input.GetMouseButton(0))
+			{
+				Vector3 mousePosition2 = Input.mousePosition;
+				GameMidlet.gameCanvas.pointerDragged((int)(mousePosition2.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition2.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
+				lastMousePos.x = mousePosition2.x / (float)mGraphics.zoomLevel;
+				lastMousePos.y = mousePosition2.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
+			}
+			if (Input.GetMouseButtonUp(0))
+			{
+				Vector3 mousePosition3 = Input.mousePosition;
+				lastMousePos.x = mousePosition3.x / (float)mGraphics.zoomLevel;
+				lastMousePos.y = mousePosition3.y / (float)mGraphics.zoomLevel + (float)mGraphics.addYWhenOpenKeyBoard;
+				GameMidlet.gameCanvas.pointerReleased((int)(mousePosition3.x / (float)mGraphics.zoomLevel), (int)(((float)Screen.height - mousePosition3.y) / (float)mGraphics.zoomLevel) + mGraphics.addYWhenOpenKeyBoard);
+			}
+			float wheel = Input.GetAxis("Mouse ScrollWheel");
+			if (isPC || wheel != 0f)
+			{
+				GameMidlet.gameCanvas.scrollMouse((int)(wheel * 10f));
+			}
+			if (isPC)
+			{
+				float x = Input.mousePosition.x;
+				float y = Input.mousePosition.y;
+				int x2 = (int)x / mGraphics.zoomLevel;
+				int y2 = (Screen.height - (int)y) / mGraphics.zoomLevel;
+				GameMidlet.gameCanvas.pointerMouse(x2, y2);
+			}
+			return;
 		}
 		if (Event.current.type == EventType.KeyDown)
 		{
@@ -613,15 +630,6 @@ public class Main : MonoBehaviour
 			{
 				GameMidlet.gameCanvas.keyReleasedz(num2);
 			}
-		}
-		if (isPC)
-		{
-			GameMidlet.gameCanvas.scrollMouse((int)(Input.GetAxis("Mouse ScrollWheel") * 10f));
-			float x = Input.mousePosition.x;
-			float y = Input.mousePosition.y;
-			int x2 = (int)x / mGraphics.zoomLevel;
-			int y2 = (Screen.height - (int)y) / mGraphics.zoomLevel;
-			GameMidlet.gameCanvas.pointerMouse(x2, y2);
 		}
 	}
 

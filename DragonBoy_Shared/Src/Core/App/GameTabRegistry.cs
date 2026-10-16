@@ -122,6 +122,20 @@ public static class GameTabRegistry
     /// <summary>
     /// Dọn dẹp thông tin tài khoản cũ trong thư mục tab phụ khi tạo mới hoặc xóa tab.
     /// </summary>
+    private static void DeleteVfsFile(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+#if BROWSER
+        if (OperatingSystem.IsBrowser())
+        {
+            DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(path);
+        }
+#endif
+    }
+
     private static void ResetTabCredentials(int id)
     {
         if (id <= 1) return;
@@ -133,8 +147,7 @@ public static class GameTabRegistry
                 string[] exactFiles = { "acc", "pass", "check", "sys_dev_id" };
                 foreach (string name in exactFiles)
                 {
-                    string p = Path.Combine(tabDir, name);
-                    if (File.Exists(p)) File.Delete(p);
+                    DeleteVfsFile(Path.Combine(tabDir, name));
                 }
                 foreach (string f in Directory.GetFiles(tabDir))
                 {
@@ -142,14 +155,12 @@ public static class GameTabRegistry
                     if (fileName.StartsWith("userAo", StringComparison.OrdinalIgnoreCase) ||
                         fileName.StartsWith("passAo", StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Delete(f);
+                        DeleteVfsFile(f);
                     }
                 }
             }
-            string statusFile = Path.Combine(Root, $"tab_status_{id}.txt");
-            if (File.Exists(statusFile)) File.Delete(statusFile);
-            string stopFile = Path.Combine(Root, $"stop_tab_{id}");
-            if (File.Exists(stopFile)) File.Delete(stopFile);
+            DeleteVfsFile(Path.Combine(Root, $"tab_status_{id}.txt"));
+            DeleteVfsFile(Path.Combine(Root, $"stop_tab_{id}"));
         }
         catch { }
     }

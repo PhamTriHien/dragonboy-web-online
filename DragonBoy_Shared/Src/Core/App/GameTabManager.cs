@@ -144,6 +144,7 @@ public static class GameTabManager
 			try
 			{
 				ModConfig.LoadConfig();
+				ModBackground.Init();
 			}
 			catch { }
 

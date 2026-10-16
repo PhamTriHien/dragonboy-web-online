@@ -342,12 +342,14 @@ public partial class Panel : IActionListener, IChatable
 			if (GameCanvas.isPointerJustRelease)
 			{
 				trans = false;
+				pointerIsDowning = false;
+				bool isTap = Res.abs(GameCanvas.pxLast - GameCanvas.px) <= 10 && Res.abs(GameCanvas.pyLast - GameCanvas.py) <= 10;
 				GameCanvas.pxLast = GameCanvas.px;
 				GameCanvas.pyLast = GameCanvas.py;
 				pX = GameCanvas.pxLast + cmxMap;
 				pY = GameCanvas.pyLast + cmyMap;
 
-				if (TileMap.planetID >= 0 && TileMap.planetID < mapX.Length)
+				if (isTap && TileMap.planetID >= 0 && TileMap.planetID < mapX.Length)
 				{
 					for (int k = 0; k < mapX[TileMap.planetID].Length; k++)
 					{

@@ -110,6 +110,14 @@ app.MapGet("/api/proxy", async (HttpContext context) =>
 
     try
     {
+        IPAddress[] hostIps = await Dns.GetHostAddressesAsync(targetUri.DnsSafeHost, context.RequestAborted);
+        if (hostIps.Length == 0 || hostIps.Any(IsBlockedInternalIp))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Forbidden target host.");
+            return;
+        }
+
         using var resp = await proxyHttp.GetAsync(targetUri, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
         context.Response.StatusCode = (int)resp.StatusCode;
         if (resp.Content.Headers.ContentType != null)
@@ -163,9 +171,9 @@ app.Map("/ws/tcp", async (HttpContext context) =>
                        ?? addresses.FirstOrDefault();
         }
 
-        if (targetIp == null)
+        if (targetIp == null || IsBlockedInternalIp(targetIp))
         {
-            await ws.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "DNS resolution failed", CancellationToken.None);
+            await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Target address not allowed", CancellationToken.None);
             return;
         }
 
@@ -206,6 +214,32 @@ app.MapFallbackToFile("index.html");
 app.Run();
 
 /// <summary>
+/// Kiểm tra xem địa chỉ IP có thuộc dải Loopback, mạng nội bộ (Private) hoặc Link-Local cần chặn để chống SSRF hay không.
+/// </summary>
+static bool IsBlockedInternalIp(IPAddress ip)
+{
+    if (ip == null) return true;
+    if (IPAddress.IsLoopback(ip)) return true;
+    if (ip.IsIPv4MappedToIPv6)
+    {
+        ip = ip.MapToIPv4();
+    }
+    if (ip.AddressFamily == AddressFamily.InterNetworkV6)
+    {
+        return ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.Equals(IPAddress.IPv6None) || ip.Equals(IPAddress.IPv6Any);
+    }
+    if (ip.AddressFamily == AddressFamily.InterNetwork)
+    {
+        byte[] b = ip.GetAddressBytes();
+        if (b[0] == 0 || b[0] == 10 || b[0] == 127) return true;
+        if (b[0] == 172 && b[1] >= 16 && b[1] <= 31) return true;
+        if (b[0] == 192 && b[1] == 168) return true;
+        if (b[0] == 169 && b[1] == 254) return true;
+    }
+    return false;
+}
+
+/// <summary>
 /// Chuyển tiếp luồng gói tin nhị phân từ WebSocket của trình duyệt sang kết nối TCP của máy chủ game.
 /// </summary>
 static async System.Threading.Tasks.Task PumpWebSocketToTcpAsync(WebSocket ws, NetworkStream netStream, CancellationToken ct)
@@ -216,12 +250,15 @@ static async System.Threading.Tasks.Task PumpWebSocketToTcpAsync(WebSocket ws, N
         while (!ct.IsCancellationRequested && ws.State == WebSocketState.Open)
         {
             WebSocketReceiveResult result = await ws.ReceiveAsync(new ArraySegment<byte>(buf), ct);
-            if (result.MessageType == WebSocketMessageType.Close || result.Count <= 0)
+            if (result.MessageType == WebSocketMessageType.Close || result.CloseStatus.HasValue)
             {
                 break;
             }
-            await netStream.WriteAsync(buf.AsMemory(0, result.Count), ct);
-            await netStream.FlushAsync(ct);
+            if (result.Count > 0)
+            {
+                await netStream.WriteAsync(buf.AsMemory(0, result.Count), ct);
+                await netStream.FlushAsync(ct);
+            }
         }
     }
     catch { }

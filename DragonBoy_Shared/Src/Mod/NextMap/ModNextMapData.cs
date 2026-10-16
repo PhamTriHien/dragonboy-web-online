@@ -237,9 +237,9 @@ public static class ModNextMapData
 		string mName = GetMapName(targetMapId);
 		if (MatchMapName(wpName, mName)) return true;
 
-		// 2. So khớp với alias đa ngôn ngữ (Indo / Anh / Viết tắt)
 		if (s_MapMultilingualAliases.TryGetValue(targetMapId, out string[] aliases))
 		{
+			string[] rawTokens = null;
 			for (int i = 0; i < aliases.Length; i++)
 			{
 				string aliasClean = CleanName(aliases[i]);
@@ -250,13 +250,15 @@ public static class ModNextMapData
 						return true;
 					}
 				}
-				else
+				else if (aliasClean.Length > 0)
 				{
-					// Từ ngắn (<= 3 ký tự) phải so khớp cả từ, tránh 'da' ăn nhầm 'Xayda' hay 'Desa'
-					string[] tokens = cleanWp.Split(new char[] { ' ', '-', '_', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-					for (int t = 0; t < tokens.Length; t++)
+					if (rawTokens == null)
 					{
-						if (tokens[t].Equals(aliasClean, StringComparison.OrdinalIgnoreCase))
+						rawTokens = wpName.Split(new char[] { ' ', '-', '_', '(', ')', ',', '.', '/', '\\', ':' }, StringSplitOptions.RemoveEmptyEntries);
+					}
+					for (int t = 0; t < rawTokens.Length; t++)
+					{
+						if (CleanName(rawTokens[t]).Equals(aliasClean, StringComparison.OrdinalIgnoreCase))
 						{
 							return true;
 						}
