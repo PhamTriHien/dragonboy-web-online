@@ -4,7 +4,7 @@
 public static class ModAutoPet
 {
 	public static bool isEnabled;
-	public static int status = 5;
+	public static int status = 2;
 	public static int intervalMs = 5000;
 	private static long nextAt;
 	/// <summary>
@@ -12,7 +12,7 @@ public static class ModAutoPet
 	/// </summary>
 	public static void Configure(int value, int interval)
 	{
-		status = value < 0 ? 0 : (value > 20 ? 20 : value);
+		status = value < 0 ? 0 : (value > 3 ? 3 : value);
 		intervalMs = interval < 1000 ? 1000 : (interval > 3600000 ? 3600000 : interval);
 		isEnabled = true; nextAt = 0; ModConfig.SaveConfig();
 	}
@@ -21,6 +21,7 @@ public static class ModAutoPet
 	/// </summary>
 	public static void Toggle()
 	{
+		if (status < 0 || status > 3) status = 2;
 		isEnabled = !isEnabled; nextAt = 0; ModConfig.SaveConfig();
 		GameScr.info1.addInfo("Auto Pet: " + (isEnabled ? "BẬT" : "TẮT"), 0);
 	}
@@ -30,6 +31,7 @@ public static class ModAutoPet
 	public static void Update()
 	{
 		if (!isEnabled || !ModMenu.IsInGame() || Char.myCharz() == null || !Char.myCharz().havePet) return;
+		if (status < 0 || status > 3) status = 2;
 		long now = mSystem.currentTimeMillis();
 		if (now < nextAt) return;
 		Service.gI().petStatus((sbyte)status);

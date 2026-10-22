@@ -268,7 +268,7 @@ public static class ModConfig
 						bool.TryParse(val, out ModAutoPet.isEnabled);
 						break;
 					case "autoPetStatus":
-						int.TryParse(val, out ModAutoPet.status);
+						if (int.TryParse(val, out int aps)) ModAutoPet.status = (aps >= 0 && aps <= 3) ? aps : 2;
 						break;
 					case "autoPetIntervalMs":
 						if (int.TryParse(val, out int apiPet)) ModAutoPet.intervalMs = apiPet < 1000 ? 1000 : (apiPet > 3600000 ? 3600000 : apiPet);

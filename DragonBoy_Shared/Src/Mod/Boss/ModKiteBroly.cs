@@ -18,6 +18,7 @@ public static class ModKiteBroly
 
 	private static long lastDodgeTime = 0;
 	private static long lastAttackTime = 0;
+	private static int lastSentSkillId = -1;
 
 	/// <summary>
 	/// Bật hoặc tắt trạng thái kích hoạt của ToggleAutoKite.
@@ -166,7 +167,36 @@ public static class ModKiteBroly
 		try
 		{
 			Char me = Char.myCharz();
-			if (me == null || me.myskill == null) return;
+			if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5) return;
+			if (me.isCharge || me.isFlyAndCharge || me.isStandAndCharge || me.isFreez) return;
+
+			Skill sk = me.myskill ?? ModTanSatFilter.GetBestSkillToUse();
+			if (sk == null || sk.template == null || !ModTanSatFilter.IsAttackSkill(sk))
+			{
+				sk = ModTanSatFilter.GetBestSkillToUse();
+			}
+			if (sk == null || sk.template == null) return;
+
+			long now = mSystem.currentTimeMillis();
+			int effCd = (sk.coolDown < 300) ? 300 : sk.coolDown;
+			if (now - sk.lastTimeUseThisSkill < effCd) return;
+			if (!ModTanSatFilter.HasEnoughMp(me, sk)) return;
+
+			if (me.myskill != sk || lastSentSkillId != sk.template.id)
+			{
+				me.myskill = sk;
+				GameScr.lastSkill = sk;
+				Service.gI().selectSkill(sk.template.id);
+				lastSentSkillId = sk.template.id;
+			}
+
+			int targetX = (target is Char tc) ? tc.cx : ((target is Mob tm) ? tm.x : me.cx);
+			int targetY = (target is Char tc2) ? tc2.cy : ((target is Mob tm2) ? tm2.y : me.cy);
+			if (sk.dx > 0 && Res.abs(me.cx - targetX) > sk.dx + 30) return;
+			if (sk.dy > 0 && Res.abs(me.cy - targetY) > sk.dy + 40) return;
+
+			sk.lastTimeUseThisSkill = now;
+			me.myskill.lastTimeUseThisSkill = now;
 
 			MyVector vMob = new MyVector();
 			MyVector vChar = new MyVector();

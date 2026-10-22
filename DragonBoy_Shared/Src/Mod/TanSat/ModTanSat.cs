@@ -90,7 +90,7 @@ public static class ModTanSat
 		if (lockedSkillTemplateId >= 0)
 		{
 			Skill locked = ModTanSatFilter.FindSkillByTemplateId(lockedSkillTemplateId);
-			if (locked != null && ModTanSatFilter.IsSkillAllowed(locked)) return locked;
+			if (locked != null && ModTanSatFilter.IsAttackSkill(locked)) return locked;
 		}
 		return ModTanSatFilter.GetBestSkillToUse();
 	}
@@ -122,6 +122,9 @@ public static class ModTanSat
 			Char me = Char.myCharz();
 			if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5) return;
 
+			// Tam dung khi nhan vat dang van cong (Quả cầu kênh khí / Laze / Tái tạo / Biến khỉ / Đóng băng)
+			if (me.isCharge || me.isFlyAndCharge || me.isStandAndCharge || me.isUseSkillAfterCharge || me.isWaitMonkey || me.isFreez || me.isCreateDark) return;
+
 			long now = mSystem.currentTimeMillis();
 
 			// 0. Uu tien tuyet doi cho thao tac di chuyen thu cong cua nguoi choi (Phim mui ten / WASD / click chuot)
@@ -148,11 +151,11 @@ public static class ModTanSat
 				lastSentSkillTemplateId = skillToUse.template.id;
 			}
 
-			// 2. Watchdog chong ket quai ma / quai da chet / khong giam HP
+			// 2. Watchdog chong ket quai ma / quai da chet / khong giam HP / khong nam trong bo loc
 			bool targetDiedOrInvalid = false;
 			if (currentFarmTarget != null)
 			{
-				if (currentFarmTarget.status == 0 || currentFarmTarget.status == 1 || currentFarmTarget.hp <= 0)
+				if (currentFarmTarget.status == 0 || currentFarmTarget.status == 1 || currentFarmTarget.hp <= 0 || !ModTanSatFilter.IsMobAllowed(currentFarmTarget.templateId) || !GameScr.gI().isMeCanAttackMob(currentFarmTarget))
 				{
 					targetDiedOrInvalid = true;
 				}
@@ -202,7 +205,7 @@ public static class ModTanSat
 					if (!GameScr.gI().isMeCanAttackMob(m)) continue;
 
 					// Loc theo cau hinh quai
-					if (!selectAllMobs && tickedMobTemplateIds.Count > 0 && !tickedMobTemplateIds.Contains(m.templateId)) continue;
+					if (!ModTanSatFilter.IsMobAllowed(m.templateId)) continue;
 
 					int dist = Res.distance(me.cx, me.cy, m.x, m.y);
 
@@ -339,16 +342,24 @@ public static class ModTanSat
 
 			// 8. Thuc thi xuat chieu truc tiep qua Game Engine chuan (100% theo dac ta cooldown thuc cua game)
 			lastAttackTime = now;
-			skillToUse.lastTimeUseThisSkill = now;
-			me.myskill.lastTimeUseThisSkill = now;
 
 			if (me.isUseChargeSkill())
 			{
 				me.currentFireByShortcut = true;
 				me.sendUseChargeSkill();
+				skillToUse.lastTimeUseThisSkill = now;
+				me.myskill.lastTimeUseThisSkill = now;
+			}
+			else if (me.isUseSkillSpec())
+			{
+				skillToUse.lastTimeUseThisSkill = now;
+				me.myskill.lastTimeUseThisSkill = now;
+				GameScr.gI().doSelectSkill(skillToUse, isShortcut: true);
 			}
 			else if (skillToUse.skillId >= 0 && skillToUse.skillId < GameScr.sks.Length && GameScr.sks[skillToUse.skillId] != null)
 			{
+				skillToUse.lastTimeUseThisSkill = now;
+				me.myskill.lastTimeUseThisSkill = now;
 				bool isGroundedNow = TileMap.tileTypeAt(me.cx, me.cy, 2);
 				me.currentFireByShortcut = true;
 				me.setSkillPaint(GameScr.sks[skillToUse.skillId], (!isGroundedNow) ? 1 : 0);
@@ -359,6 +370,8 @@ public static class ModTanSat
 			}
 			else
 			{
+				skillToUse.lastTimeUseThisSkill = now;
+				me.myskill.lastTimeUseThisSkill = now;
 				GameScr.gI().doSelectSkill(skillToUse, isShortcut: true);
 			}
 		}

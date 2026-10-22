@@ -17,8 +17,21 @@ public static class ModTanSatFilter
 	public static bool IsAttackSkill(Skill s)
 	{
 		if (s == null || s.template == null) return false;
-		if (s.template.isBuffToPlayer()) return false;
+		if (s.template.isBuffToPlayer() || s.template.isUseAlone()) return false;
+		sbyte id = s.template.id;
+		if (id == 6 || id == 7 || id == 8 || id == 12 || id == 13 || id == 14 || id == 19 || id == 20 || id == 21 || id == 23)
+		{
+			return false;
+		}
 		return s.template.isAttackSkill() || s.template.isSkillSpec() || s.template.type == 1 || s.template.type == 4;
+	}
+
+	private static bool IsAutoAttackSkill(Skill s)
+	{
+		if (!IsAttackSkill(s)) return false;
+		sbyte id = s.template.id;
+		if (id == 10 || id == 11) return false;
+		return true;
 	}
 
 	/// <summary>
@@ -37,6 +50,17 @@ public static class ModTanSatFilter
 
 	public static bool IsAttackSkillOnly(int templateId) => IsAttackSkill(templateId);
 	public static bool IsSupportSpec(int templateId) => !IsAttackSkill(templateId);
+
+	/// <summary>
+	/// Kiểm tra quái có nằm trong danh sách cho phép tấn công hay không.
+	/// </summary>
+	public static bool IsMobAllowed(int templateId)
+	{
+		if (selectAllMobs) return true;
+		if (tickedMobTemplateIds.Count > 0) return tickedMobTemplateIds.Contains(templateId);
+		if (selectedMobTemplateId >= 0) return templateId == selectedMobTemplateId;
+		return false;
+	}
 
 	/// <summary>
 	/// Truy xuất và trả về dữ liệu của GetHotbarSkills.
@@ -147,11 +171,25 @@ public static class ModTanSatFilter
 	/// </summary>
 	public static string GetSelectedMobName()
 	{
-		if (selectAllMobs || selectedMobTemplateId == -1) return "Tất cả quái";
+		if (selectAllMobs) return "Tất cả quái";
+		if (tickedMobTemplateIds.Count > 0)
+		{
+			int firstId = tickedMobTemplateIds[0];
+			for (int i = 0; i < GameScr.vMob.size(); i++)
+			{
+				Mob m = (Mob)GameScr.vMob.elementAt(i);
+				if (m != null && m.templateId == firstId && m.getTemplate() != null)
+				{
+					return (tickedMobTemplateIds.Count == 1) ? m.getTemplate().name : (m.getTemplate().name + " (+" + (tickedMobTemplateIds.Count - 1) + ")");
+				}
+			}
+			return "Đã chọn " + tickedMobTemplateIds.Count + " loại quái";
+		}
+		if (selectedMobTemplateId == -1) return "Chưa chọn quái";
 		for (int i = 0; i < GameScr.vMob.size(); i++)
 		{
 			Mob m = (Mob)GameScr.vMob.elementAt(i);
-			if (m != null && m.templateId == selectedMobTemplateId)
+			if (m != null && m.templateId == selectedMobTemplateId && m.getTemplate() != null)
 			{
 				return m.getTemplate().name;
 			}
@@ -178,6 +216,7 @@ public static class ModTanSatFilter
 		{
 			selectAllMobs = true;
 			selectedMobTemplateId = -1;
+			tickedMobTemplateIds.Clear();
 			return;
 		}
 
@@ -185,14 +224,18 @@ public static class ModTanSatFilter
 		{
 			selectAllMobs = false;
 			selectedMobTemplateId = (dir > 0) ? available[0] : available[available.Count - 1];
+			tickedMobTemplateIds.Clear();
+			tickedMobTemplateIds.Add(selectedMobTemplateId);
 		}
 		else
 		{
-			int curIdx = available.IndexOf(selectedMobTemplateId);
+			int curId = (selectedMobTemplateId >= 0) ? selectedMobTemplateId : ((tickedMobTemplateIds.Count == 1) ? tickedMobTemplateIds[0] : -1);
+			int curIdx = available.IndexOf(curId);
 			if (curIdx == -1)
 			{
 				selectAllMobs = true;
 				selectedMobTemplateId = -1;
+				tickedMobTemplateIds.Clear();
 			}
 			else
 			{
@@ -201,10 +244,13 @@ public static class ModTanSatFilter
 				{
 					selectAllMobs = true;
 					selectedMobTemplateId = -1;
+					tickedMobTemplateIds.Clear();
 				}
 				else
 				{
 					selectedMobTemplateId = available[nextIdx];
+					tickedMobTemplateIds.Clear();
+					tickedMobTemplateIds.Add(selectedMobTemplateId);
 				}
 			}
 		}
@@ -218,9 +264,16 @@ public static class ModTanSatFilter
 	/// </summary>
 	public static void ToggleMobTicked(int templateId)
 	{
-		if (tickedMobTemplateIds.Contains(templateId)) tickedMobTemplateIds.Remove(templateId);
-		else tickedMobTemplateIds.Add(templateId);
-		selectAllMobs = (tickedMobTemplateIds.Count == 0);
+		if (tickedMobTemplateIds.Contains(templateId))
+		{
+			tickedMobTemplateIds.Remove(templateId);
+		}
+		else
+		{
+			tickedMobTemplateIds.Add(templateId);
+		}
+		selectedMobTemplateId = -1;
+		selectAllMobs = false;
 		ModConfig.SaveConfig();
 	}
 
@@ -230,21 +283,8 @@ public static class ModTanSatFilter
 	public static void ToggleSelectAllMobs()
 	{
 		selectAllMobs = !selectAllMobs;
-		if (selectAllMobs)
-		{
-			tickedMobTemplateIds.Clear();
-		}
-		else
-		{
-			for (int i = 0; i < GameScr.vMob.size(); i++)
-			{
-				Mob m = (Mob)GameScr.vMob.elementAt(i);
-				if (m != null && !tickedMobTemplateIds.Contains(m.templateId))
-				{
-					tickedMobTemplateIds.Add(m.templateId);
-				}
-			}
-		}
+		tickedMobTemplateIds.Clear();
+		selectedMobTemplateId = -1;
 		ModConfig.SaveConfig();
 	}
 
@@ -266,8 +306,14 @@ public static class ModTanSatFilter
 	/// </summary>
 	public static void ToggleSkillTicked(int templateId)
 	{
-		if (tickedSkillTemplateIds.Contains(templateId)) tickedSkillTemplateIds.Remove(templateId);
-		else tickedSkillTemplateIds.Add(templateId);
+		if (tickedSkillTemplateIds.Contains(templateId))
+		{
+			tickedSkillTemplateIds.Remove(templateId);
+		}
+		else
+		{
+			tickedSkillTemplateIds.Add(templateId);
+		}
 		selectAllSkills = (tickedSkillTemplateIds.Count == 0);
 		ModConfig.SaveConfig();
 	}
@@ -281,18 +327,6 @@ public static class ModTanSatFilter
 		if (selectAllSkills)
 		{
 			tickedSkillTemplateIds.Clear();
-		}
-		else
-		{
-			List<Skill> skills = ModUI.GetPlayerAttackSkills();
-			for (int i = 0; i < skills.Count; i++)
-			{
-				Skill s = skills[i];
-				if (s != null && s.template != null && !tickedSkillTemplateIds.Contains(s.template.id))
-				{
-					tickedSkillTemplateIds.Add(s.template.id);
-				}
-			}
 		}
 		ModConfig.SaveConfig();
 	}
@@ -326,7 +360,7 @@ public static class ModTanSatFilter
 			{
 				int tplId = tickedSkillTemplateIds[k];
 				Skill s = FindSkillByTemplateId(tplId);
-				if (s != null && s.template != null)
+				if (s != null && s.template != null && IsAttackSkill(s))
 				{
 					int effCd = (s.coolDown < 300) ? 300 : s.coolDown;
 					if (now - s.lastTimeUseThisSkill >= effCd && HasEnoughMp(me, s))
@@ -341,21 +375,21 @@ public static class ModTanSatFilter
 			{
 				int tplId2 = tickedSkillTemplateIds[k];
 				Skill s3 = FindSkillByTemplateId(tplId2);
-				if (s3 != null && s3.template != null)
+				if (s3 != null && s3.template != null && IsAttackSkill(s3))
 				{
 					return s3;
 				}
 			}
 		}
 
-		// 2. NEU NGUOI CHOI CHON "TAT CA KY NANG" HOAC FALLBACK DUNG KY NANG THUC TE CUA NHAN VAT
+		// 2. NEU NGUOI CHOI CHON "TAT CA KY NANG" HOAC FALLBACK DUNG KY NANG TAN CONG THUC TE CUA NHAN VAT
 		if (GameScr.keySkill != null)
 		{
 			Skill bestSpecial = null;
 			for (int i = 0; i < GameScr.keySkill.Length; i++)
 			{
 				Skill s = GameScr.keySkill[i];
-				if (s != null && s.template != null && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
+				if (s != null && IsAutoAttackSkill(s) && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
 				{
 					if (bestSpecial == null || s.coolDown > bestSpecial.coolDown)
 					{
@@ -368,7 +402,7 @@ public static class ModTanSatFilter
 			for (int i = 0; i < GameScr.keySkill.Length; i++)
 			{
 				Skill s = GameScr.keySkill[i];
-				if (s != null && s.template != null) return s;
+				if (s != null && IsAutoAttackSkill(s)) return s;
 			}
 		}
 
@@ -378,7 +412,7 @@ public static class ModTanSatFilter
 			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
 			{
 				Skill s = GameScr.onScreenSkill[j];
-				if (s != null && s.template != null && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
+				if (s != null && IsAutoAttackSkill(s) && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
 				{
 					if (bestSpecial2 == null || s.coolDown > bestSpecial2.coolDown)
 					{
@@ -391,7 +425,7 @@ public static class ModTanSatFilter
 			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
 			{
 				Skill s = GameScr.onScreenSkill[j];
-				if (s != null && s.template != null) return s;
+				if (s != null && IsAutoAttackSkill(s)) return s;
 			}
 		}
 
@@ -400,7 +434,7 @@ public static class ModTanSatFilter
 			for (int k = 0; k < me.vSkillFight.size(); k++)
 			{
 				Skill s = (Skill)me.vSkillFight.elementAt(k);
-				if (s != null && s.template != null && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
+				if (s != null && IsAutoAttackSkill(s) && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
 				{
 					return s;
 				}
@@ -408,7 +442,7 @@ public static class ModTanSatFilter
 			for (int k = 0; k < me.vSkillFight.size(); k++)
 			{
 				Skill s = (Skill)me.vSkillFight.elementAt(k);
-				if (s != null && s.template != null) return s;
+				if (s != null && IsAutoAttackSkill(s)) return s;
 			}
 		}
 
@@ -417,14 +451,14 @@ public static class ModTanSatFilter
 			for (int m = 0; m < me.vSkill.size(); m++)
 			{
 				Skill s2 = (Skill)me.vSkill.elementAt(m);
-				if (s2 != null && s2.template != null && now - s2.lastTimeUseThisSkill >= s2.coolDown && HasEnoughMp(me, s2))
+				if (s2 != null && IsAutoAttackSkill(s2) && now - s2.lastTimeUseThisSkill >= s2.coolDown && HasEnoughMp(me, s2))
 				{
 					return s2;
 				}
 			}
 		}
 
-		if (me.myskill != null && me.myskill.template != null)
+		if (me.myskill != null && IsAttackSkill(me.myskill))
 		{
 			return me.myskill;
 		}

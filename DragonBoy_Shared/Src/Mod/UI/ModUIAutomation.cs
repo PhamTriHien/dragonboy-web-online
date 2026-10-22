@@ -6,6 +6,85 @@ using System;
 public static class ModUIAutomation
 {
 	public static int subTab = 0;
+	public static int scrollY = 0;
+
+	private static bool isDragging = false;
+	private static bool hasDragged = false;
+	private static int startDragY = 0;
+	private static int lastDragY = 0;
+
+	private static int GetContentHeight()
+	{
+		return (subTab == 0) ? 174 : 182;
+	}
+
+	/// <summary>
+	/// Bộ xử lý sự kiện tiếp nhận và phản hồi OnMouseScroll.
+	/// </summary>
+	public static void OnMouseScroll(float wheel)
+	{
+		int step = 22;
+		if (wheel > 0)
+		{
+			scrollY -= step;
+			if (scrollY < 0) scrollY = 0;
+		}
+		else if (wheel < 0)
+		{
+			scrollY += step;
+		}
+	}
+
+	/// <summary>
+	/// Cập nhật trạng thái logic của UpdateDragScroll theo chu kỳ khung hình.
+	/// </summary>
+	public static void UpdateDragScroll(int px, int py, int uiX, int uiY, int uiW, int uiH)
+	{
+		int row0Y = uiY + 4;
+		int row0H = 18;
+		int boxX = uiX + 4;
+		int boxY = row0Y + row0H + 4;
+		int boxW = uiW - 8;
+		int boxH = uiH - (boxY - uiY) - 4;
+		if (boxH < 40) boxH = 40;
+
+		int contentH = GetContentHeight();
+		int viewH = boxH - 8;
+		int maxScroll = (contentH > viewH) ? (contentH - viewH) : 0;
+
+		if (GameCanvas.isPointerDown)
+		{
+			if (!isDragging)
+			{
+				if (px >= boxX && px <= boxX + boxW && py >= boxY && py <= boxY + boxH)
+				{
+					isDragging = true;
+					hasDragged = false;
+					startDragY = py;
+					lastDragY = py;
+				}
+			}
+			else
+			{
+				int moveY = py - lastDragY;
+				lastDragY = py;
+				if (Res.abs(py - startDragY) > 5)
+				{
+					hasDragged = true;
+				}
+				if (hasDragged && maxScroll > 0)
+				{
+					scrollY -= moveY;
+					if (scrollY < 0) scrollY = 0;
+					if (scrollY > maxScroll) scrollY = maxScroll;
+				}
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+	}
 
 	/// <summary>
 	/// Thực hiện vẽ toàn bộ đối tượng và các lớp hiển thị lên canvas mGraphics.
@@ -25,18 +104,26 @@ public static class ModUIAutomation
 		int boxH = uiH - (boxY - uiY) - 4;
 		if (boxH < 40) boxH = 40;
 
+		int contentH = GetContentHeight();
+		int viewH = boxH - 8;
+		int maxScroll = (contentH > viewH) ? (contentH - viewH) : 0;
+		if (scrollY > maxScroll) scrollY = maxScroll;
+		if (scrollY < 0) scrollY = 0;
+
 		GameCanvas.paintz.paintFrameSimple(boxX, boxY, boxW, boxH, g);
 		g.setColor(15196114);
 		g.fillRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4);
 
+		g.setClip(boxX + 2, boxY + 2, boxW - 4, boxH - 4);
 		if (subTab == 0)
 		{
-			PaintSubTabPlayer(boxX + 4, boxY + 4, boxW - 8, boxH - 8, g);
+			PaintSubTabPlayer(boxX + 4, boxY + 4 - scrollY, boxW - 8, boxH - 8, g);
 		}
 		else
 		{
-			PaintSubTabUtilities(boxX + 4, boxY + 4, boxW - 8, boxH - 8, g);
+			PaintSubTabUtilities(boxX + 4, boxY + 4 - scrollY, boxW - 8, boxH - 8, g);
 		}
+		g.setClip(0, 0, GameCanvas.w, GameCanvas.h);
 	}
 
 	/// <summary>
@@ -205,6 +292,12 @@ public static class ModUIAutomation
 	/// </summary>
 	public static bool HandleTap(int px, int py, int uiX, int uiY, int uiW, int uiH)
 	{
+		if (hasDragged)
+		{
+			hasDragged = false;
+			return true;
+		}
+
 		int subTabW = (uiW - 12) / 2;
 		int row0Y = uiY + 4;
 		int row0H = 18;
@@ -215,12 +308,14 @@ public static class ModUIAutomation
 			if (px >= uiX + 4 && px <= uiX + 4 + subTabW)
 			{
 				subTab = 0;
+				scrollY = 0;
 				SoundMn.gI().buttonClick();
 				return true;
 			}
 			if (px >= uiX + 8 + subTabW && px <= uiX + 8 + subTabW * 2)
 			{
 				subTab = 1;
+				scrollY = 0;
 				SoundMn.gI().buttonClick();
 				return true;
 			}
@@ -229,8 +324,15 @@ public static class ModUIAutomation
 		int boxX = uiX + 4;
 		int boxY = row0Y + row0H + 4;
 		int boxW = uiW - 8;
+		int boxH = uiH - (boxY - uiY) - 4;
+		if (boxH < 40) boxH = 40;
+		if (px < boxX || px > boxX + boxW || py < boxY || py > boxY + boxH)
+		{
+			return false;
+		}
+
 		int x = boxX + 4;
-		int y = boxY + 4;
+		int y = boxY + 4 - scrollY;
 		int w = boxW - 8;
 
 		if (subTab == 0)

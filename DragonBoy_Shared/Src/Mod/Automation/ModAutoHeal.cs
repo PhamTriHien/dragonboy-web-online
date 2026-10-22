@@ -192,6 +192,18 @@ public static class ModAutoHeal
 			GameScr.gI().doUseHP();
 		}
 
+		Char petInfo = Char.myPetz();
+		if (petInfo != null && petInfo.cHPFull > 0)
+		{
+			petInfo.cHP = petInfo.cHPFull;
+			petInfo.cMP = petInfo.cMPFull;
+		}
+		Char mapPet = GameScr.findCharInMap(-me.charID);
+		if (mapPet != null && mapPet.cHPFull > 0)
+		{
+			mapPet.cHP = mapPet.cHPFull;
+		}
+
 		SoundMn.gI().HP_MPup();
 		GameScr.info1.addInfo("Đã ăn đậu cho đệ tử! (" + reason + ")", 0);
 	}
@@ -283,13 +295,13 @@ public static class ModAutoHeal
 				}
 			}
 
-			// 4. Giám sát sinh lực đệ tử, tự ăn đậu khi máu đệ tử nguy kịch
-			if (autoFeedPetOnAsk && me.havePet && Char.myPetz() != null)
+			// 4. Giám sát sinh lực đệ tử thực tế trong map, tự ăn đậu khi máu đệ tử nguy kịch
+			if (autoFeedPetOnAsk && me.havePet)
 			{
-				Char pet = Char.myPetz();
-				if (pet.cHPFull > 0 && pet.cHP > 0)
+				Char mapPet = GameScr.findCharInMap(-me.charID);
+				if (mapPet != null && mapPet.cHPFull > 0 && mapPet.cHP > 0)
 				{
-					long petHpPercent = pet.cHP * 100L / pet.cHPFull;
+					long petHpPercent = mapPet.cHP * 100L / mapPet.cHPFull;
 					if (petHpPercent <= 25)
 					{
 						FeedPetBean("HP đệ còn " + petHpPercent + "%");

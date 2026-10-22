@@ -82,7 +82,7 @@ public static class ModUI
 			for (int i = 0; i < GameScr.keySkill.Length; i++)
 			{
 				Skill s = GameScr.keySkill[i];
-				if (s != null && s.template != null && !addedIds.Contains(s.template.id))
+				if (s != null && s.template != null && ModTanSatFilter.IsAttackSkill(s) && !addedIds.Contains(s.template.id))
 				{
 					list.Add(s);
 					addedIds.Add(s.template.id);
@@ -95,7 +95,7 @@ public static class ModUI
 			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
 			{
 				Skill s2 = GameScr.onScreenSkill[j];
-				if (s2 != null && s2.template != null && !addedIds.Contains(s2.template.id))
+				if (s2 != null && s2.template != null && ModTanSatFilter.IsAttackSkill(s2) && !addedIds.Contains(s2.template.id))
 				{
 					list.Add(s2);
 					addedIds.Add(s2.template.id);
@@ -103,7 +103,7 @@ public static class ModUI
 			}
 		}
 
-		if (me != null && me.myskill != null && me.myskill.template != null && !addedIds.Contains(me.myskill.template.id))
+		if (me != null && me.myskill != null && me.myskill.template != null && ModTanSatFilter.IsAttackSkill(me.myskill) && !addedIds.Contains(me.myskill.template.id))
 		{
 			list.Add(me.myskill);
 			addedIds.Add(me.myskill.template.id);
@@ -114,7 +114,7 @@ public static class ModUI
 			for (int k = 0; k < me.vSkillFight.size(); k++)
 			{
 				Skill s3 = (Skill)me.vSkillFight.elementAt(k);
-				if (s3 != null && s3.template != null && !addedIds.Contains(s3.template.id))
+				if (s3 != null && s3.template != null && ModTanSatFilter.IsAttackSkill(s3) && !addedIds.Contains(s3.template.id))
 				{
 					list.Add(s3);
 					addedIds.Add(s3.template.id);
@@ -582,6 +582,10 @@ public static class ModUI
 						{
 							ModUIBackground.OnMouseScroll(wheel);
 						}
+						else if (selectedTab == 4)
+						{
+							ModUIAutomation.OnMouseScroll(wheel);
+						}
 						else if (selectedTab == 11)
 						{
 							ModUIHelp.OnMouseScroll(wheel);
@@ -657,6 +661,10 @@ public static class ModUI
 				if (selectedTab == 11)
 				{
 					ModUIHelp.UpdateDragScroll(px, py, detailX, detailY, detailW, detailH);
+				}
+				else if (selectedTab == 4)
+				{
+					ModUIAutomation.UpdateDragScroll(px, py, detailX, detailY, detailW, detailH);
 				}
 				else if (selectedTab == 0)
 				{
@@ -796,6 +804,11 @@ public static class ModUI
 					{
 						GameCanvas.isPointerJustRelease = GameCanvas.isPointerClick = false;
 					}
+				}
+
+				if (px >= uiX && px <= uiX + uiW && py >= uiY && py <= uiY + uiH)
+				{
+					GameCanvas.isPointerJustDown = false;
 				}
 
 				if (!isDown)

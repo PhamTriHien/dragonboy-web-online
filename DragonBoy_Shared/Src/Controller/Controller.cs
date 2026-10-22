@@ -734,7 +734,7 @@ public partial class Controller : IMessageHandler
 						if (lower.Contains("đậu") || lower.Contains("dau") || lower.Contains("sư phụ") || lower.Contains("su phu") || lower.Contains("cho con"))
 						{
 							Char myPet = Char.myPetz();
-							bool isMyPet = (@char.isPet || (myPet != null && @char.cName == myPet.cName) || @char.charID < 0);
+							bool isMyPet = Char.myCharz() != null && Char.myCharz().havePet && (@char.charID == -Char.myCharz().charID || (myPet != null && !string.IsNullOrEmpty(myPet.cName) && !string.IsNullOrEmpty(@char.cName) && @char.cName.EndsWith(myPet.cName)));
 							if (isMyPet)
 							{
 								ModAutoHeal.FeedPetBean(text9);
