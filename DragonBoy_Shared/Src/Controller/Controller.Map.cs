@@ -185,7 +185,7 @@ public partial class Controller : IMessageHandler
 				{
 					Char.myCharz().cdir = 1;
 				}
-				else if (Char.myCharz().cx >= TileMap.tmw - 100 && Char.myCharz().cx <= TileMap.tmw)
+				else if (Char.myCharz().cx >= TileMap.pxw - 100 && Char.myCharz().cx <= TileMap.pxw)
 				{
 					Char.myCharz().cdir = -1;
 				}

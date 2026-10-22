@@ -433,7 +433,7 @@ public static class ModSetActivator
 
 			case SetActivatorState.MovingToUron:
 				int targetStation = GetTargetSpaceshipMapId();
-				if (TileMap.mapID == targetStation)
+				if (TileMap.mapID == targetStation && !Char.isLoadingMap && !Char.ischangingMap)
 				{
 					if (ModNextMap.isNextMapActive)
 					{
@@ -442,7 +442,7 @@ public static class ModSetActivator
 					currentState = SetActivatorState.InteractingUron;
 					stateTimer = now;
 				}
-				else if (!ModNextMap.isNextMapActive)
+				else if (!ModNextMap.isNextMapActive && !Char.isLoadingMap && !Char.ischangingMap)
 				{
 					// Nếu chưa đến nơi mà nextmap dừng, kích hoạt lại
 					if (now - stateTimer > 3000)
@@ -454,15 +454,15 @@ public static class ModSetActivator
 				break;
 
 			case SetActivatorState.InteractingUron:
+				if (Char.isLoadingMap || Char.ischangingMap) break;
+
 				Npc uron = FindUronNpc();
 				if (uron != null)
 				{
 					int dist = Res.distance(me.cx, me.cy, uron.cx, uron.cy);
 					if (dist > 30)
 					{
-						me.cx = uron.cx;
-						me.cy = uron.cy;
-						Service.gI().charMoveTo(uron.cx, uron.cy);
+						ModTeleport.TeleportTo(uron.cx, uron.cy);
 					}
 					me.focusManualTo(uron);
 
@@ -544,7 +544,7 @@ public static class ModSetActivator
 					break;
 				}
 
-				if (TileMap.mapID == savedFarmMapId)
+				if (TileMap.mapID == savedFarmMapId && !Char.isLoadingMap && !Char.ischangingMap)
 				{
 					if (ModNextMap.isNextMapActive)
 					{
@@ -566,7 +566,7 @@ public static class ModSetActivator
 						stateTimer = now;
 					}
 				}
-				else if (!ModNextMap.isNextMapActive)
+				else if (!ModNextMap.isNextMapActive && !Char.isLoadingMap && !Char.ischangingMap)
 				{
 					if (now - stateTimer > 3000)
 					{
@@ -577,6 +577,8 @@ public static class ModSetActivator
 				break;
 
 			case SetActivatorState.SwitchingZone:
+				if (Char.isLoadingMap || Char.ischangingMap) break;
+
 				if (TileMap.zoneID == savedFarmZoneId)
 				{
 					currentState = SetActivatorState.TeleportingToSpot;
@@ -602,6 +604,8 @@ public static class ModSetActivator
 				break;
 
 			case SetActivatorState.TeleportingToSpot:
+				if (Char.isLoadingMap || Char.ischangingMap) break;
+
 				if (savedFarmX != -1 && savedFarmY != -1)
 				{
 					ModTeleport.TeleportTo(savedFarmX, savedFarmY);

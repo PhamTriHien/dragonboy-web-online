@@ -26,6 +26,8 @@ public static class ModWaypoint
 		lastTeleportTime = 0;
 		lastWalkTime = 0;
 		edgeWalkAttempts = 0;
+		isWaitingShipMenu = false;
+		pendingTargetPlanetMapId = -1;
 	}
 
 	/// <summary>
@@ -198,12 +200,16 @@ public static class ModWaypoint
 				return false;
 			}
 
+			bool isLeftEdge = wp.maxX < 60;
+			bool isRightEdge = !isLeftEdge && wp.minX > TileMap.pxw - 60;
+			bool isInterior = !isLeftEdge && !isRightEdge;
+
 			int wpTargetX;
-			if (wp.maxX < 60)
+			if (isLeftEdge)
 			{
 				wpTargetX = 15;
 			}
-			else if (wp.minX <= TileMap.pxw - 60)
+			else if (isInterior)
 			{
 				wpTargetX = (wp.minX + wp.maxX) / 2;
 			}
@@ -212,18 +218,25 @@ public static class ModWaypoint
 				wpTargetX = TileMap.pxw - 15;
 			}
 
-			int wpTargetY = wp.maxY;
 			bool isAirOrTower = TileMap.isInAirMap() || TileMap.mapID == 45 || TileMap.mapID == 46 || TileMap.mapID == 47 || TileMap.mapID == 48;
+			int wpTargetY;
 			if (isAirOrTower && wp.maxY > wp.minY + 24)
 			{
 				wpTargetY = (wp.minY + wp.maxY) / 2;
 			}
+			else if (!isAirOrTower)
+			{
+				wpTargetY = GetGroundY(wpTargetX, wp.minY, wp.maxY);
+			}
+			else
+			{
+				wpTargetY = wp.maxY;
+			}
 
 			int dx = Res.abs(me.cx - wpTargetX);
 			int dy = Res.abs(me.cy - wpTargetY);
-			bool isInterior = wp.maxX >= 60 && wp.minX <= TileMap.pxw - 60;
-			int teleportX = (isInterior || isAirOrTower) ? wpTargetX : (wpTargetX + ((me.cx < wpTargetX) ? (-20) : 20));
-			me.cdir = (me.cx < wpTargetX) ? 1 : (-1);
+			int teleportX = (isInterior || isAirOrTower) ? wpTargetX : (isLeftEdge ? (wpTargetX + 20) : (wpTargetX - 20));
+			me.cdir = isLeftEdge ? (-1) : (isRightEdge ? 1 : ((me.cx <= wpTargetX) ? 1 : (-1)));
 
 			if (!hasTeleportedToWp || dx > 30 || dy > 30)
 			{
@@ -265,8 +278,8 @@ public static class ModWaypoint
 
 				if (me.currentMovePoint == null && now - lastWalkTime >= 180)
 				{
-					int walkOffset = (me.cx < wpTargetX) ? (-15) : 15;
-					me.currentMovePoint = new MovePoint(wpTargetX - walkOffset, wpTargetY);
+					int walkTargetX = isLeftEdge ? 5 : (TileMap.pxw - 5);
+					me.currentMovePoint = new MovePoint(walkTargetX, wpTargetY);
 					edgeWalkAttempts++;
 					lastWalkTime = now;
 				}
@@ -350,6 +363,13 @@ public static class ModWaypoint
 		{
 			if (!isWaitingShipMenu || menuItems == null || menuItems.Length == 0)
 			{
+				return;
+			}
+
+			if (mSystem.currentTimeMillis() - lastShipOpenMenuTime > 5000)
+			{
+				isWaitingShipMenu = false;
+				pendingTargetPlanetMapId = -1;
 				return;
 			}
 

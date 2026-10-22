@@ -6,6 +6,7 @@ public static class ModAutoRevive
 	public static bool isEnabled;
 	public static int intervalMs = 10000;
 	private static long nextAt;
+	private static long deathDetectTime;
 
 	/// <summary>
 	/// Bật hoặc tắt trạng thái kích hoạt của Toggle.
@@ -14,6 +15,7 @@ public static class ModAutoRevive
 	{
 		isEnabled = !isEnabled;
 		nextAt = 0;
+		deathDetectTime = 0;
 		ModConfig.SaveConfig();
 		GameScr.info1.addInfo("Auto hồi sinh: " + (isEnabled ? "BẬT" : "TẮT"), 0);
 	}
@@ -24,10 +26,21 @@ public static class ModAutoRevive
 	public static void Update()
 	{
 		if (!isEnabled || !ModMenu.IsInGame() || Char.myCharz() == null) return;
+		if (ModGoBack.isGoBackActive && (ModGoBack.savedMapId >= 0 || ModGoBack.isAutoRecordOnDeath)) return;
 		Char me = Char.myCharz();
-		if (me.statusMe != 14) return;
+		bool isDead = me.cHP <= 0 || me.statusMe == 14 || me.meDead;
+		if (!isDead)
+		{
+			deathDetectTime = 0;
+			return;
+		}
 		long now = mSystem.currentTimeMillis();
-		if (now < nextAt) return;
+		if (deathDetectTime == 0)
+		{
+			deathDetectTime = now;
+			return;
+		}
+		if (now - deathDetectTime < 600 || now < nextAt) return;
 		Service.gI().wakeUpFromDead();
 		nextAt = now + intervalMs;
 	}

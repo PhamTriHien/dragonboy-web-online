@@ -143,8 +143,6 @@ public static class ModNextMap
 			return null;
 		}
 
-		string targetMapName = GetMapName(nextMapId);
-
 		// 1. So khớp tên cổng chính xác & đa ngôn ngữ (bao gồm cả popup says)
 		for (int j = 0; j < TileMap.vGo.size(); j++)
 		{
@@ -182,7 +180,7 @@ public static class ModNextMap
 							fullName += " " + wp.popup.says[s];
 						}
 					}
-					if (ModNextMapData.MatchMapId(fullName, nextMapId) || wp.isOffline || wp.isEnter)
+					if (ModNextMapData.MatchMapId(fullName, nextMapId) || wp.isOffline || (wp.isEnter && wp.minX >= 60 && wp.maxX <= TileMap.pxw - 60))
 					{
 						return wp;
 					}
@@ -195,25 +193,57 @@ public static class ModNextMap
 			return (Waypoint)TileMap.vGo.elementAt(0);
 		}
 
-		// 3. Xử lý Vách núi (42, 43, 44)
+		// 3. Xử lý Vách núi (42, 43, 44) - luôn là cổng rìa trái của Làng (0, 7, 14)
 		if (nextMapId == 42 || nextMapId == 43 || nextMapId == 44)
 		{
 			for (int j = 0; j < TileMap.vGo.size(); j++)
 			{
 				Waypoint wp = (Waypoint)TileMap.vGo.elementAt(j);
-				if (wp != null && (wp.minX < 200 || ModNextMapData.MatchMapId(wp.name, nextMapId)))
+				if (wp != null && ((!wp.isOffline && !wp.isEnter && wp.maxX < 100) || ModNextMapData.MatchMapId(wp.name, nextMapId)))
 				{
 					return wp;
 				}
 			}
 		}
 
-		// 4. Xử lý tháp Karin & trên không (47, 46, 45, 48)
-		if (TileMap.mapID == 47) // Rừng Karin: 46 (lên Tháp) / 42 (xuống Vách)
+		// 4. Xử lý Vách Aru, Rừng Karin, Tháp Karin, Thần điện & Thánh địa Kaio (42, 47, 46, 45, 48)
+		if (TileMap.mapID == 42) // Vách Aru: 47 (sang Rừng Karin - trái/trên) / 0 (về Làng Aru - phải/dưới)
+		{
+			if (nextMapId == 47)
+			{
+				Waypoint leftWp = null;
+				int minLeftX = int.MaxValue;
+				for (int k = 0; k < TileMap.vGo.size(); k++)
+				{
+					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+					if (w != null && w.minX < minLeftX)
+					{
+						minLeftX = w.minX;
+						leftWp = w;
+					}
+				}
+				if (leftWp != null) return leftWp;
+			}
+			else if (nextMapId == 0)
+			{
+				Waypoint rightWp = null;
+				int maxRightX = int.MinValue;
+				for (int k = 0; k < TileMap.vGo.size(); k++)
+				{
+					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+					if (w != null && w.maxX > maxRightX)
+					{
+						maxRightX = w.maxX;
+						rightWp = w;
+					}
+				}
+				if (rightWp != null) return rightWp;
+			}
+		}
+		else if (TileMap.mapID == 47) // Rừng Karin: 46 (lên Tháp) / 42 (xuống Vách)
 		{
 			if (nextMapId == 46)
 			{
-				// Tìm cổng trên cao (minY nhỏ nhất)
 				Waypoint topWp = null;
 				int minTopY = int.MaxValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
@@ -227,12 +257,26 @@ public static class ModNextMap
 				}
 				if (topWp != null) return topWp;
 			}
+			else if (nextMapId == 42)
+			{
+				Waypoint bottomWp = null;
+				int maxBottomY = int.MinValue;
+				for (int k = 0; k < TileMap.vGo.size(); k++)
+				{
+					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+					if (w != null && w.maxY > maxBottomY)
+					{
+						maxBottomY = w.maxY;
+						bottomWp = w;
+					}
+				}
+				if (bottomWp != null) return bottomWp;
+			}
 		}
 		else if (TileMap.mapID == 46) // Tháp Karin: 45 (lên Thần điện) / 47 (xuống Rừng Karin)
 		{
 			if (nextMapId == 45)
 			{
-				// Tìm cổng trên đỉnh tháp
 				Waypoint topWp = null;
 				int minTopY = int.MaxValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
@@ -248,7 +292,6 @@ public static class ModNextMap
 			}
 			else if (nextMapId == 47)
 			{
-				// Tìm cổng dưới chân tháp
 				Waypoint bottomWp = null;
 				int maxBottomY = int.MinValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
@@ -263,9 +306,24 @@ public static class ModNextMap
 				if (bottomWp != null) return bottomWp;
 			}
 		}
-		else if (TileMap.mapID == 45) // Thần điện: 46 (xuống Tháp Karin)
+		else if (TileMap.mapID == 45) // Thần điện: 48 (lên Thánh địa Kaio) / 46 (xuống Tháp Karin)
 		{
-			if (nextMapId == 46)
+			if (nextMapId == 48)
+			{
+				Waypoint topWp = null;
+				int minTopY = int.MaxValue;
+				for (int k = 0; k < TileMap.vGo.size(); k++)
+				{
+					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+					if (w != null && w.minY < minTopY)
+					{
+						minTopY = w.minY;
+						topWp = w;
+					}
+				}
+				if (topWp != null) return topWp;
+			}
+			else if (nextMapId == 46)
 			{
 				Waypoint bottomWp = null;
 				int maxBottomY = int.MinValue;

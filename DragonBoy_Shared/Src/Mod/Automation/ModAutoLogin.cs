@@ -66,12 +66,19 @@ public static class ModAutoLogin
 			wasAutoBuaActive = ModAutoBuyBua.isAutoRebuy;
 			wasSpeedHackActive = ModSpeed.speedHack;
 
-			if (ModGoBack.savedMapId >= 0)
+			if (ModGoBack.isGoBackActive && ModGoBack.savedMapId >= 0)
 			{
 				lastFarmMapId = ModGoBack.savedMapId;
 				lastFarmZoneId = ModGoBack.savedZoneId;
 				lastFarmX = ModGoBack.savedX;
 				lastFarmY = ModGoBack.savedY;
+			}
+			else if (ModSetActivator.isActive && ModSetActivator.savedFarmMapId >= 0)
+			{
+				lastFarmMapId = ModSetActivator.savedFarmMapId;
+				lastFarmZoneId = ModSetActivator.savedFarmZoneId;
+				lastFarmX = ModSetActivator.savedFarmX;
+				lastFarmY = ModSetActivator.savedFarmY;
 			}
 			else if (TileMap.mapID >= 0 && Char.myCharz() != null)
 			{
@@ -247,6 +254,15 @@ public static class ModAutoLogin
 			if (wasSetKHActive)
 			{
 				ModSetActivator.isActive = true;
+				if (!wasGoBackActive && lastFarmMapId >= 0 && (TileMap.mapID != lastFarmMapId || (lastFarmZoneId >= 0 && TileMap.zoneID != lastFarmZoneId)))
+				{
+					ModSetActivator.savedFarmMapId = lastFarmMapId;
+					ModSetActivator.savedFarmZoneId = lastFarmZoneId;
+					ModSetActivator.savedFarmX = lastFarmX;
+					ModSetActivator.savedFarmY = lastFarmY;
+					ModSetActivator.currentState = ModSetActivator.SetActivatorState.ReturningToFarm;
+					ModNextMap.StartNextMap(lastFarmMapId);
+				}
 			}
 
 			// 6. Tu Mua Bua

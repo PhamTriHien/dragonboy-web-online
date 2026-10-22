@@ -177,52 +177,52 @@ public static class ModNextMapData
 
 	private static readonly Dictionary<int, string[]> s_MapMultilingualAliases = new Dictionary<int, string[]>
 	{
-		{ 0, new string[] { "Aru", "Desa Aru" } },
-		{ 1, new string[] { "cuc", "cúc", "krisan", "chrysanthemum" } },
-		{ 2, new string[] { "tre", "bambu", "bamboo" } },
-		{ 3, new string[] { "nam", "nấm", "jamur", "mushroom" } },
-		{ 4, new string[] { "xuong", "xương", "tulang", "bone" } },
-		{ 5, new string[] { "Kame", "Kamê", "Pulau Kame" } },
-		{ 6, new string[] { "Dong Nam", "Đông Nam", "Tenggara" } },
-		{ 7, new string[] { "Mori", "Moori", "Desa Mori" } },
-		{ 8, new string[] { "Doi nam", "Đồi nấm", "tim", "tím", "Bukit jamur" } },
+		{ 0, new string[] { "Lang Aru", "Desa Aru" } },
+		{ 1, new string[] { "Hoa cuc", "Doi hoa cuc", "Krisan", "Chrysanthemum" } },
+		{ 2, new string[] { "Thung lung tre", "Lembah bambu" } },
+		{ 3, new string[] { "Rung nam", "Hutan jamur", "Mushroom" } },
+		{ 4, new string[] { "Rung xuong", "Hutan tulang", "Bone forest" } },
+		{ 5, new string[] { "Dao Kame", "Pulau Kame" } },
+		{ 6, new string[] { "Dong Nam Kame", "Tenggara Kame" } },
+		{ 7, new string[] { "Lang Mori", "Lang Moori", "Desa Mori", "Desa Moori" } },
+		{ 8, new string[] { "Doi nam", "Doi nam tim", "Bukit jamur" } },
 		{ 9, new string[] { "Maima", "Lembah Maima" } },
-		{ 10, new string[] { "da", "đá", "batu", "stone" } },
-		{ 11, new string[] { "Vuc cam", "Vực cấm", "Jurang terlarang" } },
+		{ 10, new string[] { "Thung lung da", "Lembah batu" } },
+		{ 11, new string[] { "Vuc cam", "Jurang terlarang" } },
 		{ 12, new string[] { "Appule", "Gunung Appule" } },
-		{ 13, new string[] { "Fide", "Frieza", "Pangkalan" } },
-		{ 14, new string[] { "Kakarot", "Desa Kakarot", "Kakarot village" } },
-		{ 15, new string[] { "Abadon", "Abadon hill", "hoang", "liar", "wild", "Bukit liar" } },
-		{ 16, new string[] { "Plant", "Desa Plant", "Plant village" } },
-		{ 17, new string[] { "nguyen sinh", "nguyên sinh", "perawan", "primeval" } },
-		{ 18, new string[] { "co", "cọ", "thong", "thông", "palem", "palm" } },
+		{ 13, new string[] { "Can cu Fide", "Pangkalan Frieza" } },
+		{ 14, new string[] { "Lang Kakarot", "Desa Kakarot", "Kakarot village" } },
+		{ 15, new string[] { "Doi hoang", "Abadon", "Bukit liar" } },
+		{ 16, new string[] { "Lang Plant", "Desa Plant", "Plant village" } },
+		{ 17, new string[] { "Nguyen sinh", "Rung nguyen sinh", "Hutan perawan", "Primeval" } },
+		{ 18, new string[] { "Rung co", "Rung thong", "Hutan palem" } },
 		{ 19, new string[] { "Vegeta", "Kota Vegeta" } },
-		{ 20, new string[] { "den", "đen", "hitam", "black" } },
-		{ 21, new string[] { "Gohan", "Gôhan", "Rumah Gohan" } },
-		{ 22, new string[] { "Moori", "Mori", "Rumah Moori" } },
-		{ 23, new string[] { "Broly", "Rumah Broly" } },
-		{ 24, new string[] { "Tau", "Tàu", "Dat", "Đất", "Stasiun", "Bumi", "Earth" } },
-		{ 25, new string[] { "Tau", "Tàu", "Namec", "Namếc", "Stasiun Namec", "Namek" } },
-		{ 26, new string[] { "Tau", "Tàu", "Xayda", "Saiya", "Stasiun Saiya", "Saiyan" } },
-		{ 27, new string[] { "bamboo", "truc", "trúc", "Hutan bambu" } },
-		{ 28, new string[] { "duong xi", "dương xỉ", "pakis", "fern" } },
+		{ 20, new string[] { "Vach nui den", "Tebing hitam" } },
+		{ 21, new string[] { "Nha Gohan", "Rumah Gohan" } },
+		{ 22, new string[] { "Nha Moori", "Nha Mori", "Rumah Moori" } },
+		{ 23, new string[] { "Nha Broly", "Rumah Broly" } },
+		{ 24, new string[] { "Tram tau", "Tau vu tru", "Stasiun", "Spaceship" } },
+		{ 25, new string[] { "Tram tau", "Tau vu tru", "Stasiun Namec", "Spaceship" } },
+		{ 26, new string[] { "Tram tau", "Tau vu tru", "Stasiun Saiya", "Spaceship" } },
+		{ 27, new string[] { "Rung bamboo", "Rung truc", "Hutan bambu" } },
+		{ 28, new string[] { "Duong xi", "Rung duong xi", "Hutan pakis" } },
 		{ 29, new string[] { "Nam Kame", "Selatan Kame" } },
-		{ 30, new string[] { "Bulong", "Bulông", "Kame 2" } },
-		{ 31, new string[] { "vang", "vàng", "kuning", "yellow" } },
-		{ 32, new string[] { "tim", "tím", "ungu", "purple" } },
+		{ 30, new string[] { "Dao Bulong", "Bulong", "Dao Kame 2", "Kame 2" } },
+		{ 31, new string[] { "Nui hoa vang", "Bunga kuning" } },
+		{ 32, new string[] { "Nui hoa tim", "Bunga ungu" } },
 		{ 33, new string[] { "Nam Guru", "Selatan Guru" } },
-		{ 34, new string[] { "Guru", "Den", "Đền", "Kuil Guru" } },
-		{ 35, new string[] { "da", "đá", "batu", "stone" } },
-		{ 36, new string[] { "den", "đen", "hitam", "black" } },
-		{ 37, new string[] { "vuc", "vực", "jurang", "abyss" } },
-		{ 38, new string[] { "Fide 2", "Frieza 2" } },
-		{ 42, new string[] { "Vach Aru", "Vách Aru", "Tebing Aru" } },
-		{ 43, new string[] { "Vach Moori", "Vách Moori", "Tebing Moori" } },
-		{ 44, new string[] { "Vach Kakarot", "Vách Kakarot", "Tebing Kakarot" } },
-		{ 45, new string[] { "Than dien", "Thần điện", "Kuil Dewa", "Kami" } },
-		{ 46, new string[] { "Thap Karin", "Tháp Karin", "Menara Karin", "Korin" } },
-		{ 47, new string[] { "Rung Karin", "Rừng Karin", "Hutan Karin" } },
-		{ 48, new string[] { "Kaio", "Thanh dia", "Thánh địa", "Planet Kaio" } }
+		{ 34, new string[] { "Den Guru", "Kuil Guru" } },
+		{ 35, new string[] { "Rung da", "Hutan batu" } },
+		{ 36, new string[] { "Thung lung den", "Lembah hitam" } },
+		{ 37, new string[] { "Bo vuc den", "Jurang hitam" } },
+		{ 38, new string[] { "Can cu Fide 2", "Fide 2", "Frieza 2" } },
+		{ 42, new string[] { "Vach Aru", "Vach nui Aru", "Tebing Aru" } },
+		{ 43, new string[] { "Vach Moori", "Vach Mori", "Vach nui Moori", "Vach nui Mori", "Tebing Moori" } },
+		{ 44, new string[] { "Vach Kakarot", "Vach nui Kakarot", "Tebing Kakarot" } },
+		{ 45, new string[] { "Than dien", "Kuil Dewa", "Kami" } },
+		{ 46, new string[] { "Thap Karin", "Menara Karin", "Korin" } },
+		{ 47, new string[] { "Rung Karin", "Hutan Karin" } },
+		{ 48, new string[] { "Kaio", "Thanh dia Kaio", "Planet Kaio" } }
 	};
 
 	/// <summary>
@@ -231,38 +231,17 @@ public static class ModNextMapData
 	public static bool MatchMapId(string wpName, int targetMapId)
 	{
 		if (string.IsNullOrEmpty(wpName)) return false;
-		string cleanWp = CleanName(wpName);
 
-		// 1. So khớp với tên tiếng Việt chuẩn
 		string mName = GetMapName(targetMapId);
 		if (MatchMapName(wpName, mName)) return true;
 
 		if (s_MapMultilingualAliases.TryGetValue(targetMapId, out string[] aliases))
 		{
-			string[] rawTokens = null;
 			for (int i = 0; i < aliases.Length; i++)
 			{
-				string aliasClean = CleanName(aliases[i]);
-				if (aliasClean.Length > 3)
+				if (MatchMapName(wpName, aliases[i]))
 				{
-					if (cleanWp.Contains(aliasClean) || aliasClean.Contains(cleanWp))
-					{
-						return true;
-					}
-				}
-				else if (aliasClean.Length > 0)
-				{
-					if (rawTokens == null)
-					{
-						rawTokens = wpName.Split(new char[] { ' ', '-', '_', '(', ')', ',', '.', '/', '\\', ':' }, StringSplitOptions.RemoveEmptyEntries);
-					}
-					for (int t = 0; t < rawTokens.Length; t++)
-					{
-						if (CleanName(rawTokens[t]).Equals(aliasClean, StringComparison.OrdinalIgnoreCase))
-						{
-							return true;
-						}
-					}
+					return true;
 				}
 			}
 		}
@@ -278,21 +257,60 @@ public static class ModNextMapData
 		if (string.IsNullOrEmpty(wpName) || string.IsNullOrEmpty(mapName)) return false;
 		string w = CleanName(wpName);
 		string m = CleanName(mapName);
-		if (w.Contains(m) || m.Contains(w)) return true;
+		if (string.IsNullOrEmpty(w) || string.IsNullOrEmpty(m)) return false;
 
-		// Tách từ khóa quan trọng không dấu
+		if (w.Equals(m, StringComparison.OrdinalIgnoreCase)) return true;
+
+		// Tránh khớp nhầm giữa bản đồ gốc và bản đồ hậu tố số (ví dụ: Đảo Kamê vs Đảo Kamê 2, Căn cứ Fide vs Căn cứ Fide 2)
+		bool wpHas2 = w.Contains("2");
+		bool mapHas2 = m.Contains("2");
+		if (wpHas2 != mapHas2) return false;
+
 		string normW = RemoveAccents(wpName).ToLower();
 		string normM = RemoveAccents(mapName).ToLower();
-		string[] keywords = normM.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-		int matchCount = 0;
-		for (int i = 0; i < keywords.Length; i++)
+
+		// Tránh khớp nhầm giữa "Đông Nam Kamê" và "Nam Kamê"
+		if (normW.Contains("dong nam") != normM.Contains("dong nam"))
 		{
-			if (keywords[i].Length >= 2 && normW.Contains(keywords[i]))
+			return false;
+		}
+
+		if (w.Contains(m))
+		{
+			return true;
+		}
+
+		char[] sep = new char[] { ' ', '-', '_', '(', ')', ',', '.', '/', '\\', ':' };
+		string[] wWords = normW.Split(sep, StringSplitOptions.RemoveEmptyEntries);
+		string[] mWords = normM.Split(sep, StringSplitOptions.RemoveEmptyEntries);
+		if (mWords.Length == 0 || wWords.Length == 0) return false;
+
+		int requiredCount = 0;
+		int matchedCount = 0;
+		for (int i = 0; i < mWords.Length; i++)
+		{
+			string kw = mWords[i];
+			if (kw == "t" || kw == "dat" && normM.Contains("tram tau"))
 			{
-				matchCount++;
+				continue;
+			}
+			requiredCount++;
+			bool tokenFound = false;
+			for (int j = 0; j < wWords.Length; j++)
+			{
+				if (wWords[j].Equals(kw, StringComparison.OrdinalIgnoreCase))
+				{
+					tokenFound = true;
+					break;
+				}
+			}
+			if (tokenFound)
+			{
+				matchedCount++;
 			}
 		}
-		return (keywords.Length > 0 && matchCount >= (keywords.Length > 2 ? 2 : 1));
+
+		return requiredCount > 0 && matchedCount == requiredCount;
 	}
 
 	/// <summary>
@@ -325,11 +343,10 @@ public static class ModNextMapData
 			}
 		}
 
-		// 3. So khớp gần đúng chứa từ khóa
+		// 3. So khớp theo từ khóa đầy đủ
 		for (int id = 0; id <= 48; id++)
 		{
-			string mName = GetMapName(id);
-			if (MatchMapName(mName, name))
+			if (MatchMapId(name, id))
 			{
 				return id;
 			}
@@ -339,7 +356,7 @@ public static class ModNextMapData
 		{
 			for (int i = 0; i < TileMap.mapNames.Length; i++)
 			{
-				if (TileMap.mapNames[i] != null && MatchMapName(TileMap.mapNames[i], name))
+				if (TileMap.mapNames[i] != null && MatchMapName(name, TileMap.mapNames[i]))
 				{
 					return i;
 				}

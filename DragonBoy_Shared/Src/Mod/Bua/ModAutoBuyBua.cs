@@ -15,7 +15,8 @@ public static class ModAutoBuyBua
 		ApproachingBaHatMit,
 		WaitingMenu,
 		WaitingShop,
-		ReturningToFarm
+		ReturningToFarm,
+		SwitchingZone
 	}
 
 	// Cấu hình
@@ -64,6 +65,8 @@ public static class ModAutoBuyBua
 	private static long lastBuySuccessTime = 0;
 	private static int retryOpenMenuCount = 0;
 	private static int retryShopCount = 0;
+	private static long lastZoneAttemptTime = 0;
+	private static int zoneAttemptCount = 0;
 
 	/// <summary>
 	/// Truy xuất và trả về dữ liệu của GetHomeVachNuiMapId.
@@ -194,6 +197,7 @@ public static class ModAutoBuyBua
 			case AutoBuyBuaState.WaitingShop:
 				return "Đang mua bùa trong cửa hàng...";
 			case AutoBuyBuaState.ReturningToFarm:
+			case AutoBuyBuaState.SwitchingZone:
 				return "Đang quay lại bãi farm...";
 			default:
 				return isAutoRebuy ? "Sẵn sàng (Tự mua khi hết)" : "Sẵn sàng";
@@ -247,7 +251,7 @@ public static class ModAutoBuyBua
 					currentState = AutoBuyBuaState.ApproachingBaHatMit;
 					stateTimer = now;
 				}
-				else if (!ModNextMap.isNextMapActive)
+				else if (!ModNextMap.isNextMapActive && !Char.isLoadingMap && !Char.ischangingMap)
 				{
 					ModNextMap.StartNextMap(vachMapId);
 				}
@@ -262,9 +266,7 @@ public static class ModAutoBuyBua
 					int dist = Res.distance(me.cx, me.cy, baHatMit.cx, baHatMit.cy);
 					if (dist > 30)
 					{
-						me.cx = baHatMit.cx;
-						me.cy = baHatMit.cy;
-						Service.gI().charMoveTo(baHatMit.cx, baHatMit.cy);
+						ModTeleport.TeleportTo(baHatMit.cx, baHatMit.cy);
 					}
 					me.focusManualTo(baHatMit);
 
@@ -393,18 +395,29 @@ public static class ModAutoBuyBua
 				{
 					if (TileMap.mapID == savedFarmMapId && !Char.isLoadingMap && !Char.ischangingMap)
 					{
+						if (ModNextMap.isNextMapActive)
+						{
+							ModNextMap.StopNextMap();
+						}
 						if (savedFarmZoneId >= 0 && TileMap.zoneID != savedFarmZoneId)
 						{
+							currentState = AutoBuyBuaState.SwitchingZone;
+							stateTimer = now;
+							lastZoneAttemptTime = now;
+							zoneAttemptCount = 1;
 							Service.gI().requestChangeZone(savedFarmZoneId, -1);
 						}
-						if (savedFarmX > 0 && savedFarmY > 0)
+						else
 						{
-							ModTeleport.TeleportTo(savedFarmX, savedFarmY);
+							if (savedFarmX > 0 && savedFarmY > 0)
+							{
+								ModTeleport.TeleportTo(savedFarmX, savedFarmY);
+							}
+							currentState = AutoBuyBuaState.Idle;
+							GameScr.info1.addInfo("Đã quay về bãi farm an toàn!", 0);
 						}
-						currentState = AutoBuyBuaState.Idle;
-						GameScr.info1.addInfo("Đã quay về bãi farm an toàn!", 0);
 					}
-					else if (!ModNextMap.isNextMapActive)
+					else if (!ModNextMap.isNextMapActive && !Char.isLoadingMap && !Char.ischangingMap)
 					{
 						ModNextMap.StartNextMap(savedFarmMapId);
 					}
@@ -412,6 +425,28 @@ public static class ModAutoBuyBua
 				else
 				{
 					currentState = AutoBuyBuaState.Idle;
+				}
+				break;
+
+			case AutoBuyBuaState.SwitchingZone:
+				if (Char.isLoadingMap || Char.ischangingMap) break;
+
+				if (savedFarmZoneId < 0 || TileMap.zoneID == savedFarmZoneId || zoneAttemptCount >= 3)
+				{
+					if (savedFarmX > 0 && savedFarmY > 0)
+					{
+						ModTeleport.TeleportTo(savedFarmX, savedFarmY);
+					}
+					currentState = AutoBuyBuaState.Idle;
+					GameScr.info1.addInfo("Đã quay về bãi farm an toàn!", 0);
+					break;
+				}
+
+				if (now - lastZoneAttemptTime > 2500)
+				{
+					lastZoneAttemptTime = now;
+					zoneAttemptCount++;
+					Service.gI().requestChangeZone(savedFarmZoneId, -1);
 				}
 				break;
 		}
