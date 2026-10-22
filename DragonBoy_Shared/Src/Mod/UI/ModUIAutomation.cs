@@ -139,7 +139,7 @@ public static class ModUIAutomation
 		curY += 19;
 
 		int btnW4 = (w - 9) / 4;
-		string[] statNames = new string[] { "Sức Đánh", "HP Gốc", "KI Gốc", "Giáp" };
+		string[] statNames = new string[] { "HP Gốc", "KI Gốc", "Sức Đánh", "Giáp" };
 		for (int i = 0; i < 4; i++)
 		{
 			int bx = x + i * (btnW4 + 3);
@@ -148,9 +148,9 @@ public static class ModUIAutomation
 		}
 		curY += 19;
 
-		mFont.tahoma_7_grey.drawString(g, "Điểm/lần: " + ModAutoPoint.pointsPerTick, x + 2, curY + 3, mFont.LEFT);
-		int[] ptPresets = new int[] { 1, 5, 10, 50 };
-		int ptBtnW = 28;
+		mFont.tahoma_7_grey.drawString(g, "Mức cộng/lần: +" + ModAutoPoint.pointsPerTick, x + 2, curY + 3, mFont.LEFT);
+		int[] ptPresets = new int[] { 1, 10, 100 };
+		int ptBtnW = 34;
 		for (int p = 0; p < ptPresets.Length; p++)
 		{
 			int pbx = x + w - (ptPresets.Length - p) * (ptBtnW + 3);
@@ -376,9 +376,9 @@ public static class ModUIAutomation
 		}
 		curY += 19;
 
-		// Chọn điểm mỗi lần (1, 5, 10, 50)
-		int[] ptPresets = new int[] { 1, 5, 10, 50 };
-		int ptBtnW = 28;
+		// Chọn điểm mỗi lần (1, 10, 100)
+		int[] ptPresets = new int[] { 1, 10, 100 };
+		int ptBtnW = 34;
 		for (int p = 0; p < ptPresets.Length; p++)
 		{
 			int pbx = x + w - (ptPresets.Length - p) * (ptBtnW + 3);

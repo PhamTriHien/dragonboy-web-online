@@ -175,8 +175,8 @@ public static class ModGoBack
 		long now = mSystem.currentTimeMillis();
 		bool isDead = (me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5 || me.meDead);
 
-		// 1. Cập nhật vị trí sống cuối cùng khi đang bình thường (không ở nhà, không loading)
-		if (!isDead && !Char.isLoadingMap && !Char.ischangingMap)
+		// 1. Cập nhật vị trí sống cuối cùng chỉ khi đang ở trạng thái bình thường (Idle, không đang NextMap hay bán đồ/mua bùa)
+		if (!isDead && !Char.isLoadingMap && !Char.ischangingMap && currentState == GoBackState.Idle && !ModNextMap.isNextMapActive && !ModSetActivator.isBusy && !ModAutoBuyBua.isBusy)
 		{
 			if (TileMap.mapID != 21 && TileMap.mapID != 22 && TileMap.mapID != 23)
 			{
@@ -262,9 +262,28 @@ public static class ModGoBack
 
 			case GoBackState.DelayAtHome:
 			{
-				// Nghỉ 800ms tại nhà để nạp xong tài nguyên và chỉ số
+				// Nghỉ tối thiểu 800ms tại nhà để nạp xong tài nguyên và chỉ số
 				if (now - stateTimer < 800)
 				{
+					return;
+				}
+
+				// Đảm bảo hồi phục HP trước khi rời khỏi nhà (chờ tối đa 2500ms nếu đang hồi đậu/thu hoạch cây đậu)
+				if (me.cHPFull > 0 && me.cHP * 100L < me.cHPFull * 20L && now - stateTimer < 2500)
+				{
+					if (GameScr.hpPotion > 0)
+					{
+						GameScr.gI().doUseHP();
+					}
+					else if (TileMap.mapID == 21 || TileMap.mapID == 22 || TileMap.mapID == 23)
+					{
+						MagicTree tree = GameScr.gI().magicTree;
+						if (tree != null && tree.currPeas > 0 && !tree.isUpdate)
+						{
+							Service.gI().openMenu(4);
+							Service.gI().confirmMenu(4, 0);
+						}
+					}
 					return;
 				}
 

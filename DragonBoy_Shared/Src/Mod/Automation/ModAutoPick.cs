@@ -72,6 +72,10 @@ public static class ModAutoPick
 
 	public static bool isBusy = false;
 	private static long lastPickTime = 0;
+	private static int lastPickMapId = -1;
+	private static int lastPickedItemMapId = -1;
+	private static int currentItemRetryCount = 0;
+	private static readonly Dictionary<int, long> ignoredItemUntil = new Dictionary<int, long>();
 	private static readonly AutoPickActionListener listener = new AutoPickActionListener();
 
 	/// <summary>
@@ -212,12 +216,23 @@ public static class ModAutoPick
 	/// </summary>
 	public static bool ShouldPickItem(ItemMap it)
 	{
-		if (it == null) return false;
-		if (pickAll) return true;
-		if (it.template == null) return true;
+		if (it == null || it.status == 2) return false;
+		Char me = Char.myCharz();
+		int myId = (me != null) ? me.charID : -1;
+		bool isMyOrPublicItem = (it.playerId == myId || it.playerId == -1 || it.playerId == -2 || it.playerId == 0);
+		if (!isMyOrPublicItem) return false;
 
+		if (it.template == null) return pickAll;
 		int tId = it.template.id;
 		string name = it.template.name;
+
+		// Vật phẩm 673 (cờ/vật phẩm cần xác nhận askToPick) chỉ nhặt khi người chơi chỉ định đích danh trong lọc ID
+		if (tId == 673 && !(filterById && filterIds.Contains(673)))
+		{
+			return false;
+		}
+
+		if (pickAll) return true;
 
 		// 1. Lọc theo danh sách ID
 		if (filterById && filterIds.Contains(tId))
@@ -266,10 +281,17 @@ public static class ModAutoPick
 	{
 		try
 		{
-			if (!autoPick || ModNextMap.isNextMapActive || ModGoBack.isReturning || ModSetActivator.isBusy)
+			if (!autoPick || ModNextMap.isNextMapActive || ModGoBack.isReturning || ModSetActivator.isBusy || ModAutoBuyBua.isBusy)
 			{
 				isBusy = false;
 				return;
+			}
+			if (TileMap.mapID != lastPickMapId)
+			{
+				lastPickMapId = TileMap.mapID;
+				lastPickedItemMapId = -1;
+				currentItemRetryCount = 0;
+				ignoredItemUntil.Clear();
 			}
 			long now = mSystem.currentTimeMillis();
 			if (now - lastPickTime < 200)
@@ -277,7 +299,7 @@ public static class ModAutoPick
 				return;
 			}
 			Char me = Char.myCharz();
-			if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5)
+			if (me == null || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5 || Char.isLoadingMap || Char.ischangingMap)
 			{
 				isBusy = false;
 				return;
@@ -300,6 +322,11 @@ public static class ModAutoPick
 				{
 					continue;
 				}
+				if (ignoredItemUntil.TryGetValue(it.itemMapID, out long ignoreUntil))
+				{
+					if (now < ignoreUntil) continue;
+					ignoredItemUntil.Remove(it.itemMapID);
+				}
 
 				if (ShouldPickItem(it))
 				{
@@ -314,17 +341,33 @@ public static class ModAutoPick
 
 			if (closest != null)
 			{
+				if (closest.itemMapID == lastPickedItemMapId)
+				{
+					currentItemRetryCount++;
+					if (currentItemRetryCount > 3)
+					{
+						ignoredItemUntil[closest.itemMapID] = now + 10000L;
+						lastPickedItemMapId = -1;
+						currentItemRetryCount = 0;
+						isBusy = false;
+						return;
+					}
+				}
+				else
+				{
+					lastPickedItemMapId = closest.itemMapID;
+					currentItemRetryCount = 1;
+				}
+
 				lastPickTime = now;
 				isBusy = true;
-				if (minDistance <= 30)
+				if (minDistance <= 50)
 				{
-					// Đã ở cự ly gần: Nhặt trực tiếp
 					me.itemFocus = closest;
 					Service.gI().pickItem(closest.itemMapID);
 				}
 				else
 				{
-					// Áp sát vật phẩm và nhặt
 					ModTeleport.TeleportTo(closest.x, closest.y);
 					me.itemFocus = closest;
 					Service.gI().pickItem(closest.itemMapID);
@@ -332,10 +375,9 @@ public static class ModAutoPick
 			}
 			else
 			{
-				if (now - lastPickTime > 200)
-				{
-					isBusy = false;
-				}
+				lastPickedItemMapId = -1;
+				currentItemRetryCount = 0;
+				isBusy = false;
 			}
 		}
 		catch

@@ -300,7 +300,12 @@ public partial class Controller : IMessageHandler
 					Char.myCharz().cMPFull = msg.reader().readLong();
 					Char.myCharz().cHP = msg.reader().readLong();
 					Char.myCharz().cMP = msg.reader().readLong();
-					Char.myCharz().cspeed = msg.reader().readByte();
+					sbyte srvSpeed = msg.reader().readByte();
+					Char.myCharz().cspeed = srvSpeed;
+					if (srvSpeed > 0)
+					{
+						ModSpeed.originalSpeed = srvSpeed;
+					}
 					Char.myCharz().hpFrom1000TiemNang = msg.reader().readByte();
 					Char.myCharz().mpFrom1000TiemNang = msg.reader().readByte();
 					Char.myCharz().damFrom1000TiemNang = msg.reader().readByte();

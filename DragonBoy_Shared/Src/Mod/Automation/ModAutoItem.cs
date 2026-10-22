@@ -13,6 +13,7 @@ public static class ModAutoItem
 	public static int conditionType;
 	public static int thresholdPercent = 30;
 	private static long nextAt;
+	private static int lastBagIndex = -1;
 
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho LoadIds.
@@ -121,17 +122,30 @@ public static class ModAutoItem
 	public static void Update()
 	{
 		if (!isEnabled || itemIds.Count == 0 || !ModMenu.IsInGame() || Char.myCharz() == null || GameScr.gI() == null) return;
+		if (Char.isLoadingMap || Char.ischangingMap) return;
+		Char me = Char.myCharz();
+		if (me.isDie || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5) return;
 		long now = mSystem.currentTimeMillis();
 		if (now < nextAt) return;
-		Item[] bag = Char.myCharz().arrItemBag;
-		if (bag == null) return;
-		Char me = Char.myCharz();
+		Item[] bag = me.arrItemBag;
+		if (bag == null || bag.Length == 0) return;
 		if (conditionType == 1 && (me.cHPFull <= 0 || me.cHP * 100L > me.cHPFull * thresholdPercent)) return;
 		if (conditionType == 2 && (me.cMPFull <= 0 || me.cMP * 100L > me.cMPFull * thresholdPercent)) return;
-		for (int i = 0; i < bag.Length; i++)
+
+		int len = bag.Length;
+		int startIdx = (lastBagIndex + 1) % len;
+		if (startIdx < 0) startIdx = 0;
+
+		for (int offset = 0; offset < len; offset++)
 		{
+			int i = (startIdx + offset) % len;
 			Item item = bag[i];
 			if (item == null || item.template == null || !itemIds.Contains(item.template.id)) continue;
+			if (conditionType == 0 && item.template.iconID > 0 && ItemTime.isExistItem(item.template.iconID))
+			{
+				continue;
+			}
+			lastBagIndex = i;
 			Service.gI().useItem(0, 1, (sbyte)item.indexUI, -1);
 			nextAt = now + intervalMs;
 			return;

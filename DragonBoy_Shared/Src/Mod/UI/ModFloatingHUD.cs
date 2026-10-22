@@ -185,7 +185,11 @@ public static class ModFloatingHUD
             if (release)
             {
                 dragging = false;
-                if (!moved)
+                if (moved)
+                {
+                    ModConfig.SaveConfig();
+                }
+                else
                 {
                     isExpanded = true;
                     SoundMn.gI()?.buttonClick();
@@ -231,6 +235,10 @@ public static class ModFloatingHUD
 
         if (release)
         {
+            if (panelHeaderDragging && moved)
+            {
+                ModConfig.SaveConfig();
+            }
             if ((panelPointer && closePressed && overClose) || (panelPointer && outsidePressed && !overPanel))
             {
                 isExpanded = false;

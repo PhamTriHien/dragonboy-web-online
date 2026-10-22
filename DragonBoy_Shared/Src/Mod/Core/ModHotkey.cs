@@ -22,8 +22,7 @@ public static class ModHotkey
 			// Phím F10: Chuyển đổi chế độ Render (0: Java Gốc / 1: HD PC-Android) ở mọi tab và mọi màn hình
 			if (Input.GetKeyDown(KeyCode.F10))
 			{
-				ModGraphics.renderMode = (ModGraphics.renderMode == 0) ? 1 : 0;
-				ModMenu.SaveConfig();
+				ModGraphics.SetRenderMode((ModGraphics.renderMode == 0) ? 1 : 0);
 				string modeStr = (ModGraphics.renderMode == 0)
 					? "Chế độ Render: 1. Java Gốc (16-bit RGB565 + Pixel Sắc Nét)"
 					: "Chế độ Render: 2. Bản HD PC/Android (32-bit + Khử Răng Cưa)";

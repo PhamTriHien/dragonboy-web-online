@@ -137,14 +137,11 @@ public static class ModDropRate
 
 		totalItemsDropped++;
 
-		if (isInstantPick)
+		if (isInstantPick && ModAutoPick.autoPick && me != null)
 		{
-			if (ModAutoPick.ShouldPickItem(item))
+			if (ModAutoPick.ShouldPickItem(item) && Res.distance(me.cx, me.cy, item.x, item.y) <= 60)
 			{
-				if (me != null)
-				{
-					me.itemFocus = item;
-				}
+				me.itemFocus = item;
 				Service.gI().pickItem(item.itemMapID);
 			}
 		}

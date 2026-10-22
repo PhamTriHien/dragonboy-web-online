@@ -76,7 +76,7 @@ public static class ModConfig
 
 			// Tốc Chạy
 			sb.AppendLine("speedHack=" + ModSpeed.speedHack);
-			sb.AppendLine("speedMult=" + ModSpeed.speedMult);
+			sb.AppendLine("speedMult=" + ModSpeed.speedMult.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
 			// Bơm Đậu & HP
 			sb.AppendLine("autoPean=" + ModAutoHeal.autoPean);
@@ -366,7 +366,7 @@ public static class ModConfig
 						bool.TryParse(val, out ModSpeed.speedHack);
 						break;
 					case "speedMult":
-						float.TryParse(val, out ModSpeed.speedMult);
+						if (float.TryParse(val.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsedSpeedMult)) { ModSpeed.speedMult = System.Math.Clamp(parsedSpeedMult, 1.0f, 5.0f); }
 						break;
 					case "autoPean":
 						bool.TryParse(val, out ModAutoHeal.autoPean);

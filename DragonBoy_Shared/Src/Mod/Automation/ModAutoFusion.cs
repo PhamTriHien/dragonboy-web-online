@@ -31,7 +31,8 @@ public static class ModAutoFusion
 	public static void Update()
 	{
 		Char me = Char.myCharz();
-		if (!isEnabled || !ModMenu.IsInGame() || me == null || me.isFusion) return;
+		if (!isEnabled || !ModMenu.IsInGame() || me == null || me.isFusion || !me.havePet) return;
+		if (Char.isLoadingMap || Char.ischangingMap || me.isDie || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5) return;
 		long now = mSystem.currentTimeMillis();
 		if (now < nextAt) return;
 		Service.gI().funsion((sbyte)fusionType);
