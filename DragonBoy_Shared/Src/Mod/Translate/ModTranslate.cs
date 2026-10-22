@@ -28,6 +28,44 @@ public static partial class ModTranslate
 	}
 
 	/// <summary>
+	/// Dịch tên cổng chuyển map (Waypoint) theo đúng bảng tên bản đồ trước khi fallback sang dịch từ đơn lẻ.
+	/// </summary>
+	public static string TranslateWaypointName(string rawName)
+	{
+		if (string.IsNullOrEmpty(rawName))
+		{
+			return rawName;
+		}
+		if (!ModConfig.isTranslate)
+		{
+			return rawName;
+		}
+		try
+		{
+			string trimmed = rawName.Trim();
+			if (rawMapNames != null)
+			{
+				for (int i = 0; i < rawMapNames.Length; i++)
+				{
+					if (!string.IsNullOrEmpty(rawMapNames[i]) && string.Equals(rawMapNames[i].Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
+					{
+						return GetMapName(i, rawName);
+					}
+				}
+			}
+			int matchedMapId = ModNextMapData.FindMapIdByName(trimmed);
+			if (matchedMapId >= 0)
+			{
+				return GetMapName(matchedMapId, rawName);
+			}
+		}
+		catch (Exception)
+		{
+		}
+		return Res.changeString(rawName);
+	}
+
+	/// <summary>
 	/// Truy xuất và trả về dữ liệu của GetNpcName.
 	/// </summary>
 	public static string GetNpcName(int id, string defaultName)
@@ -287,6 +325,19 @@ public static partial class ModTranslate
 						{
 							it.description = GetItemDescription(it.id, it.rawDescription);
 						}
+					}
+				}
+			}
+
+			// 5. Cập nhật Waypoint names hiện tại trong map
+			if (TileMap.vGo != null)
+			{
+				for (int i = 0; i < TileMap.vGo.size(); i++)
+				{
+					Waypoint wp = (Waypoint)TileMap.vGo.elementAt(i);
+					if (wp != null && !string.IsNullOrEmpty(wp.rawName))
+					{
+						wp.name = TranslateWaypointName(wp.rawName);
 					}
 				}
 			}

@@ -54,6 +54,10 @@ public partial class Char : IMapObject
 				}
 				if (TileMap.isInAirMap() && cy >= TileMap.pxh - 48)
 				{
+					if (ModNextMap.isNextMapActive && ModNextMap.currentTargetWaypoint != null && ModNextMap.currentTargetWaypoint.minY <= 150)
+					{
+						return false;
+					}
 					return true;
 				}
 				if (isTeleport || isUsePlane)

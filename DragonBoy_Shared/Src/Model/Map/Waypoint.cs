@@ -17,6 +17,8 @@ public class Waypoint : IActionListener
 
 	public string name;
 
+	public string rawName;
+
 	public PopUp popup;
 
 	/// <summary>
@@ -28,7 +30,8 @@ public class Waypoint : IActionListener
 		this.minY = minY;
 		this.maxX = maxX;
 		this.maxY = maxY;
-		name = Res.changeString(name);
+		this.rawName = name;
+		name = ModTranslate.TranslateWaypointName(name);
 		this.name = name;
 		this.isEnter = isEnter;
 		this.isOffline = isOffline;

@@ -70,6 +70,16 @@ public static class ModNextMap
 	}
 
 	/// <summary>
+	/// Kiểm tra xem chặng chuyển map hiện tại có phải là đi xuống đáy của Air Map (45 -> 46, 46 -> 47, 48 -> 45) hay không.
+	/// </summary>
+	public static bool IsAirMapDownwardTransition(int currMapId, int nextMapId)
+	{
+		return (currMapId == 46 && nextMapId == 47) ||
+		       (currMapId == 45 && nextMapId == 46) ||
+		       (currMapId == 48 && nextMapId == 45);
+	}
+
+	/// <summary>
 	/// Thực thi phương thức nghiệp vụ StartNextMap.
 	/// </summary>
 	public static void StartNextMap(int targetId)
@@ -79,6 +89,8 @@ public static class ModNextMap
 			GameScr.info1.addInfo("Bạn đang ở " + GetMapName(targetId) + " rồi!", 0);
 			return;
 		}
+
+		ModNextMapData.SyncLiveWaypointsForCurrentMap();
 
 		nextMapTargetId = targetId;
 		isNextMapActive = true;
@@ -143,12 +155,34 @@ public static class ModNextMap
 			return null;
 		}
 
-		// 1. So khớp tên cổng chính xác & đa ngôn ngữ (bao gồm cả popup says)
+		int currMapId = TileMap.mapID;
+		int planetId = TileMap.planetID;
+
+		// 1. Giải mã ID đích chính xác từ rawName, name và popup.says của từng Waypoint
 		for (int j = 0; j < TileMap.vGo.size(); j++)
 		{
 			Waypoint wp = (Waypoint)TileMap.vGo.elementAt(j);
 			if (wp != null)
 			{
+				int resolvedId = ModNextMapData.ResolveWaypointTargetMapId(wp, currMapId, planetId);
+				if (resolvedId == nextMapId)
+				{
+					return wp;
+				}
+			}
+		}
+
+		// 2. So khớp đa ngôn ngữ trực tiếp trên rawName, name và popup.says
+		for (int j = 0; j < TileMap.vGo.size(); j++)
+		{
+			Waypoint wp = (Waypoint)TileMap.vGo.elementAt(j);
+			if (wp != null)
+			{
+				if (!string.IsNullOrEmpty(wp.rawName) && ModNextMapData.MatchMapId(wp.rawName, nextMapId))
+				{
+					return wp;
+				}
+
 				string fullName = wp.name ?? string.Empty;
 				if (wp.popup != null && wp.popup.says != null)
 				{
@@ -164,50 +198,40 @@ public static class ModNextMap
 			}
 		}
 
-		// 2. Xử lý các map đặc biệt: Nhà đẻ (21, 22, 23)
+		// 3. Xử lý các map đặc biệt: Nhà đẻ (21, 22, 23)
 		if (nextMapId == 21 || nextMapId == 22 || nextMapId == 23)
 		{
 			for (int j = 0; j < TileMap.vGo.size(); j++)
 			{
 				Waypoint wp = (Waypoint)TileMap.vGo.elementAt(j);
-				if (wp != null)
+				if (wp != null && (wp.isOffline || (wp.isEnter && wp.minX >= 60 && wp.maxX <= TileMap.pxw - 60)))
 				{
-					string fullName = wp.name ?? string.Empty;
-					if (wp.popup != null && wp.popup.says != null)
-					{
-						for (int s = 0; s < wp.popup.says.Length; s++)
-						{
-							fullName += " " + wp.popup.says[s];
-						}
-					}
-					if (ModNextMapData.MatchMapId(fullName, nextMapId) || wp.isOffline || (wp.isEnter && wp.minX >= 60 && wp.maxX <= TileMap.pxw - 60))
-					{
-						return wp;
-					}
+					return wp;
 				}
 			}
 			return null;
 		}
-		if (TileMap.mapID == 21 || TileMap.mapID == 22 || TileMap.mapID == 23)
+		if (currMapId == 21 || currMapId == 22 || currMapId == 23)
 		{
 			return (Waypoint)TileMap.vGo.elementAt(0);
 		}
 
-		// 3. Xử lý Vách núi (42, 43, 44) - luôn là cổng rìa trái của Làng (0, 7, 14)
-		if (nextMapId == 42 || nextMapId == 43 || nextMapId == 44)
+		// 4. Xử lý Vách núi (42, 43, 44, 39, 40, 41) từ Làng (0, 7, 14) - luôn là cổng rìa trái
+		if ((currMapId == 0 || currMapId == 7 || currMapId == 14) &&
+		    (nextMapId == 42 || nextMapId == 43 || nextMapId == 44 || nextMapId == 39 || nextMapId == 40 || nextMapId == 41))
 		{
 			for (int j = 0; j < TileMap.vGo.size(); j++)
 			{
 				Waypoint wp = (Waypoint)TileMap.vGo.elementAt(j);
-				if (wp != null && ((!wp.isOffline && !wp.isEnter && wp.maxX < 100) || ModNextMapData.MatchMapId(wp.name, nextMapId)))
+				if (wp != null && !wp.isOffline && !wp.isEnter && wp.maxX < 100)
 				{
 					return wp;
 				}
 			}
 		}
 
-		// 4. Xử lý Vách Aru, Rừng Karin, Tháp Karin, Thần điện & Thánh địa Kaio (42, 47, 46, 45, 48)
-		if (TileMap.mapID == 42) // Vách Aru: 47 (sang Rừng Karin - trái/trên) / 0 (về Làng Aru - phải/dưới)
+		// 5. Xử lý Vách Aru, Rừng Karin, Tháp Karin, Thần điện & Hành tinh Kaio (42, 47, 46, 45, 48)
+		if (currMapId == 42)
 		{
 			if (nextMapId == 47)
 			{
@@ -240,7 +264,7 @@ public static class ModNextMap
 				if (rightWp != null) return rightWp;
 			}
 		}
-		else if (TileMap.mapID == 47) // Rừng Karin: 46 (lên Tháp) / 42 (xuống Vách)
+		else if (currMapId == 47)
 		{
 			if (nextMapId == 46)
 			{
@@ -259,21 +283,36 @@ public static class ModNextMap
 			}
 			else if (nextMapId == 42)
 			{
-				Waypoint bottomWp = null;
-				int maxBottomY = int.MinValue;
+				Waypoint leftWp = null;
+				int minLeftX = int.MaxValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
 				{
 					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
-					if (w != null && w.maxY > maxBottomY)
+					if (w != null && w.minX < minLeftX)
 					{
-						maxBottomY = w.maxY;
-						bottomWp = w;
+						minLeftX = w.minX;
+						leftWp = w;
 					}
 				}
-				if (bottomWp != null) return bottomWp;
+				if (leftWp != null) return leftWp;
+			}
+			else if (nextMapId == 2)
+			{
+				Waypoint rightWp = null;
+				int maxRightX = int.MinValue;
+				for (int k = 0; k < TileMap.vGo.size(); k++)
+				{
+					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+					if (w != null && w.maxX > maxRightX)
+					{
+						maxRightX = w.maxX;
+						rightWp = w;
+					}
+				}
+				if (rightWp != null) return rightWp;
 			}
 		}
-		else if (TileMap.mapID == 46) // Tháp Karin: 45 (lên Thần điện) / 47 (xuống Rừng Karin)
+		else if (currMapId == 46)
 		{
 			if (nextMapId == 45)
 			{
@@ -282,7 +321,7 @@ public static class ModNextMap
 				for (int k = 0; k < TileMap.vGo.size(); k++)
 				{
 					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
-					if (w != null && w.minY < minTopY)
+					if (w != null && w.minY <= 150 && w.minY < minTopY)
 					{
 						minTopY = w.minY;
 						topWp = w;
@@ -292,21 +331,18 @@ public static class ModNextMap
 			}
 			else if (nextMapId == 47)
 			{
-				Waypoint bottomWp = null;
-				int maxBottomY = int.MinValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
 				{
 					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
-					if (w != null && w.maxY > maxBottomY)
+					if (w != null && w.minY > 150)
 					{
-						maxBottomY = w.maxY;
-						bottomWp = w;
+						return w;
 					}
 				}
-				if (bottomWp != null) return bottomWp;
+				return null;
 			}
 		}
-		else if (TileMap.mapID == 45) // Thần điện: 48 (lên Thánh địa Kaio) / 46 (xuống Tháp Karin)
+		else if (currMapId == 45)
 		{
 			if (nextMapId == 48)
 			{
@@ -315,7 +351,7 @@ public static class ModNextMap
 				for (int k = 0; k < TileMap.vGo.size(); k++)
 				{
 					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
-					if (w != null && w.minY < minTopY)
+					if (w != null && w.minY <= 150 && w.minY < minTopY)
 					{
 						minTopY = w.minY;
 						topWp = w;
@@ -325,38 +361,45 @@ public static class ModNextMap
 			}
 			else if (nextMapId == 46)
 			{
-				Waypoint bottomWp = null;
-				int maxBottomY = int.MinValue;
 				for (int k = 0; k < TileMap.vGo.size(); k++)
 				{
 					Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
-					if (w != null && w.maxY > maxBottomY)
+					if (w != null && w.minY > 150)
 					{
-						maxBottomY = w.maxY;
-						bottomWp = w;
+						return w;
 					}
 				}
-				if (bottomWp != null) return bottomWp;
+				return null;
 			}
 		}
-
-		// 5. Tuyến đường thẳng nối tiếp: chọn cổng theo hướng tọa độ X
-		if (TileMap.vGo.size() == 1)
+		else if (currMapId == 48 && nextMapId == 45)
 		{
-			return (Waypoint)TileMap.vGo.elementAt(0);
+			for (int k = 0; k < TileMap.vGo.size(); k++)
+			{
+				Waypoint w = (Waypoint)TileMap.vGo.elementAt(k);
+				if (w != null && w.minY > 150)
+				{
+					return w;
+				}
+			}
+			return null;
 		}
 
-		Waypoint bestWp = null;
-		if (nextMapId > TileMap.mapID)
+		// 6. Nếu không tìm thấy cổng khớp tên, đồng bộ lại đồ thị thực tế để FindPath tự định tuyến lại ở nhịp kế tiếp
+		ModNextMapData.SyncLiveWaypointsForCurrentMap();
+
+		// Chỉ fallback theo hướng X đối với các cổng không xác định được ID đích (tránh bước nhầm vào cổng đã biết rõ dẫn sang map khác)
+		Waypoint bestUnresolvedWp = null;
+		if (nextMapId > currMapId)
 		{
 			int maxRight = int.MinValue;
 			for (int k = 0; k < TileMap.vGo.size(); k++)
 			{
 				Waypoint wp2 = (Waypoint)TileMap.vGo.elementAt(k);
-				if (wp2 != null && wp2.maxX > maxRight)
+				if (wp2 != null && ModNextMapData.ResolveWaypointTargetMapId(wp2, currMapId, planetId) == -1 && wp2.maxX > maxRight)
 				{
 					maxRight = wp2.maxX;
-					bestWp = wp2;
+					bestUnresolvedWp = wp2;
 				}
 			}
 		}
@@ -366,15 +409,15 @@ public static class ModNextMap
 			for (int k = 0; k < TileMap.vGo.size(); k++)
 			{
 				Waypoint wp2 = (Waypoint)TileMap.vGo.elementAt(k);
-				if (wp2 != null && wp2.minX < minLeft)
+				if (wp2 != null && ModNextMapData.ResolveWaypointTargetMapId(wp2, currMapId, planetId) == -1 && wp2.minX < minLeft)
 				{
 					minLeft = wp2.minX;
-					bestWp = wp2;
+					bestUnresolvedWp = wp2;
 				}
 			}
 		}
 
-		return bestWp ?? ((Waypoint)TileMap.vGo.elementAt(0));
+		return bestUnresolvedWp;
 	}
 
 	/// <summary>
@@ -413,6 +456,7 @@ public static class ModNextMap
 			mapEnterWaitUntil = now + 300;
 			lastStepUpdateTime = 0;
 			ModWaypoint.ResetWaypointState();
+			ModNextMapData.SyncLiveWaypointsForCurrentMap();
 		}
 
 		// Tự động đóng popup thông báo sự kiện khi đang chạy Next Map
@@ -481,6 +525,7 @@ public static class ModNextMap
 		}
 		lastStepUpdateTime = now;
 
+		ModNextMapData.SyncLiveWaypointsForCurrentMap();
 		List<int> path = FindPath(TileMap.mapID, nextMapTargetId);
 		if (path == null || path.Count == 0)
 		{
@@ -525,7 +570,18 @@ public static class ModNextMap
 
 		if (targetWp != null)
 		{
+			nextMapFailCount = 0;
 			bool sentRequest = ModWaypoint.StepToWaypoint(targetWp);
+			if (sentRequest)
+			{
+				lastChangeAttemptTime = now;
+				mapEnterWaitUntil = now + 400;
+			}
+		}
+		else if (IsAirMapDownwardTransition(TileMap.mapID, nextMapId))
+		{
+			nextMapFailCount = 0;
+			bool sentRequest = ModWaypoint.StepToAirMapBottom();
 			if (sentRequest)
 			{
 				lastChangeAttemptTime = now;

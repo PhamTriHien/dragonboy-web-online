@@ -16,16 +16,22 @@ public partial class Controller : IMessageHandler
 		{
 			GameScr.vcMap = d.readByte();
 			TileMap.mapNames = new string[d.readShort()];
+			ModTranslate.rawMapNames = new string[TileMap.mapNames.Length];
 			for (int i = 0; i < TileMap.mapNames.Length; i++)
 			{
-				TileMap.mapNames[i] = d.readUTF();
+				string rawMapName = d.readUTF();
+				ModTranslate.rawMapNames[i] = rawMapName;
+				TileMap.mapNames[i] = ModTranslate.GetMapName(i, rawMapName);
 			}
 			Npc.arrNpcTemplate = new NpcTemplate[d.readByte()];
+			ModTranslate.rawNpcNames = new string[Npc.arrNpcTemplate.Length];
 			for (sbyte b = 0; b < Npc.arrNpcTemplate.Length; b++)
 			{
 				Npc.arrNpcTemplate[b] = new NpcTemplate();
 				Npc.arrNpcTemplate[b].npcTemplateId = b;
-				Npc.arrNpcTemplate[b].name = d.readUTF();
+				string rawNpcName = d.readUTF();
+				ModTranslate.rawNpcNames[b] = rawNpcName;
+				Npc.arrNpcTemplate[b].name = ModTranslate.GetNpcName(b, rawNpcName);
 				Npc.arrNpcTemplate[b].headId = d.readShort();
 				Npc.arrNpcTemplate[b].bodyId = d.readShort();
 				Npc.arrNpcTemplate[b].legId = d.readShort();
@@ -40,12 +46,15 @@ public partial class Controller : IMessageHandler
 				}
 			}
 			Mob.arrMobTemplate = new MobTemplate[d.readShort()];
+			ModTranslate.rawMobNames = new string[Mob.arrMobTemplate.Length];
 			for (int l = 0; l < Mob.arrMobTemplate.Length; l++)
 			{
 				Mob.arrMobTemplate[l] = new MobTemplate();
 				Mob.arrMobTemplate[l].mobTemplateId = l;
 				Mob.arrMobTemplate[l].type = d.readByte();
-				Mob.arrMobTemplate[l].name = d.readUTF();
+				string rawMobName = d.readUTF();
+				ModTranslate.rawMobNames[l] = rawMobName;
+				Mob.arrMobTemplate[l].name = ModTranslate.GetMobName(l, rawMobName);
 				Mob.arrMobTemplate[l].hp = d.readLong();
 				Mob.arrMobTemplate[l].rangeMove = d.readByte();
 				Mob.arrMobTemplate[l].speed = d.readByte();
@@ -126,6 +135,7 @@ public partial class Controller : IMessageHandler
 					}
 				}
 			}
+			ModNextMapData.SyncLiveWaypointsForCurrentMap();
 			GameScr.gI().switchToMe();
 			if (ModAutoLogin.isReconnecting)
 			{

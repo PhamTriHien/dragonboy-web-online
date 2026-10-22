@@ -1,7 +1,7 @@
 using System;
 
 /// <summary>
-/// Module Tọa Độ Cổng Chuyển Map: Quản lý danh sách các Waypoint kết nối giữa các bản đồ trong thế giới game.
+/// Module Tọa Độ Cổng Chuyển Map: Quản lý dịch chuyển đến các Waypoint và tương tác trạm tàu vũ trụ.
 /// </summary>
 public static class ModWaypoint
 {
@@ -13,7 +13,7 @@ public static class ModWaypoint
 	private static long wpInitTime;
 	private static bool hasTeleportedToWp;
 	private static long lastTeleportTime;
-	private static long lastWalkTime;
+	private static bool isAirBottomActive;
 
 	/// <summary>
 	/// Đặt lại trạng thái theo dõi Waypoint khi đổi map hoặc khởi động lại lộ trình.
@@ -24,14 +24,14 @@ public static class ModWaypoint
 		wpInitTime = 0;
 		hasTeleportedToWp = false;
 		lastTeleportTime = 0;
-		lastWalkTime = 0;
 		edgeWalkAttempts = 0;
+		isAirBottomActive = false;
 		isWaitingShipMenu = false;
 		pendingTargetPlanetMapId = -1;
 	}
 
 	/// <summary>
-	/// Truy xuất và trả về dữ liệu của GetGroundY.
+	/// Tìm tọa độ mặt đất hợp lệ nằm gọn trong khoảng [minY, maxY] của cổng dịch chuyển.
 	/// </summary>
 	public static int GetGroundY(int x, int minY, int maxY)
 	{
@@ -42,9 +42,16 @@ public static class ModWaypoint
 				return (minY + maxY) / 2;
 			}
 
-			int startY = System.Math.Max(24, minY);
-			int endY = System.Math.Min(TileMap.pxh - 12, maxY);
-			for (int y = startY; y <= endY; y += 12)
+			int safeMinY = System.Math.Max(12, minY);
+			int safeMaxY = System.Math.Min(TileMap.pxh - 12, maxY);
+			if (safeMaxY < safeMinY)
+			{
+				return maxY;
+			}
+
+			// Quét từ đáy cổng lên đỉnh cổng để luôn lấy đúng mặt đất tầng dưới (tránh dính vách đá/mái nhà phía trên)
+			int searchStart = System.Math.Min(TileMap.pxh - 12, safeMaxY + 24);
+			for (int y = searchStart; y >= safeMinY; y -= 12)
 			{
 				if (TileMap.tileTypeAt(x, y, 2))
 				{
@@ -53,15 +60,10 @@ public static class ModWaypoint
 					{
 						return gy;
 					}
-					return (gy <= maxY) ? gy : maxY;
-				}
-			}
-
-			for (int y = 50; y < TileMap.pxh - 24; y += 24)
-			{
-				if (TileMap.tileTypeAt(x, y, 2))
-				{
-					return TileMap.tileYofPixel(y);
+					if (gy > maxY && gy - maxY <= 24)
+					{
+						return maxY;
+					}
 				}
 			}
 
@@ -74,7 +76,7 @@ public static class ModWaypoint
 	}
 
 	/// <summary>
-	/// Thực thi phương thức nghiệp vụ TeleportTo.
+	/// Dịch chuyển nhân vật đến tọa độ đích và đồng bộ gói tin charMove lên máy chủ.
 	/// </summary>
 	public static void TeleportTo(int x, int y)
 	{
@@ -97,6 +99,8 @@ public static class ModWaypoint
 
 			me.cx = x;
 			me.cy = y;
+			me.cxSend = x - 1;
+			me.cySend = y - 1;
 			Service.gI().charMove();
 			if (!ItemTime.isExistItem(4387))
 			{
@@ -162,7 +166,63 @@ public static class ModWaypoint
 	}
 
 	/// <summary>
-	/// Thực thi phương thức nghiệp vụ StepToWaypoint.
+	/// Tính toán tọa độ X nằm gọn bên trong vùng [wp.minX, wp.maxX] và biên bản đồ an toàn.
+	/// </summary>
+	public static int GetWaypointTargetX(Waypoint wp)
+	{
+		if (wp == null)
+		{
+			return 24;
+		}
+
+		int minX = wp.minX;
+		int maxX = wp.maxX;
+		int center = (minX + maxX) / 2;
+
+		if (maxX <= 60)
+		{
+			int target = System.Math.Max(12, minX + 12);
+			if (target > maxX - 2)
+			{
+				target = center;
+			}
+			return System.Math.Max(6, target);
+		}
+
+		if (minX >= TileMap.pxw - 60)
+		{
+			int target = System.Math.Min(TileMap.pxw - 12, maxX - 12);
+			if (target < minX + 2)
+			{
+				target = center;
+			}
+			return System.Math.Min(TileMap.pxw - 6, target);
+		}
+
+		return center;
+	}
+
+	/// <summary>
+	/// Tính toán tọa độ Y nằm gọn bên trong vùng [wp.minY, wp.maxY] của cổng dịch chuyển.
+	/// </summary>
+	public static int GetWaypointTargetY(Waypoint wp, int targetX)
+	{
+		if (wp == null)
+		{
+			return 24;
+		}
+
+		bool isAirOrTower = TileMap.isInAirMap() || TileMap.mapID == 45 || TileMap.mapID == 46 || TileMap.mapID == 47 || TileMap.mapID == 48;
+		if (isAirOrTower)
+		{
+			return (wp.maxY > wp.minY + 24) ? ((wp.minY + wp.maxY) / 2) : wp.maxY;
+		}
+
+		return GetGroundY(targetX, wp.minY, wp.maxY);
+	}
+
+	/// <summary>
+	/// Thực thi dịch chuyển vào đúng tâm cổng Waypoint và gửi yêu cầu chuyển map lên Server.
 	/// </summary>
 	public static bool StepToWaypoint(Waypoint wp)
 	{
@@ -185,71 +245,43 @@ public static class ModWaypoint
 			}
 
 			long now = mSystem.currentTimeMillis();
-			if (activeWp != wp)
+			if (activeWp != wp || isAirBottomActive)
 			{
 				activeWp = wp;
+				isAirBottomActive = false;
 				wpInitTime = now;
 				hasTeleportedToWp = false;
 				lastTeleportTime = 0;
-				lastWalkTime = 0;
 				edgeWalkAttempts = 0;
 			}
 
-			if (hasTeleportedToWp && now - lastTeleportTime < 120)
+			if (hasTeleportedToWp && now - lastTeleportTime < 140)
 			{
 				return false;
 			}
 
-			bool isLeftEdge = wp.maxX < 60;
-			bool isRightEdge = !isLeftEdge && wp.minX > TileMap.pxw - 60;
-			bool isInterior = !isLeftEdge && !isRightEdge;
+			bool isLeftEdge = wp.maxX <= 60;
+			bool isRightEdge = !isLeftEdge && wp.minX >= TileMap.pxw - 60;
 
-			int wpTargetX;
-			if (isLeftEdge)
-			{
-				wpTargetX = 15;
-			}
-			else if (isInterior)
-			{
-				wpTargetX = (wp.minX + wp.maxX) / 2;
-			}
-			else
-			{
-				wpTargetX = TileMap.pxw - 15;
-			}
-
-			bool isAirOrTower = TileMap.isInAirMap() || TileMap.mapID == 45 || TileMap.mapID == 46 || TileMap.mapID == 47 || TileMap.mapID == 48;
-			int wpTargetY;
-			if (isAirOrTower && wp.maxY > wp.minY + 24)
-			{
-				wpTargetY = (wp.minY + wp.maxY) / 2;
-			}
-			else if (!isAirOrTower)
-			{
-				wpTargetY = GetGroundY(wpTargetX, wp.minY, wp.maxY);
-			}
-			else
-			{
-				wpTargetY = wp.maxY;
-			}
+			int wpTargetX = GetWaypointTargetX(wp);
+			int wpTargetY = GetWaypointTargetY(wp, wpTargetX);
 
 			int dx = Res.abs(me.cx - wpTargetX);
 			int dy = Res.abs(me.cy - wpTargetY);
-			int teleportX = (isInterior || isAirOrTower) ? wpTargetX : (isLeftEdge ? (wpTargetX + 20) : (wpTargetX - 20));
 			me.cdir = isLeftEdge ? (-1) : (isRightEdge ? 1 : ((me.cx <= wpTargetX) ? 1 : (-1)));
 
-			if (!hasTeleportedToWp || dx > 30 || dy > 30)
+			if (!hasTeleportedToWp || dx > 24 || dy > 24)
 			{
 				if (ModNextMap.useSafeMovement || ModNextMap.resetPenaltyCount > 0)
 				{
-					if (MoveSteppedTo(teleportX, wpTargetY))
+					if (MoveSteppedTo(wpTargetX, wpTargetY))
 					{
 						hasTeleportedToWp = true;
 					}
 				}
 				else
 				{
-					TeleportTo(teleportX, wpTargetY);
+					TeleportTo(wpTargetX, wpTargetY);
 					hasTeleportedToWp = true;
 				}
 				lastTeleportTime = now;
@@ -257,56 +289,98 @@ public static class ModWaypoint
 				return false;
 			}
 
-			if (!isInterior && !isAirOrTower)
+			// Đảm bảo nhân vật đứng chính xác trong lòng cổng trước khi gửi gói chuyển map
+			if (me.cx != wpTargetX || me.cy != wpTargetY || me.cxSend != wpTargetX || me.cySend != wpTargetY)
 			{
-				if (edgeWalkAttempts >= 2 || (edgeWalkAttempts > 0 && now - lastWalkTime >= 350))
-				{
-					TeleportTo(wpTargetX, wpTargetY);
-					if (wp.isOffline || TileMap.isOfflineMap() || TileMap.isTrainingMap())
-					{
-						Char.ischangingMap = true;
-						Service.gI().getMapOffline();
-					}
-					else
-					{
-						Char.ischangingMap = true;
-						Service.gI().requestChangeMap();
-					}
-					ResetWaypointState();
-					return true;
-				}
+				TeleportTo(wpTargetX, wpTargetY);
+			}
 
-				if (me.currentMovePoint == null && now - lastWalkTime >= 180)
-				{
-					int walkTargetX = isLeftEdge ? 5 : (TileMap.pxw - 5);
-					me.currentMovePoint = new MovePoint(walkTargetX, wpTargetY);
-					edgeWalkAttempts++;
-					lastWalkTime = now;
-				}
+			if (wp.isOffline || TileMap.isOfflineMap() || TileMap.isTrainingMap())
+			{
+				Char.ischangingMap = true;
+				Service.gI().getMapOffline();
+			}
+			else
+			{
+				Char.ischangingMap = true;
+				Service.gI().requestChangeMap();
+			}
+			ResetWaypointState();
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Chuyển map xuống dưới trên các bản đồ trên không (Thần điện 45 -> Tháp Karin 46 -> Rừng Karin 47, Hành tinh Kaio 48 -> Thần điện 45)
+	/// nơi Waypoint.cs đã lọc bỏ cổng dưới đáy (minY > 150) khỏi TileMap.vGo.
+	/// </summary>
+	public static bool StepToAirMapBottom()
+	{
+		try
+		{
+			Char me = Char.myCharz();
+			if (me == null)
+			{
 				return false;
 			}
 
-			if (me.currentMovePoint == null)
+			if (GameCanvas.menu != null && GameCanvas.menu.showMenu)
 			{
-				if (me.cx != wpTargetX || me.cy != wpTargetY || me.cxSend != wpTargetX || me.cySend != wpTargetY)
+				GameCanvas.menu.showMenu = false;
+			}
+
+			long now = mSystem.currentTimeMillis();
+			if (!isAirBottomActive)
+			{
+				activeWp = null;
+				isAirBottomActive = true;
+				wpInitTime = now;
+				hasTeleportedToWp = false;
+				lastTeleportTime = 0;
+			}
+
+			if (hasTeleportedToWp && now - lastTeleportTime < 140)
+			{
+				return false;
+			}
+
+			int targetX = System.Math.Max(48, System.Math.Min(TileMap.pxw - 48, me.cx));
+			int targetY = TileMap.pxh - 24;
+
+			int dx = Res.abs(me.cx - targetX);
+			int dy = Res.abs(me.cy - targetY);
+
+			if (!hasTeleportedToWp || dx > 24 || dy > 24)
+			{
+				if (ModNextMap.useSafeMovement || ModNextMap.resetPenaltyCount > 0)
 				{
-					TeleportTo(wpTargetX, wpTargetY);
-				}
-				if (wp.isOffline || TileMap.isOfflineMap() || TileMap.isTrainingMap())
-				{
-					Char.ischangingMap = true;
-					Service.gI().getMapOffline();
+					if (MoveSteppedTo(targetX, targetY))
+					{
+						hasTeleportedToWp = true;
+					}
 				}
 				else
 				{
-					Char.ischangingMap = true;
-					Service.gI().requestChangeMap();
+					TeleportTo(targetX, targetY);
+					hasTeleportedToWp = true;
 				}
-				ResetWaypointState();
-				return true;
+				lastTeleportTime = now;
+				return false;
 			}
 
-			return false;
+			if (me.cx != targetX || me.cy != targetY || me.cxSend != targetX || me.cySend != targetY)
+			{
+				TeleportTo(targetX, targetY);
+			}
+
+			Char.ischangingMap = true;
+			Service.gI().requestChangeMap();
+			ResetWaypointState();
+			return true;
 		}
 		catch
 		{
@@ -380,7 +454,7 @@ public static class ModWaypoint
 			for (int i = 0; i < menuItems.Length; i++)
 			{
 				string text = menuItems[i].ToLower();
-				if (targetPlanet == 25 && (text.Contains("nam") || text.Contains("namec")))
+				if (targetPlanet == 25 && (text.Contains("nam") || text.Contains("namec") || text.Contains("namek")))
 				{
 					selectedIndex = i;
 					break;
@@ -390,7 +464,7 @@ public static class ModWaypoint
 					selectedIndex = i;
 					break;
 				}
-				if (targetPlanet == 24 && (text.Contains("trái") || text.Contains("trai") || text.Contains("earth") || text.Contains("đất")))
+				if (targetPlanet == 24 && (text.Contains("trái") || text.Contains("trai") || text.Contains("earth") || text.Contains("đất") || text.Contains("bumi")))
 				{
 					selectedIndex = i;
 					break;
