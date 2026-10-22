@@ -572,6 +572,19 @@ public class Main : MonoBehaviour
 					ChatTextField.gI().close();
 					return;
 				}
+				if (ModUI.uiCustomOpen)
+				{
+					if (ModUIBackground.isOpen)
+					{
+						ModUIBackground.isOpen = false;
+						SoundMn.gI().buttonClose();
+					}
+					else
+					{
+						ModMenu.CloseMenu();
+					}
+					return;
+				}
 				num = -7;
 			}
 			else if (character == '\t' || Event.current.keyCode == KeyCode.Tab)

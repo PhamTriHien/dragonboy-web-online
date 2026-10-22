@@ -44,6 +44,7 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
 
             Raylib.SetConfigFlags(ConfigFlags.ResizableWindow | ConfigFlags.VSyncHint | ConfigFlags.Msaa4xHint);
             Raylib.InitWindow(WindowWidth, WindowHeight, WindowTitle);
+            Raylib.SetExitKey(KeyboardKey.Null);
 
             try
             {
