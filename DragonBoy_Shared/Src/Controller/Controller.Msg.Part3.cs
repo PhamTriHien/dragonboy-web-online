@@ -444,6 +444,10 @@ public partial class Controller : IMessageHandler
 					}
 					Char.myPetz().cGiamST = msg.reader().readByte();
 					Char.myPetz().cCritDameFull = msg.reader().readShort();
+					if (ModAutoPet.ConsumeSilentPetInfoRequest())
+					{
+						break;
+					}
 					if (GameCanvas.w > 2 * Panel.WIDTH_PANEL)
 					{
 						GameCanvas.panel2 = new Panel();

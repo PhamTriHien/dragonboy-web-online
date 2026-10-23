@@ -7,15 +7,18 @@ public static class ModAutoHeal
 {
 	public static bool autoPean = true;
 	public static int autoPeanHpPercent = 30;
+	public static int autoPeanMpPercent = 30;
 	public static bool lockHPMP = false;
 
 	public static bool autoHarvestPea = true;
 	public static bool autoDonateClan = true;
+	public static bool autoRequestPea = false;
 	public static bool autoFeedPetOnAsk = true;
 
 	private static long lastPeanTime = 0;
 	private static long lastHarvestTime = 0;
 	private static long lastClanDonateTime = 0;
+	private static long lastClanRequestTime = 0;
 	private static long lastFeedPetTime = 0;
 
 	/// <summary>
@@ -162,6 +165,24 @@ public static class ModAutoHeal
 	}
 
 	/// <summary>
+	/// Thực thi phương thức nghiệp vụ RequestClanPeaNow.
+	/// </summary>
+	public static void RequestClanPeaNow()
+	{
+		Char me = Char.myCharz();
+		if (me == null || me.clanID == -1)
+		{
+			GameScr.info1.addInfo("Bạn hiện chưa gia nhập bang hội!", 0);
+			SoundMn.gI().buttonClick();
+			return;
+		}
+		Service.gI().clanMessage(1, string.Empty, -1);
+		lastClanRequestTime = mSystem.currentTimeMillis();
+		GameScr.info1.addInfo("Đã gửi yêu cầu xin đậu bang hội!", 0);
+		SoundMn.gI().buttonClick();
+	}
+
+	/// <summary>
 	/// Thực thi phương thức nghiệp vụ FeedPetBean.
 	/// </summary>
 	public static void FeedPetBean(string reason)
@@ -237,7 +258,7 @@ public static class ModAutoHeal
 				long curHpPercent = (me.cHPFull > 0) ? (me.cHP * 100L / me.cHPFull) : 100;
 				long curMpPercent = (me.cMPFull > 0) ? (me.cMP * 100L / me.cMPFull) : 100;
 
-				if (curHpPercent < autoPeanHpPercent || curMpPercent < autoPeanHpPercent)
+				if (curHpPercent < autoPeanHpPercent || curMpPercent < autoPeanMpPercent)
 				{
 					needHeal = true;
 				}
@@ -295,7 +316,15 @@ public static class ModAutoHeal
 				}
 			}
 
-			// 4. Giám sát sinh lực đệ tử thực tế trong map, tự ăn đậu khi máu đệ tử nguy kịch
+			// 4. Tự động xin đậu bang hội theo chu kỳ 5 phút
+			if (autoRequestPea && me.clanID != -1 && !IsBeanFull() && now - lastClanRequestTime >= 301000L)
+			{
+				lastClanRequestTime = now;
+				Service.gI().clanMessage(1, string.Empty, -1);
+				GameScr.info1.addInfo("Tự động xin đậu bang hội!", 0);
+			}
+
+			// 5. Giám sát sinh lực đệ tử thực tế trong map, tự ăn đậu khi máu đệ tử nguy kịch
 			if (autoFeedPetOnAsk && me.havePet)
 			{
 				Char mapPet = GameScr.findCharInMap(-me.charID);

@@ -10,16 +10,11 @@ public static class ModUISetActivator
 	/// </summary>
 	public static void Paint(int uiX, int uiY, int uiW, int uiH, mGraphics g)
 	{
-		int halfW = (uiW - 14) / 2;
-		int item1X = uiX + 4;
-		int item2X = uiX + 8 + halfW;
-
-		// Hàng 1: Auto Úp Set KH & Tự Bán Khi Full Túi
-		mFont.tahoma_7_grey.drawString(g, "Auto Úp Set KH:", item1X + 2, uiY + 7, mFont.LEFT);
-		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 4, 38, 17, ModSetActivator.isActive ? "BẬT" : "TẮT", ModSetActivator.isActive, g);
-
-		mFont.tahoma_7_grey.drawString(g, "Bán Full:", item2X + 2, uiY + 7, mFont.LEFT);
-		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 4, 38, 17, ModSetActivator.autoSellJunk ? "BẬT" : "TẮT", ModSetActivator.autoSellJunk, g);
+		// Hàng 1: Auto Úp Set KH, Tự Bán Rác & Tự Cất Rương
+		int r1W = (uiW - 16) / 3;
+		ModUI.PaintNativeButton(uiX + 4, uiY + 4, r1W, 17, "Úp SKH: " + (ModSetActivator.isActive ? "BẬT" : "TẮT"), ModSetActivator.isActive, g);
+		ModUI.PaintNativeButton(uiX + 8 + r1W, uiY + 4, r1W, 17, "Bán Rác: " + (ModSetActivator.autoSellJunk ? "BẬT" : "TẮT"), ModSetActivator.autoSellJunk, g);
+		ModUI.PaintNativeButton(uiX + 12 + r1W * 2, uiY + 4, r1W, 17, "Cất Rương: " + (ModSetActivator.autoStoreToBox ? "BẬT" : "TẮT"), ModSetActivator.autoStoreToBox, g);
 
 		int footerH = 18;
 		int footerY = uiY + uiH - footerH - 4;
@@ -73,7 +68,7 @@ public static class ModUISetActivator
 
 		// Hàng 5 nút chức năng dưới cùng ở Footer
 		int fBtnW = (uiW - 24) / 5;
-		string[] bottomLabels = new string[] { "Lưu Bãi", "Bán Rác", "Mua Bùa", "Về Bãi", "Xóa Bãi" };
+		string[] bottomLabels = new string[] { "Lưu Bãi", "Bán Rác", "Cất Rương", "Mua Bùa", "Về Bãi" };
 		for (int b = 0; b < 5; b++)
 		{
 			int bx = uiX + 4 + b * (fBtnW + 4);
@@ -86,29 +81,36 @@ public static class ModUISetActivator
 	/// </summary>
 	public static bool HandleTap(int px, int py, int uiX, int uiY, int uiW, int uiH)
 	{
-		int halfW = (uiW - 14) / 2;
-		int item1X = uiX + 4;
-		int item2X = uiX + 8 + halfW;
+		int r1W = (uiW - 16) / 3;
 		int footerH = 18;
 		int footerY = uiY + uiH - footerH - 4;
 		int listY = uiY + 24;
 		int listW = uiW - 8;
 
-		// 1. Nút Bật/Tắt Auto Úp Set KH
-		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 2 && py <= uiY + 22)
+		// 1. Hàng 1: Úp SKH | Bán Rác | Cất Rương
+		if (py >= uiY + 2 && py <= uiY + 22)
 		{
-			ModSetActivator.ToggleActive();
-			return true;
-		}
-
-		// 2. Nút Bật/Tắt Bán Khi Full Túi
-		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 2 && py <= uiY + 22)
-		{
-			ModSetActivator.autoSellJunk = !ModSetActivator.autoSellJunk;
-			ModConfig.SaveConfig();
-			GameScr.info1.addInfo("Tự bán khi full túi: " + (ModSetActivator.autoSellJunk ? "BẬT" : "TẮT"), 0);
-			SoundMn.gI().buttonClick();
-			return true;
+			if (px >= uiX + 4 && px <= uiX + 4 + r1W)
+			{
+				ModSetActivator.ToggleActive();
+				return true;
+			}
+			if (px >= uiX + 8 + r1W && px <= uiX + 8 + r1W * 2)
+			{
+				ModSetActivator.autoSellJunk = !ModSetActivator.autoSellJunk;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Tự bán khi full túi: " + (ModSetActivator.autoSellJunk ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= uiX + 12 + r1W * 2 && px <= uiX + 12 + r1W * 3)
+			{
+				ModSetActivator.autoStoreToBox = !ModSetActivator.autoStoreToBox;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Tự cất đồ SKH/Sao vào rương: " + (ModSetActivator.autoStoreToBox ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
 		}
 
 		// 3. 4 nút lọc hàng 1
@@ -210,9 +212,12 @@ public static class ModUISetActivator
 							ModSetActivator.StartGoSellJunkNow();
 							break;
 						case 2:
-							ModAutoBuyBua.StartBuyBuaNow();
+							ModSetActivator.StartGoStoreBoxNow();
 							break;
 						case 3:
+							ModAutoBuyBua.StartBuyBuaNow();
+							break;
+						case 4:
 							if (ModSetActivator.savedFarmMapId >= 0)
 							{
 								ModSetActivator.currentState = ModSetActivator.SetActivatorState.ReturningToFarm;
@@ -223,9 +228,6 @@ public static class ModUISetActivator
 							{
 								GameScr.info1.addInfo("Chưa lưu bãi úp!", 0);
 							}
-							break;
-						case 4:
-							ModSetActivator.ResetPosition();
 							break;
 					}
 					return true;

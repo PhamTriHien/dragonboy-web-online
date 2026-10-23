@@ -17,53 +17,65 @@ public static class ModUIAutoHeal
 		int item2X = uiX + 8 + halfW;
 
 		// Hàng 1: Tự dùng đậu & Khóa HP/MP
-		mFont.tahoma_7_grey.drawString(g, "Tự dùng đậu:", item1X + 2, uiY + 7, mFont.LEFT);
-		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 4, 38, 17, ModAutoHeal.autoPean ? "BẬT" : "TẮT", ModAutoHeal.autoPean, g);
+		mFont.tahoma_7_grey.drawString(g, "Tự dùng đậu:", item1X + 2, uiY + 6, mFont.LEFT);
+		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 3, 38, 16, ModAutoHeal.autoPean ? "BẬT" : "TẮT", ModAutoHeal.autoPean, g);
 
-		mFont.tahoma_7_grey.drawString(g, "Khóa HP/MP:", item2X + 2, uiY + 7, mFont.LEFT);
-		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 4, 38, 17, ModAutoHeal.lockHPMP ? "BẬT" : "TẮT", ModAutoHeal.lockHPMP, g);
+		mFont.tahoma_7_grey.drawString(g, "Khóa HP/MP:", item2X + 2, uiY + 6, mFont.LEFT);
+		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 3, 38, 16, ModAutoHeal.lockHPMP ? "BẬT" : "TẮT", ModAutoHeal.lockHPMP, g);
 
-		// Hàng 2: Ngưỡng tự ăn đậu
-		mFont.tahoma_7_grey.drawString(g, "Ngưỡng ăn đậu khi HP/KI dưới:", uiX + 6, uiY + 24, mFont.LEFT);
-		int pBtnW = (uiW - 20) / pcts.Length;
+		// Hàng 2: Ngưỡng HP & Ngưỡng KI riêng biệt
+		int pStartX = uiX + 46;
+		int pBtnW = (uiW - 50 - 12) / pcts.Length;
+		mFont.tahoma_7_grey.drawString(g, "HP dưới:", uiX + 5, uiY + 24, mFont.LEFT);
 		for (int p = 0; p < pcts.Length; p++)
 		{
-			int pbx = uiX + 4 + p * (pBtnW + 4);
+			int pbx = pStartX + p * (pBtnW + 3);
 			bool isSel = (ModAutoHeal.autoPeanHpPercent == pcts[p]);
-			ModUI.PaintNativeButton(pbx, uiY + 39, pBtnW, 17, "< " + pcts[p] + "%", isSel, g);
+			ModUI.PaintNativeButton(pbx, uiY + 21, pBtnW, 16, "< " + pcts[p] + "%", isSel, g);
+		}
+
+		mFont.tahoma_7_grey.drawString(g, "KI dưới:", uiX + 5, uiY + 42, mFont.LEFT);
+		for (int p = 0; p < pcts.Length; p++)
+		{
+			int pbx = pStartX + p * (pBtnW + 3);
+			bool isSel = (ModAutoHeal.autoPeanMpPercent == pcts[p]);
+			ModUI.PaintNativeButton(pbx, uiY + 39, pBtnW, 16, "< " + pcts[p] + "%", isSel, g);
 		}
 
 		// Hàng 3: Tự thu đậu & Cho đậu bang hội
-		mFont.tahoma_7_grey.drawString(g, "Tự thu đậu:", item1X + 2, uiY + 62, mFont.LEFT);
-		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 59, 38, 17, ModAutoHeal.autoHarvestPea ? "BẬT" : "TẮT", ModAutoHeal.autoHarvestPea, g);
+		mFont.tahoma_7_grey.drawString(g, "Tự thu đậu:", item1X + 2, uiY + 60, mFont.LEFT);
+		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 57, 38, 16, ModAutoHeal.autoHarvestPea ? "BẬT" : "TẮT", ModAutoHeal.autoHarvestPea, g);
 
-		mFont.tahoma_7_grey.drawString(g, "Cho bang:", item2X + 2, uiY + 62, mFont.LEFT);
-		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 59, 38, 17, ModAutoHeal.autoDonateClan ? "BẬT" : "TẮT", ModAutoHeal.autoDonateClan, g);
+		mFont.tahoma_7_grey.drawString(g, "Cho bang:", item2X + 2, uiY + 60, mFont.LEFT);
+		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 57, 38, 16, ModAutoHeal.autoDonateClan ? "BẬT" : "TẮT", ModAutoHeal.autoDonateClan, g);
 
-		// Hàng 4: Ăn đậu khi đệ tử xin & Tự hồi sinh khi chết
-		mFont.tahoma_7_grey.drawString(g, "Cho đệ xin:", item1X + 2, uiY + 81, mFont.LEFT);
-		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 78, 38, 17, ModAutoFeedPet(), ModAutoHeal.autoFeedPetOnAsk, g);
+		// Hàng 4: Tự xin đậu bang & Cho đệ xin
+		mFont.tahoma_7_grey.drawString(g, "Xin đậu bang:", item1X + 2, uiY + 78, mFont.LEFT);
+		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 75, 38, 16, ModAutoHeal.autoRequestPea ? "BẬT" : "TẮT", ModAutoHeal.autoRequestPea, g);
 
-		mFont.tahoma_7_grey.drawString(g, "Hồi sinh:", item2X + 2, uiY + 81, mFont.LEFT);
-		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 78, 38, 17, ModAutoRevive.isEnabled ? "BẬT" : "TẮT", ModAutoRevive.isEnabled, g);
+		mFont.tahoma_7_grey.drawString(g, "Cho đệ xin:", item2X + 2, uiY + 78, mFont.LEFT);
+		ModUI.PaintNativeButton(item2X + halfW - 38, uiY + 75, 38, 16, ModAutoFeedPet(), ModAutoHeal.autoFeedPetOnAsk, g);
 
-		// Hàng 5: Nút thao tác nhanh
-		int actBtnW = (uiW - 12) / 2;
-		ModUI.PaintNativeButton(uiX + 4, uiY + 98, actBtnW, 17, "Thu Đậu Ngay", false, g);
-		ModUI.PaintNativeButton(uiX + 8 + actBtnW, uiY + 98, actBtnW, 17, "Cho Đậu Bang", false, g);
+		// Hàng 5: Tự hồi sinh & Thao tác nhanh (Thu đậu / Xin đậu / Cho đậu)
+		mFont.tahoma_7_grey.drawString(g, "Tự hồi sinh:", item1X + 2, uiY + 96, mFont.LEFT);
+		ModUI.PaintNativeButton(item1X + halfW - 38, uiY + 93, 38, 16, ModAutoRevive.isEnabled ? "BẬT" : "TẮT", ModAutoRevive.isEnabled, g);
+
+		int actBtnW = (uiW - 16) / 3;
+		ModUI.PaintNativeButton(uiX + 4, uiY + 112, actBtnW, 16, "Thu Đậu", false, g);
+		ModUI.PaintNativeButton(uiX + 8 + actBtnW, uiY + 112, actBtnW, 16, "Xin Đậu", false, g);
+		ModUI.PaintNativeButton(uiX + 12 + actBtnW * 2, uiY + 112, actBtnW, 16, "Cho Đậu", false, g);
 
 		// Ghi chú nhỏ ở đáy co dãn linh hoạt
 		int boxX = uiX + 4;
-		int boxY = uiY + 119;
+		int boxY = uiY + 131;
 		int boxW = uiW - 8;
-		int boxH = uiH - 123;
-		if (boxH < 36) boxH = 36;
+		int boxH = uiH - 135;
+		if (boxH < 24) boxH = 24;
 		GameCanvas.paintz.paintFrameSimple(boxX, boxY, boxW, boxH, g);
 		g.setColor(15196114);
 		g.fillRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4);
 		int beanCount = ModAutoHeal.GetBeanCount();
-		mFont.tahoma_7_grey.drawString(g, "* Đậu trong túi: " + beanCount + " hạt. Cứu sinh đệ tử,", boxX + boxW / 2, boxY + 6, mFont.CENTER);
-		mFont.tahoma_7_grey.drawString(g, "tự hồi sinh & cứu bang hội tức thời.", boxX + boxW / 2, boxY + 20, mFont.CENTER);
+		mFont.tahoma_7_grey.drawString(g, "* Đậu trong túi: " + beanCount + " hạt. Tự ăn đậu, xin/cho bang & đệ.", boxX + boxW / 2, boxY + (boxH - 10) / 2, mFont.CENTER);
 	}
 
 	private static string ModAutoFeedPet() => ModAutoHeal.autoFeedPetOnAsk ? "BẬT" : "TẮT";
@@ -78,7 +90,7 @@ public static class ModUIAutoHeal
 		int item2X = uiX + 8 + halfW;
 
 		// 1. Tự dùng đậu
-		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 2 && py <= uiY + 22)
+		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 2 && py <= uiY + 20)
 		{
 			ModAutoHeal.autoPean = !ModAutoHeal.autoPean;
 			ModConfig.SaveConfig();
@@ -87,7 +99,7 @@ public static class ModUIAutoHeal
 		}
 
 		// 2. Khóa HP/MP
-		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 2 && py <= uiY + 22)
+		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 2 && py <= uiY + 20)
 		{
 			ModAutoHeal.lockHPMP = !ModAutoHeal.lockHPMP;
 			ModConfig.SaveConfig();
@@ -95,14 +107,22 @@ public static class ModUIAutoHeal
 			return true;
 		}
 
-		// 3. Ngưỡng ăn đậu
-		int pBtnW = (uiW - 20) / pcts.Length;
+		// 3a. Ngưỡng ăn đậu HP & KI
+		int pStartX = uiX + 46;
+		int pBtnW = (uiW - 50 - 12) / pcts.Length;
 		for (int p = 0; p < pcts.Length; p++)
 		{
-			int pbx = uiX + 4 + p * (pBtnW + 4);
-			if (px >= pbx && px <= pbx + pBtnW && py >= uiY + 38 && py <= uiY + 57)
+			int pbx = pStartX + p * (pBtnW + 3);
+			if (px >= pbx && px <= pbx + pBtnW && py >= uiY + 20 && py <= uiY + 38)
 			{
 				ModAutoHeal.autoPeanHpPercent = pcts[p];
+				ModConfig.SaveConfig();
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= pbx && px <= pbx + pBtnW && py >= uiY + 38 && py <= uiY + 56)
+			{
+				ModAutoHeal.autoPeanMpPercent = pcts[p];
 				ModConfig.SaveConfig();
 				SoundMn.gI().buttonClick();
 				return true;
@@ -110,7 +130,7 @@ public static class ModUIAutoHeal
 		}
 
 		// 4. Tự thu đậu
-		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 57 && py <= uiY + 77)
+		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 56 && py <= uiY + 74)
 		{
 			ModAutoHeal.autoHarvestPea = !ModAutoHeal.autoHarvestPea;
 			ModConfig.SaveConfig();
@@ -120,7 +140,7 @@ public static class ModUIAutoHeal
 		}
 
 		// 5. Cho đậu bang
-		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 57 && py <= uiY + 77)
+		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 56 && py <= uiY + 74)
 		{
 			ModAutoHeal.autoDonateClan = !ModAutoHeal.autoDonateClan;
 			ModConfig.SaveConfig();
@@ -129,8 +149,18 @@ public static class ModUIAutoHeal
 			return true;
 		}
 
-		// 6. Cho đệ khi xin
-		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 76 && py <= uiY + 96)
+		// 6a. Tự xin đậu bang
+		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 74 && py <= uiY + 92)
+		{
+			ModAutoHeal.autoRequestPea = !ModAutoHeal.autoRequestPea;
+			ModConfig.SaveConfig();
+			GameScr.info1.addInfo("Tự xin đậu bang: " + (ModAutoHeal.autoRequestPea ? "BẬT" : "TẮT"), 0);
+			SoundMn.gI().buttonClick();
+			return true;
+		}
+
+		// 6b. Cho đệ khi xin
+		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 74 && py <= uiY + 92)
 		{
 			ModAutoHeal.autoFeedPetOnAsk = !ModAutoHeal.autoFeedPetOnAsk;
 			ModConfig.SaveConfig();
@@ -140,26 +170,32 @@ public static class ModUIAutoHeal
 		}
 
 		// 7. Tự hồi sinh
-		if (px >= item2X + halfW - 40 && px <= item2X + halfW + 2 && py >= uiY + 76 && py <= uiY + 96)
+		if (px >= item1X + halfW - 40 && px <= item1X + halfW + 2 && py >= uiY + 92 && py <= uiY + 110)
 		{
 			ModAutoRevive.Toggle();
 			SoundMn.gI().buttonClick();
 			return true;
 		}
 
-		// 8. Nút Thu Đậu Ngay
-		int actBtnW = (uiW - 12) / 2;
-		if (px >= uiX + 4 && px <= uiX + 4 + actBtnW && py >= uiY + 97 && py <= uiY + 117)
+		// 8. 3 Nút Thao tác nhanh: Thu Đậu / Xin Đậu / Cho Đậu
+		int actBtnW = (uiW - 16) / 3;
+		if (py >= uiY + 111 && py <= uiY + 129)
 		{
-			ModAutoHeal.HarvestMagicTreeNow();
-			return true;
-		}
-
-		// 8. Nút Cho Đậu Bang Ngay
-		if (px >= uiX + 8 + actBtnW && px <= uiX + 8 + actBtnW * 2 && py >= uiY + 97 && py <= uiY + 117)
-		{
-			ModAutoHeal.DonateClanNow();
-			return true;
+			if (px >= uiX + 4 && px <= uiX + 4 + actBtnW)
+			{
+				ModAutoHeal.HarvestMagicTreeNow();
+				return true;
+			}
+			if (px >= uiX + 8 + actBtnW && px <= uiX + 8 + actBtnW * 2)
+			{
+				ModAutoHeal.RequestClanPeaNow();
+				return true;
+			}
+			if (px >= uiX + 12 + actBtnW * 2 && px <= uiX + 12 + actBtnW * 3)
+			{
+				ModAutoHeal.DonateClanNow();
+				return true;
+			}
 		}
 
 		return false;

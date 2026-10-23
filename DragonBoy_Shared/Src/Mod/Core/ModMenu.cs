@@ -505,11 +505,14 @@ public static class ModMenu
 			// Tự động về chỗ cũ khi chết (GoBack)
 			ModGoBack.Update();
 
-			// Tự động úp set kích hoạt & bán đồ rác
+			// Tự động úp set kích hoạt & bán đồ rác / cất rương
 			ModSetActivator.Update();
 
 			// Tự động né Broly & khinh công
 			ModKiteBroly.Update();
+
+			// Tự động dò khu Boss & săn Boss
+			ModBossNotice.UpdateAutoBoss();
 
 			// Tối ưu hóa tỉ lệ rơi đồ
 			ModDropRate.Update();
@@ -517,10 +520,14 @@ public static class ModMenu
 			// Tự động mua bùa Bà Hạt Mít
 			ModAutoBuyBua.Update();
 
-			// Tự động nhặt đồ
+			// Tự động nhặt đồ & vứt đồ
 			ModAutoPick.RunRealAutoPick();
 
-			// Tự động Tàn Sát
+			// Tự động Tàn Sát (hoặc đóng băng hồi chiêu / buff hỗ trợ khi đánh tay)
+			if (!ModTanSat.autoTanSat && (ModTanSat.freezeSkillCooldown || ModTanSat.autoSupportSkills) && !me.isDie && me.cHP > 0)
+			{
+				ModTanSat.UpdateSupportAndFreezeSkills(me, now);
+			}
 			ModTanSat.RunTanSat();
 		}
 		catch
@@ -562,6 +569,9 @@ public static class ModMenu
 
 				// HUD Radar thực thể Boss & Player trong map
 				ModMapEntityHUD.Paint(g);
+
+				// HUD Thông số Đệ Tử
+				ModAutoPet.PaintPetHUD(g);
 
 				// HUD Tên Map & Khu vực
 				ModNextMap.PaintHUDMapTag(g);

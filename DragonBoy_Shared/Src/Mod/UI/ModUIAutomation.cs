@@ -15,7 +15,7 @@ public static class ModUIAutomation
 
 	private static int GetContentHeight()
 	{
-		return (subTab == 0) ? 174 : 182;
+		return (subTab == 0) ? 174 : 202;
 	}
 
 	/// <summary>
@@ -135,16 +135,18 @@ public static class ModUIAutomation
 
 		// 1. AUTO CỘNG ĐIỂM TIỀM NĂNG
 		mFont.tahoma_7_green2.drawString(g, "CỘNG ĐIỂM TIỀM NĂNG:", x + 2, curY + 2, mFont.LEFT);
+		string capLabel = "Mốc: " + (ModAutoPoint.maxTargetStat > 0 ? Res.formatNumber2(ModAutoPoint.maxTargetStat) : "Tắt");
+		ModUI.PaintNativeButton(x + w - 118, curY, 72, 16, capLabel, ModAutoPoint.maxTargetStat > 0, g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoPoint.isEnabled ? "BẬT" : "TẮT", ModAutoPoint.isEnabled, g);
 		curY += 19;
 
-		int btnW4 = (w - 9) / 4;
-		string[] statNames = new string[] { "HP Gốc", "KI Gốc", "Sức Đánh", "Giáp" };
-		for (int i = 0; i < 4; i++)
+		int btnW5 = (w - 12) / 5;
+		string[] statNames = new string[] { "HP Gốc", "KI Gốc", "Sức Đánh", "Giáp", "Chí Mạng" };
+		for (int i = 0; i < 5; i++)
 		{
-			int bx = x + i * (btnW4 + 3);
+			int bx = x + i * (btnW5 + 3);
 			bool isSel = (ModAutoPoint.targetType == i);
-			ModUI.PaintNativeButton(bx, curY, btnW4, 16, statNames[i], isSel, g);
+			ModUI.PaintNativeButton(bx, curY, btnW5, 16, statNames[i], isSel, g);
 		}
 		curY += 19;
 
@@ -237,6 +239,13 @@ public static class ModUIAutomation
 			bool isSelPet = (ModAutoPet.status == i);
 			ModUI.PaintNativeButton(bx, curY, petBtnW, 16, petCmds[i], isSelPet, g);
 		}
+		curY += 18;
+
+		// Hàng tính năng nâng cao của Đệ Tử: HUD Đệ, Né Boss, Cờ Đen, Trị Thương
+		ModUI.PaintNativeButton(x, curY, petBtnW, 16, "HUD Đệ", ModAutoPet.showPetHUD, g);
+		ModUI.PaintNativeButton(x + (petBtnW + 3), curY, petBtnW, 16, "Né Boss", ModAutoPet.petAvoidBoss, g);
+		ModUI.PaintNativeButton(x + (petBtnW + 3) * 2, curY, petBtnW, 16, "Cờ Đen", ModAutoPet.petAutoFlag, g);
+		ModUI.PaintNativeButton(x + (petBtnW + 3) * 3, curY, petBtnW, 16, "Trị Thương", ModAutoPet.autoNamekHeal, g);
 		curY += 21;
 
 		// 2. AUTO CHAT
@@ -352,7 +361,13 @@ public static class ModUIAutomation
 	{
 		int curY = y;
 
-		// 1. Auto Tiềm Năng: Bật / Tắt
+		// 1. Auto Tiềm Năng: Nút Mốc giới hạn & Bật / Tắt
+		if (px >= x + w - 120 && px <= x + w - 45 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoPoint.ShowInputMaxTargetStat();
+			SoundMn.gI().buttonClick();
+			return true;
+		}
 		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModAutoPoint.Toggle();
@@ -361,12 +376,12 @@ public static class ModUIAutomation
 		}
 		curY += 19;
 
-		// Chọn chỉ số (Sức đánh, HP, MP, Giáp)
-		int btnW4 = (w - 9) / 4;
-		for (int i = 0; i < 4; i++)
+		// Chọn chỉ số (HP, KI, Sức Đánh, Giáp, Chí Mạng)
+		int btnW5 = (w - 12) / 5;
+		for (int i = 0; i < 5; i++)
 		{
-			int bx = x + i * (btnW4 + 3);
-			if (px >= bx && px <= bx + btnW4 && py >= curY - 2 && py <= curY + 18)
+			int bx = x + i * (btnW5 + 3);
+			if (px >= bx && px <= bx + btnW5 && py >= curY - 2 && py <= curY + 18)
 			{
 				ModAutoPoint.Configure(i, ModAutoPoint.pointsPerTick, ModAutoPoint.intervalMs);
 				ModConfig.SaveConfig();
@@ -509,6 +524,44 @@ public static class ModUIAutomation
 			if (px >= bx && px <= bx + petBtnW && py >= curY - 2 && py <= curY + 18)
 			{
 				ModAutoPet.Configure(i, ModAutoPet.intervalMs);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+		}
+		curY += 18;
+
+		// Hàng tính năng nâng cao của Đệ Tử: HUD Đệ, Né Boss, Cờ Đen, Trị Thương
+		if (py >= curY - 2 && py <= curY + 18)
+		{
+			if (px >= x && px <= x + petBtnW)
+			{
+				ModAutoPet.showPetHUD = !ModAutoPet.showPetHUD;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("HUD Đệ Tử: " + (ModAutoPet.showPetHUD ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= x + (petBtnW + 3) && px <= x + (petBtnW + 3) + petBtnW)
+			{
+				ModAutoPet.petAvoidBoss = !ModAutoPet.petAvoidBoss;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Đệ Tử Né Boss: " + (ModAutoPet.petAvoidBoss ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= x + (petBtnW + 3) * 2 && px <= x + (petBtnW + 3) * 2 + petBtnW)
+			{
+				ModAutoPet.petAutoFlag = !ModAutoPet.petAutoFlag;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Tự Bật Cờ Đen: " + (ModAutoPet.petAutoFlag ? "BẬT" : "TẮT"), 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= x + (petBtnW + 3) * 3 && px <= x + w)
+			{
+				ModAutoPet.autoNamekHeal = !ModAutoPet.autoNamekHeal;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Auto Trị Thương Đệ: " + (ModAutoPet.autoNamekHeal ? "BẬT" : "TẮT"), 0);
 				SoundMn.gI().buttonClick();
 				return true;
 			}

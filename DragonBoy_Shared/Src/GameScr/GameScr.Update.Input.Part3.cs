@@ -26,6 +26,10 @@ public partial class GameScr : mScreen, IChatable
 				{
 					return;
 				}
+				if (ModBossNotice.CheckHUDClick(GameCanvas.px, GameCanvas.py))
+				{
+					return;
+				}
 				if (ModMapEntityHUD.CheckClick(GameCanvas.px, GameCanvas.py))
 				{
 					return;
