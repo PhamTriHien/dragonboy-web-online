@@ -10,6 +10,25 @@ public static class ModGraphics
 	public static int graphicsQuality = 0;
 	public static readonly string[] graphicsNames = new string[4] { "Ultra", "Medium", "Low", "Super Low" };
 
+	// Chế độ Treo Giảm CPU (giới hạn 15 FPS + tối giản hiệu ứng nền)
+	public static bool isAfkLowCpu = false;
+
+	public static void ToggleAfkLowCpu()
+	{
+		isAfkLowCpu = !isAfkLowCpu;
+		if (isAfkLowCpu)
+		{
+			Application.targetFrameRate = 15;
+		}
+		else
+		{
+			ModFps.ApplyFPS();
+		}
+		ModConfig.SaveConfig();
+		GameScr.info1?.addInfo("Chế độ Treo Giảm CPU (15 FPS): " + (isAfkLowCpu ? "BẬT" : "TẮT"), 0);
+		SoundMn.gI().buttonClick();
+	}
+
 	// 2 chế độ render: 0: Java Gốc (pixel to + RGB565, lọc Point), 1: Bản HD PC/Android (nguyên độ phân giải, lọc Bilinear)
 	public static int renderMode = 0;
 	public static readonly string[] renderModeNames = new string[2] { "Java Gốc", "Bản HD PC/Android" };

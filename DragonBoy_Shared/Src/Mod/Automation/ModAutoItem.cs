@@ -7,6 +7,8 @@ using System.Collections.Generic;
 public static class ModAutoItem
 {
 	public static bool isEnabled;
+	public static bool autoOpenCskb = false;
+	private static long lastCskbTime = 0;
 	public static string itemIdsRaw = string.Empty;
 	public static HashSet<int> itemIds = new HashSet<int>();
 	public static int intervalMs = 3000;
@@ -121,11 +123,27 @@ public static class ModAutoItem
 	/// </summary>
 	public static void Update()
 	{
-		if (!isEnabled || itemIds.Count == 0 || !ModMenu.IsInGame() || Char.myCharz() == null || GameScr.gI() == null) return;
+		if (!ModMenu.IsInGame() || Char.myCharz() == null || GameScr.gI() == null) return;
 		if (Char.isLoadingMap || Char.ischangingMap) return;
 		Char me = Char.myCharz();
 		if (me.isDie || me.cHP <= 0 || me.statusMe == 14 || me.statusMe == 5) return;
 		long now = mSystem.currentTimeMillis();
+
+		if (autoOpenCskb && now - lastCskbTime >= 350 && me.arrItemBag != null)
+		{
+			for (int c = 0; c < me.arrItemBag.Length; c++)
+			{
+				Item cskb = me.arrItemBag[c];
+				if (cskb != null && cskb.template != null && cskb.template.id == 380)
+				{
+					lastCskbTime = now;
+					Service.gI().useItem(0, 1, (sbyte)cskb.indexUI, -1);
+					break;
+				}
+			}
+		}
+
+		if (!isEnabled || itemIds.Count == 0) return;
 		if (now < nextAt) return;
 		Item[] bag = me.arrItemBag;
 		if (bag == null || bag.Length == 0) return;

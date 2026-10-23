@@ -12,6 +12,7 @@ public static class ModGoBack
 	{
 		Idle,
 		WaitingRevive,
+		MovingHomeForMp,
 		DelayAtHome,
 		NavigatingToMap,
 		ChangingZone,
@@ -20,17 +21,60 @@ public static class ModGoBack
 
 	public static bool isGoBackActive = false;
 	public static bool isAutoRecordOnDeath = true;
+	public static bool gobackOnLowMp = false;
+	public static int lowMpPercent = 10;
 
 	public static int savedMapId = -1;
 	public static int savedZoneId = -1;
 	public static int savedX = -1;
 	public static int savedY = -1;
 
+	private class CustomGoBackChatListener : IChatable
+	{
+		public void onChatFromMe(string text, string to)
+		{
+			ChatTextField.gI().isShow = false;
+			ChatTextField.gI().parentScreen = GameScr.gI();
+			if (string.IsNullOrEmpty(text)) return;
+			string[] parts = text.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length >= 1 && int.TryParse(parts[0].Trim(), out int mId))
+			{
+				savedMapId = mId;
+				if (parts.Length >= 2 && int.TryParse(parts[1].Trim(), out int zId)) savedZoneId = zId;
+				if (parts.Length >= 4 && int.TryParse(parts[2].Trim(), out int px) && int.TryParse(parts[3].Trim(), out int py))
+				{
+					savedX = px;
+					savedY = py;
+				}
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("GoBack tùy chỉnh: Map " + savedMapId + " [K." + savedZoneId + "] (" + savedX + "," + savedY + ")", 0);
+			}
+		}
+		public void onCancelChat()
+		{
+			ChatTextField.gI().isShow = false;
+			ChatTextField.gI().parentScreen = GameScr.gI();
+		}
+	}
+
+	private static readonly CustomGoBackChatListener customGoBackListener = new CustomGoBackChatListener();
+
+	public static void ShowInputCustomGoBack()
+	{
+		ChatTextField.gI().strChat = "Nhập: MapID,Khu,X,Y (VD: 5,2,350,240)";
+		ChatTextField.gI().tfChat.name = "MapID,Khu,X,Y";
+		ChatTextField.gI().tfChat.setIputType(TField.INPUT_TYPE_ANY);
+		ChatTextField.gI().startChat2(customGoBackListener, string.Empty);
+		string cur = (savedMapId >= 0) ? (savedMapId + "," + System.Math.Max(0, savedZoneId) + "," + System.Math.Max(0, savedX) + "," + System.Math.Max(0, savedY)) : string.Empty;
+		ChatTextField.gI().tfChat.setText(cur);
+	}
+
 	public static GoBackState currentState = GoBackState.Idle;
 
 	public static bool isReturning
 	{
 		get { return isGoBackActive && currentState != GoBackState.Idle; }
+		set { if (!value) currentState = GoBackState.Idle; }
 	}
 
 	private static int lastAliveMapId = -1;
@@ -143,6 +187,8 @@ public static class ModGoBack
 				return "Đang theo dõi (Chờ kiệt sức)";
 			case GoBackState.WaitingRevive:
 				return "Đang gửi lệnh về nhà hồi sinh...";
+			case GoBackState.MovingHomeForMp:
+				return "Đang về nhà hồi KI...";
 			case GoBackState.DelayAtHome:
 				return "Đã về nhà, đang hồi phục...";
 			case GoBackState.NavigatingToMap:
@@ -184,6 +230,24 @@ public static class ModGoBack
 				lastAliveZoneId = TileMap.zoneID;
 				lastAliveX = me.cx;
 				lastAliveY = me.cy;
+
+				if (gobackOnLowMp && me.cMPFull > 0 && (me.cMP * 100L / me.cMPFull) < lowMpPercent)
+				{
+					if (isAutoRecordOnDeath || savedMapId < 0)
+					{
+						savedMapId = TileMap.mapID;
+						savedZoneId = TileMap.zoneID;
+						savedX = me.cx;
+						savedY = me.cy;
+						ModConfig.SaveConfig();
+					}
+					int homeMap = 21 + me.cgender;
+					currentState = GoBackState.MovingHomeForMp;
+					stateTimer = now;
+					ModNextMap.StartNextMap(homeMap);
+					GameScr.info1.addInfo("GoBack: KI < " + lowMpPercent + "%! Về nhà hồi phục...", 0);
+					return;
+				}
 			}
 		}
 
@@ -260,6 +324,27 @@ public static class ModGoBack
 				break;
 			}
 
+			case GoBackState.MovingHomeForMp:
+			{
+				int homeMap = 21 + me.cgender;
+				if (TileMap.mapID == homeMap && !Char.isLoadingMap && !Char.ischangingMap)
+				{
+					if (ModNextMap.isNextMapActive)
+					{
+						ModNextMap.StopNextMap();
+					}
+					currentState = GoBackState.DelayAtHome;
+					stateTimer = now;
+					return;
+				}
+				if (!ModNextMap.isNextMapActive && !Char.isLoadingMap && !Char.ischangingMap && now - stateTimer > 2500)
+				{
+					stateTimer = now;
+					ModNextMap.StartNextMap(homeMap);
+				}
+				break;
+			}
+
 			case GoBackState.DelayAtHome:
 			{
 				// Nghỉ tối thiểu 800ms tại nhà để nạp xong tài nguyên và chỉ số
@@ -268,8 +353,23 @@ public static class ModGoBack
 					return;
 				}
 
-				// Đảm bảo hồi phục HP trước khi rời khỏi nhà (chờ tối đa 2500ms nếu đang hồi đậu/thu hoạch cây đậu)
-				if (me.cHPFull > 0 && me.cHP * 100L < me.cHPFull * 20L && now - stateTimer < 2500)
+				if ((TileMap.mapID == 21 || TileMap.mapID == 22 || TileMap.mapID == 23) && GameScr.vItemMap != null)
+				{
+					for (int i = 0; i < GameScr.vItemMap.size(); i++)
+					{
+						ItemMap itm = (ItemMap)GameScr.vItemMap.elementAt(i);
+						if (itm != null && itm.template != null && itm.template.id == 73)
+						{
+							Service.gI().pickItem(itm.itemMapID);
+							break;
+						}
+					}
+				}
+
+				// Đảm bảo hồi phục HP/KI trước khi rời khỏi nhà (chờ tối đa 3000ms nếu đang hồi đậu/thu hoạch cây đậu)
+				bool needRecover = (me.cHPFull > 0 && me.cHP * 100L < me.cHPFull * 20L) ||
+				                   (gobackOnLowMp && me.cMPFull > 0 && me.cMP * 100L < me.cMPFull * 50L);
+				if (needRecover && now - stateTimer < 3000)
 				{
 					if (GameScr.hpPotion > 0)
 					{

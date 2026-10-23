@@ -101,12 +101,14 @@ public static class ModUIGraphics
 		ModUI.PaintNativeButton(uiX + 144, uiY + 249, 38, 16, ModLogo.isShowLogoInGame ? "BẬT" : "TẮT", ModLogo.isShowLogoInGame, g);
 		ModUI.PaintNativeButton(uiX + 186, uiY + 249, 60, 16, ModLogo.logoPosition == 0 ? "Góc Phải" : "Ở Giữa", ModLogo.isShowLogoInGame, g);
 
-		// 7. Menu HUB Nổi & Bàn phím ảo Analog
+		// 7. Menu HUB Nổi, Bàn phím ảo Analog & Treo Giảm CPU
 		mFont.tahoma_7_grey.drawString(g, "HUB Nổi:", uiX + 6, uiY + 274, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 62, uiY + 271, 38, 16, ModFloatingHUD.isShowFloatingHUD ? "BẬT" : "TẮT", ModFloatingHUD.isShowFloatingHUD, g);
+		ModUI.PaintNativeButton(uiX + 54, uiY + 271, 34, 16, ModFloatingHUD.isShowFloatingHUD ? "BẬT" : "TẮT", ModFloatingHUD.isShowFloatingHUD, g);
 
-		mFont.tahoma_7_grey.drawString(g, "Analog:", uiX + 108, uiY + 274, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 154, uiY + 271, 38, 16, (GameScr.isAnalog == 1) ? "BẬT" : "TẮT", GameScr.isAnalog == 1, g);
+		mFont.tahoma_7_grey.drawString(g, "Analog:", uiX + 92, uiY + 274, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 132, uiY + 271, 34, 16, (GameScr.isAnalog == 1) ? "BẬT" : "TẮT", GameScr.isAnalog == 1, g);
+
+		ModUI.PaintNativeButton(uiX + 170, uiY + 271, 76, 16, "Giảm CPU: " + (ModGraphics.isAfkLowCpu ? "BẬT" : "TẮT"), ModGraphics.isAfkLowCpu, g);
 
 		// 8. Chủ Đề Font Chữ & Kích Thước Font Chữ
 		mFont.tahoma_7_grey.drawString(g, "Chủ đề Font chữ:", uiX + 6, uiY + 293, mFont.LEFT);
@@ -241,7 +243,7 @@ public static class ModUIGraphics
 		}
 
 		// 10. Bật / Tắt Menu HUB Nổi
-		if (px >= uiX + 62 && px <= uiX + 100 && py >= uiY + 270 && py <= uiY + 288)
+		if (px >= uiX + 54 && px <= uiX + 88 && py >= uiY + 270 && py <= uiY + 288)
 		{
 			ModFloatingHUD.isShowFloatingHUD = !ModFloatingHUD.isShowFloatingHUD;
 			ModConfig.SaveConfig();
@@ -251,7 +253,7 @@ public static class ModUIGraphics
 		}
 
 		// 11. Bật / Tắt Bàn Phím Ảo & Analog
-		if (px >= uiX + 154 && px <= uiX + 192 && py >= uiY + 270 && py <= uiY + 288)
+		if (px >= uiX + 132 && px <= uiX + 166 && py >= uiY + 270 && py <= uiY + 288)
 		{
 			GameScr.isAnalog = (GameScr.isAnalog == 1) ? 0 : 1;
 			GameScr.setSkillBarPosition();
@@ -259,6 +261,13 @@ public static class ModUIGraphics
 			ModConfig.SaveConfig();
 			GameScr.info1.addInfo("Bàn phím ảo & Analog: " + ((GameScr.isAnalog == 1) ? "BẬT" : "TẮT"), 0);
 			SoundMn.gI().buttonClick();
+			return true;
+		}
+
+		// 11b. Bật / Tắt Treo Giảm CPU
+		if (px >= uiX + 170 && px <= uiX + 246 && py >= uiY + 270 && py <= uiY + 288)
+		{
+			ModGraphics.ToggleAfkLowCpu();
 			return true;
 		}
 

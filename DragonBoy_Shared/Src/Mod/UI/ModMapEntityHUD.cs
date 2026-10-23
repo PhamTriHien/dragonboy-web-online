@@ -30,6 +30,10 @@ public static class ModMapEntityHUD
 	}
 
 	public static bool isShowMapEntityHUD = true;
+	public static bool isShowTargetStatus = true;
+	public static bool isLockTarget = false;
+	public static int lockedCharId = 0;
+	public static int lockedMobId = -1;
 	public static int maxDisplayEntries = 15;
 
 	private static readonly List<MapEntityEntry> currentEntries = new List<MapEntityEntry>();
@@ -56,6 +60,160 @@ public static class ModMapEntityHUD
 			return (hp / 1_000.0).ToString("0.#") + "k";
 		}
 		return hp.ToString();
+	}
+
+	/// <summary>
+	/// Bật hoặc tắt khóa cứng mục tiêu đang chọn (Gim Mục Tiêu).
+	/// </summary>
+	public static void ToggleLockTarget()
+	{
+		isLockTarget = !isLockTarget;
+		Char me = Char.myCharz();
+		if (isLockTarget && me != null)
+		{
+			if (me.charFocus != null)
+			{
+				lockedCharId = me.charFocus.charID;
+				lockedMobId = -1;
+			}
+			else if (me.mobFocus != null)
+			{
+				lockedMobId = me.mobFocus.mobId;
+				lockedCharId = 0;
+			}
+		}
+		else
+		{
+			lockedCharId = 0;
+			lockedMobId = -1;
+		}
+		ModConfig.SaveConfig();
+		GameScr.info1.addInfo("Gim mục tiêu: " + (isLockTarget ? "BẬT" : "TẮT"), 0);
+		SoundMn.gI().buttonClick();
+	}
+
+	/// <summary>
+	/// Duy trì mục tiêu đã khóa trên bản đồ.
+	/// </summary>
+	public static void UpdateLockTarget()
+	{
+		if (!isLockTarget || !ModMenu.IsInGame()) return;
+		Char me = Char.myCharz();
+		if (me == null) return;
+
+		if (me.charFocus != null && me.charFocus.cHP > 0 && me.charFocus.statusMe != 14 && me.charFocus.statusMe != 5)
+		{
+			lockedCharId = me.charFocus.charID;
+			lockedMobId = -1;
+			return;
+		}
+		if (me.mobFocus != null && me.mobFocus.hp > 0 && me.mobFocus.status != 0 && me.mobFocus.status != 1)
+		{
+			lockedMobId = me.mobFocus.mobId;
+			lockedCharId = 0;
+			return;
+		}
+
+		if (lockedCharId != 0 && GameScr.vCharInMap != null)
+		{
+			for (int i = 0; i < GameScr.vCharInMap.size(); i++)
+			{
+				Char c = (Char)GameScr.vCharInMap.elementAt(i);
+				if (c != null && c.charID == lockedCharId && c.cHP > 0 && c.statusMe != 14 && c.statusMe != 5)
+				{
+					me.charFocus = c;
+					me.mobFocus = null;
+					return;
+				}
+			}
+		}
+		if (lockedMobId >= 0 && GameScr.vMob != null)
+		{
+			for (int j = 0; j < GameScr.vMob.size(); j++)
+			{
+				Mob m = (Mob)GameScr.vMob.elementAt(j);
+				if (m != null && m.mobId == lockedMobId && m.hp > 0 && m.status != 0 && m.status != 1)
+				{
+					me.mobFocus = m;
+					me.charFocus = null;
+					return;
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// Vẽ đường tia đỏ nối tới mục tiêu đang khóa và hiển thị trạng thái chiến đấu của đối thủ.
+	/// </summary>
+	public static void PaintTargetStatusHUD(mGraphics g)
+	{
+		if (!ModMenu.IsInGame() || g == null) return;
+		if ((GameCanvas.panel != null && GameCanvas.panel.isShow) ||
+		    (GameCanvas.panel2 != null && GameCanvas.panel2.isShow) ||
+		    (GameCanvas.menu != null && GameCanvas.menu.showMenu) ||
+		    GameCanvas.currentDialog != null ||
+		    ModUI.uiCustomOpen)
+		{
+			return;
+		}
+
+		try
+		{
+			Char me = Char.myCharz();
+			if (me == null) return;
+
+			g.translate(-g.getTranslateX(), -g.getTranslateY());
+			g.setClip(0, 0, GameCanvas.w, GameCanvas.h);
+
+			if (isLockTarget)
+			{
+				int tx = -1;
+				int ty = -1;
+				if (me.charFocus != null && me.charFocus.cHP > 0)
+				{
+					tx = me.charFocus.cx;
+					ty = me.charFocus.cy - 12;
+				}
+				else if (me.mobFocus != null && me.mobFocus.hp > 0)
+				{
+					tx = me.mobFocus.x;
+					ty = me.mobFocus.y - 12;
+				}
+				if (tx >= 0 && ty >= 0)
+				{
+					g.setColor(0xFF0000);
+					g.drawLine(me.cx - GameScr.cmx, me.cy - 12 - GameScr.cmy, tx - GameScr.cmx, ty - GameScr.cmy);
+				}
+			}
+
+			if (isShowTargetStatus && me.charFocus != null && me.charFocus.cHP > 0)
+			{
+				Char target = me.charFocus;
+				int cx = GameCanvas.w / 2;
+				int cy = 38;
+
+				string hpLine = target.cName + " [" + FormatHp(target.cHP) + "/" + FormatHp(target.cHPFull > 0 ? target.cHPFull : target.cHP) + "]";
+				mFont.tahoma_7b_red.drawString(g, hpLine, cx, cy, mFont.CENTER, mFont.tahoma_7_grey);
+				cy += 10;
+
+				string effStr = string.Empty;
+				if (target.holdEffID != 0) effStr += "[Bị trói] ";
+				if (target.sleepEff) effStr += "[Thôi miên] ";
+				if (target.blindEff) effStr += "[TDHS] ";
+				if (target.isFreez) effStr += "[Choáng/Băng] ";
+				if (target.stone) effStr += "[Hóa đá] ";
+				if (target.isMonkey == 1) effStr += "[Biến khỉ] ";
+				if (target.isCharge) effStr += "[Tái tạo] ";
+
+				if (!string.IsNullOrEmpty(effStr))
+				{
+					mFont.tahoma_7_yellow.drawString(g, effStr.Trim(), cx, cy, mFont.CENTER, mFont.tahoma_7_grey);
+				}
+			}
+		}
+		catch
+		{
+		}
 	}
 
 	/// <summary>
@@ -206,6 +364,7 @@ public static class ModMapEntityHUD
 	/// </summary>
 	public static void Paint(mGraphics g)
 	{
+		PaintTargetStatusHUD(g);
 		if (!isShowMapEntityHUD || !ModMenu.IsInGame() || g == null)
 		{
 			return;
@@ -376,12 +535,16 @@ public static class ModMapEntityHUD
 								me.charFocus = entry.charRef;
 								me.mobFocus = null;
 								me.npcFocus = null;
+								lockedCharId = entry.charRef.charID;
+								lockedMobId = -1;
 							}
 							else if (entry.mobRef != null)
 							{
 								me.mobFocus = entry.mobRef;
 								me.charFocus = null;
 								me.npcFocus = null;
+								lockedMobId = entry.mobRef.mobId;
+								lockedCharId = 0;
 							}
 
 							// Dịch chuyển tức thời đến tọa độ thực thể

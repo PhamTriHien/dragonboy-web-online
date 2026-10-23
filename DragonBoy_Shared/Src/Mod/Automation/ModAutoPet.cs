@@ -12,6 +12,7 @@ public static class ModAutoPet
 	public static bool petAvoidBoss = false;
 	public static bool petAutoFlag = false;
 	public static bool autoNamekHeal = false;
+	public static long exitOnPetPowerLimit = 0;
 
 	private static long nextAt;
 	private static long lastSilentPetInfoTime;
@@ -21,6 +22,25 @@ public static class ModAutoPet
 	private static bool isEvadingBoss;
 
 	private static readonly string[] petStatusNames = new string[] { "Đi Theo", "Bảo Vệ", "Tấn Công", "Về Nhà" };
+
+	public static void CyclePetPowerLimit()
+	{
+		if (exitOnPetPowerLimit <= 0) exitOnPetPowerLimit = 149_900_000L;
+		else if (exitOnPetPowerLimit == 149_900_000L) exitOnPetPowerLimit = 1_499_000_000L;
+		else if (exitOnPetPowerLimit == 1_499_000_000L) exitOnPetPowerLimit = 17_990_000_000L;
+		else exitOnPetPowerLimit = 0;
+		ModConfig.SaveConfig();
+		SoundMn.gI().buttonClick();
+	}
+
+	public static string GetPetPowerLimitLabel()
+	{
+		if (exitOnPetPowerLimit <= 0) return "Mốc SM: Tắt";
+		if (exitOnPetPowerLimit == 149_900_000L) return "Mốc: 149.9Tr";
+		if (exitOnPetPowerLimit == 1_499_000_000L) return "Mốc: 1.49T";
+		if (exitOnPetPowerLimit == 17_990_000_000L) return "Mốc: 17.99T";
+		return "Mốc: " + Res.formatNumber2(exitOnPetPowerLimit);
+	}
 
 	/// <summary>
 	/// Kiểm tra và tiêu thụ cờ yêu cầu thông tin đệ tử ngầm (tránh mở bảng hành trang đệ tử).
@@ -141,13 +161,34 @@ public static class ModAutoPet
 			}
 		}
 
-		if (showPetHUD && (GameCanvas.panel == null || !GameCanvas.panel.isShow) && GameCanvas.currentDialog == null && !ModUI.uiCustomOpen)
+		if ((showPetHUD || exitOnPetPowerLimit > 0) && (GameCanvas.panel == null || !GameCanvas.panel.isShow) && GameCanvas.currentDialog == null && !ModUI.uiCustomOpen)
 		{
 			if (now - lastSilentPetInfoTime >= 12000)
 			{
 				lastSilentPetInfoTime = now;
 				silentPetInfoExpireAt = now + 2500;
 				Service.gI().petInfo();
+			}
+		}
+
+		// 0. Kiểm tra mốc sức mạnh đệ tử để tự động thu đệ về nhà & dừng Tàn Sát (chống lố mốc mở skill)
+		if (exitOnPetPowerLimit > 0)
+		{
+			Char myPetCheck = Char.myPetz();
+			if (myPetCheck != null && myPetCheck.cPower >= exitOnPetPowerLimit)
+			{
+				Service.gI().petStatus(3);
+				myPetCheck.petStatus = 3;
+				status = 3;
+				if (ModTanSat.autoTanSat)
+				{
+					ModTanSat.autoTanSat = false;
+				}
+				exitOnPetPowerLimit = 0;
+				ModConfig.SaveConfig();
+				GameScr.info1.addInfo("Đệ tử đã đạt mốc SM (" + Res.formatNumber2(myPetCheck.cPower) + ")! Đã cho đệ về nhà & dừng Tàn Sát!", 0);
+				SoundMn.gI().buttonClick();
+				return;
 			}
 		}
 

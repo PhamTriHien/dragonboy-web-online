@@ -212,8 +212,12 @@ public class ItemMap : IMapObject
 				g.drawRegion(Mob.imgHP, 0, 24, 9, 6, 0, x, y - 17, 3);
 				if (ModSetActivator.showItemId && template != null)
 				{
-					mFont.tahoma_7_white.drawString(g, "[" + template.id + "] " + template.name, x, y - 30, mFont.CENTER);
+					mFont.tahoma_7_white.drawString(g, "[" + template.id + "] " + template.name, x, y - 30, mGraphics.HCENTER);
 				}
+			}
+			else if (ModSetActivator.showItemId && template != null && status != 2)
+			{
+				mFont.tahoma_7_yellow.drawString(g, "[" + template.id + "]", x, y - 20, mGraphics.HCENTER);
 			}
 		}
 	}

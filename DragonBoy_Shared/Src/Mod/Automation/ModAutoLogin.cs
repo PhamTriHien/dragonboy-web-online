@@ -6,11 +6,30 @@ using System;
 public static class ModAutoLogin
 {
 	public static bool isEnabled = true;
+	public static bool keepSavedZone = false;
+	public static int savedKeepZoneId = -1;
+	private static long lastKeepZoneCheckTime = 0;
 	public static bool isReconnecting = false;
 	public static int retryCount = 0;
 	public static long lastRetryTime = 0;
 	public static int reconnectDelayMs = 8000;
 	public static string statusMessage = "";
+
+	public static void ToggleKeepZone()
+	{
+		keepSavedZone = !keepSavedZone;
+		if (keepSavedZone && ModMenu.IsInGame())
+		{
+			savedKeepZoneId = TileMap.zoneID;
+			GameScr.info1.addInfo("Giữ Khu Cố Định: BẬT (Khu " + savedKeepZoneId + ")", 0);
+		}
+		else
+		{
+			GameScr.info1.addInfo("Giữ Khu Cố Định: TẮT", 0);
+		}
+		ModConfig.SaveConfig();
+		SoundMn.gI().buttonClick();
+	}
 
 	public static bool wasTanSatActive = false;
 	public static bool wasAutoPickActive = false;
@@ -114,6 +133,19 @@ public static class ModAutoLogin
 	/// </summary>
 	public static void Update()
 	{
+		if (keepSavedZone && savedKeepZoneId >= 0 && ModMenu.IsInGame() && !Char.isLoadingMap && !Char.ischangingMap)
+		{
+			if (!ModNextMap.isNextMapActive && !ModBossNotice.isAutoScanBossZone && !ModGoBack.isReturning && !ModSetActivator.isBusy && !ModAutoBuyBua.isBusy)
+			{
+				long tNow = mSystem.currentTimeMillis();
+				if (TileMap.zoneID != savedKeepZoneId && tNow - lastKeepZoneCheckTime >= 3500)
+				{
+					lastKeepZoneCheckTime = tNow;
+					Service.gI().requestChangeZone(savedKeepZoneId, -1);
+				}
+			}
+		}
+
 		if (!isEnabled || !isReconnecting) return;
 
 		// Khi da vao lai map on dinh

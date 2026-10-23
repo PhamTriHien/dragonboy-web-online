@@ -15,7 +15,7 @@ public static class ModUIAutomation
 
 	private static int GetContentHeight()
 	{
-		return (subTab == 0) ? 174 : 202;
+		return (subTab == 0) ? 196 : 224;
 	}
 
 	/// <summary>
@@ -163,6 +163,7 @@ public static class ModUIAutomation
 
 		// 2. AUTO DÙNG ITEM TRONG TÚI
 		mFont.tahoma_7_green2.drawString(g, "AUTO DÙNG ITEM (TÚI):", x + 2, curY + 2, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 114, curY, 68, 16, ModAutoItem.autoOpenCskb ? "CSKB: BẬT" : "CSKB: TẮT", ModAutoItem.autoOpenCskb, g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoItem.isEnabled ? "BẬT" : "TẮT", ModAutoItem.isEnabled, g);
 		curY += 19;
 
@@ -217,6 +218,11 @@ public static class ModUIAutomation
 		int fuseW = (w - 3) / 2;
 		ModUI.PaintNativeButton(x, curY, fuseW, 16, "Bông Tai Porata", ModAutoFusion.fusionType == 4, g);
 		ModUI.PaintNativeButton(x + fuseW + 3, curY, fuseW, 16, "Kaio-ken / Thường", ModAutoFusion.fusionType == 6, g);
+		curY += 21;
+
+		// 4. AUTO NHIỆM VỤ TÂN THỦ (TASK 0 -> 10)
+		mFont.tahoma_7_green2.drawString(g, "AUTO NV TÂN THỦ (0->10):", x + 2, curY + 2, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoNewAccount.isEnabled ? "BẬT" : "TẮT", ModAutoNewAccount.isEnabled, g);
 	}
 
 	/// <summary>
@@ -228,6 +234,7 @@ public static class ModUIAutomation
 
 		// 1. AUTO ĐỆ TỬ (PET)
 		mFont.tahoma_7_green2.drawString(g, "AUTO LỆNH ĐỆ TỬ:", x + 2, curY + 2, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 122, curY, 76, 16, ModAutoPet.GetPetPowerLimitLabel(), ModAutoPet.exitOnPetPowerLimit > 0, g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoPet.isEnabled ? "BẬT" : "TẮT", ModAutoPet.isEnabled, g);
 		curY += 18;
 
@@ -279,6 +286,7 @@ public static class ModUIAutomation
 
 		// 4. LẬP LỊCH AUTO
 		mFont.tahoma_7_green2.drawString(g, "LẬP LỊCH KHUNG GIỜ:", x + 2, curY + 2, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 114, curY, 68, 16, "Hẹn Map/Khu", !string.IsNullOrEmpty(ModSchedule.trainSlotsRaw[0]), g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModSchedule.isEnabled ? "BẬT" : "TẮT", ModSchedule.isEnabled, g);
 		curY += 18;
 
@@ -291,8 +299,9 @@ public static class ModUIAutomation
 		ModUI.PaintNativeButton(x + (schedW + 3) * 2, curY, schedW, 16, "22h - 06h", isNight, g);
 		curY += 21;
 
-		// 5. TỰ KẾT NỐI LẠI (AUTO RECONNECT)
-		mFont.tahoma_7_green2.drawString(g, "TỰ ĐĂNG NHẬP LẠI (RECONNECT):", x + 2, curY + 2, mFont.LEFT);
+		// 5. TỰ KẾT NỐI LẠI (AUTO RECONNECT) & GIỮ KHU
+		mFont.tahoma_7_green2.drawString(g, "RECONNECT & GIỮ KHU:", x + 2, curY + 2, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 114, curY, 68, 16, ModAutoLogin.keepSavedZone ? ("Giữ K." + ModAutoLogin.savedKeepZoneId) : "Giữ Khu: Tắt", ModAutoLogin.keepSavedZone, g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoLogin.isEnabled ? "BẬT" : "TẮT", ModAutoLogin.isEnabled, g);
 	}
 
@@ -407,7 +416,15 @@ public static class ModUIAutomation
 		}
 		curY += 24;
 
-		// 2. Auto Dùng Item: Bật / Tắt
+		// 2. Auto Dùng Item: CSKB & Bật / Tắt
+		if (px >= x + w - 116 && px <= x + w - 45 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoItem.autoOpenCskb = !ModAutoItem.autoOpenCskb;
+			ModConfig.SaveConfig();
+			GameScr.info1?.addInfo("Auto Mở CSKB (380): " + (ModAutoItem.autoOpenCskb ? "BẬT" : "TẮT"), 0);
+			SoundMn.gI().buttonClick();
+			return true;
+		}
 		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModAutoItem.Toggle();
@@ -496,6 +513,14 @@ public static class ModUIAutomation
 			SoundMn.gI().buttonClick();
 			return true;
 		}
+		curY += 21;
+
+		// 4. Auto NV Tân Thủ (Task 0 -> 10)
+		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoNewAccount.Toggle();
+			return true;
+		}
 
 		return false;
 	}
@@ -507,7 +532,13 @@ public static class ModUIAutomation
 	{
 		int curY = y;
 
-		// 1. Auto Pet: Bật / Tắt
+		// 1. Auto Pet: Mốc SM Đệ & Bật / Tắt
+		if (px >= x + w - 124 && px <= x + w - 45 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoPet.CyclePetPowerLimit();
+			GameScr.info1?.addInfo("Đệ Tử - " + ModAutoPet.GetPetPowerLimitLabel(), 0);
+			return true;
+		}
 		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModAutoPet.Toggle();
@@ -616,7 +647,14 @@ public static class ModUIAutomation
 		}
 		curY += 21;
 
-		// 4. Lập Lịch Auto: Bật / Tắt & Presets
+		// 4. Lập Lịch Auto: Hẹn Map/Khu, Bật / Tắt & Presets
+		if (px >= x + w - 116 && px <= x + w - 45 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModUI.uiCustomOpen = false;
+			ModSchedule.ShowInputTrainSlot(0);
+			SoundMn.gI().buttonClick();
+			return true;
+		}
 		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModSchedule.Toggle();
@@ -649,7 +687,12 @@ public static class ModUIAutomation
 		}
 		curY += 21;
 
-		// 5. Tự Reconnect: Bật / Tắt
+		// 5. Tự Reconnect & Giữ Khu: Bật / Tắt
+		if (px >= x + w - 116 && px <= x + w - 45 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoLogin.ToggleKeepZone();
+			return true;
+		}
 		if (px >= x + w - 44 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModAutoLogin.isEnabled = !ModAutoLogin.isEnabled;

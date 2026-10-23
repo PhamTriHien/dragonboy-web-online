@@ -627,6 +627,14 @@ public partial class Panel : IActionListener, IChatable
 				string qStr = (item.quantity > 999) ? (item.quantity / 1000 + "k") : (string.Empty + item.quantity);
 				mFont.tahoma_7_yellow.drawString(g, qStr, x + size - 2, y + size - 8, mFont.RIGHT);
 			}
+			else if (ModSetActivator.showItemId)
+			{
+				string optTag = ModSetActivator.GetCompactOptionTag(item);
+				if (!string.IsNullOrEmpty(optTag))
+				{
+					mFont.tahoma_7_yellow.drawString(g, optTag, x + 2, y + size - 9, mFont.LEFT);
+				}
+			}
 		}
 		catch
 		{
@@ -686,6 +694,14 @@ public partial class Panel : IActionListener, IChatable
 			{
 				string qStr = (item.quantity > 999) ? (item.quantity / 1000 + "k") : (string.Empty + item.quantity);
 				mFont.tahoma_7_yellow.drawString(g, qStr, x + w - 2, y + h - 8, mFont.RIGHT);
+			}
+			else if (ModSetActivator.showItemId)
+			{
+				string optTag = ModSetActivator.GetCompactOptionTag(item);
+				if (!string.IsNullOrEmpty(optTag))
+				{
+					mFont.tahoma_7_yellow.drawString(g, optTag, x + 2, y + h - 9, mFont.LEFT);
+				}
 			}
 			if (item.newItem && GameCanvas.gameTick % 10 > 4)
 			{

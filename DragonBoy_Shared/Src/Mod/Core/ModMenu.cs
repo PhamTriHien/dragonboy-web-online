@@ -391,6 +391,7 @@ public static class ModMenu
 			ModAutoRevive.Update();
 			ModAutoPet.Update();
 			ModAutoFusion.Update();
+			ModAutoNewAccount.Update();
 
 			if (!IsInGame())
 			{
@@ -499,6 +500,10 @@ public static class ModMenu
 			// Tự động bơm đậu & khóa HP/MP
 			ModAutoHeal.DoRealAutoHeal();
 
+			// Cập nhật khóa mục tiêu & thống kê vàng treo máy
+			ModMapEntityHUD.UpdateLockTarget();
+			ModTanSat.UpdateGoldTrain(me, now);
+
 			// Tự động chuyển map
 			ModNextMap.UpdateNextMap();
 
@@ -561,6 +566,9 @@ public static class ModMenu
 			// Các HUD dưới đây chỉ hiển thị khi đã vào game thế giới
 			if (IsInGame())
 			{
+				// Vòng bán kính tự nhặt (vẽ trên mặt đất)
+				ModAutoPick.PaintPickRadius(g);
+
 				// Nút mũi tên mở Mod Menu góc phải
 				ModArrowButton.Paint(g);
 
@@ -572,6 +580,11 @@ public static class ModMenu
 
 				// HUD Thông số Đệ Tử
 				ModAutoPet.PaintPetHUD(g);
+
+				// HUD Thống kê Vàng, SKH & Bùa
+				ModTanSat.PaintGoldTrainHUD(g);
+				ModSetActivator.PaintSkhHUD(g);
+				ModAutoBuyBua.PaintCharmHUD(g);
 
 				// HUD Tên Map & Khu vực
 				ModNextMap.PaintHUDMapTag(g);
