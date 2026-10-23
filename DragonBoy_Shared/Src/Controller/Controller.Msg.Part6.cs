@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Assets.src.e;
 using Assets.src.f;
 using Assets.src.g;
@@ -592,7 +592,7 @@ public partial class Controller : IMessageHandler
 							if (num3 == Char.myCharz().charID)
 							{
 								char3 = Char.myCharz();
-								if (!GameScr.isChangeZone && GameScr.isAutoPlay && GameScr.canAutoPlay)
+								if (!GameScr.isChangeZone && GameScr.isAutoPlay && GameScr.canAutoPlay && !ModTanSat.autoTanSat)
 								{
 									Service.gI().requestChangeZone(-1, -1);
 									GameScr.isChangeZone = true;

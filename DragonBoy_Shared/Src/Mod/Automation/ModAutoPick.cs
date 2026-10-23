@@ -275,6 +275,28 @@ public static class ModAutoPick
 	}
 
 	/// <summary>
+	/// Kiểm tra xem trên bản đồ có vật phẩm rơi hợp lệ đang chờ nhặt hay không.
+	/// </summary>
+	public static bool HasPendingPickableItem()
+	{
+		if (!autoPick || ModNextMap.isNextMapActive || ModGoBack.isReturning || ModSetActivator.isBusy || ModAutoBuyBua.isBusy)
+		{
+			return false;
+		}
+		MyVector items = GameScr.vItemMap;
+		if (items == null || items.size() == 0) return false;
+		long now = mSystem.currentTimeMillis();
+		for (int i = 0; i < items.size(); i++)
+		{
+			ItemMap it = (ItemMap)items.elementAt(i);
+			if (it == null) continue;
+			if (ignoredItemUntil.TryGetValue(it.itemMapID, out long ignoreUntil) && now < ignoreUntil) continue;
+			if (ShouldPickItem(it)) return true;
+		}
+		return false;
+	}
+
+	/// <summary>
 	/// Thực thi phương thức nghiệp vụ RunRealAutoPick.
 	/// </summary>
 	public static void RunRealAutoPick()
@@ -341,6 +363,37 @@ public static class ModAutoPick
 
 			if (closest != null)
 			{
+				bool isFightingTarget = ModTanSat.autoTanSat &&
+				                        ModTanSat.currentFarmTarget != null &&
+				                        ModTanSat.currentFarmTarget.status != 0 &&
+				                        ModTanSat.currentFarmTarget.status != 1 &&
+				                        ModTanSat.currentFarmTarget.hp > 0;
+
+				int pickX = closest.x;
+				int pickY = closest.y;
+				if (ModTanSatTargeting.IsInsideWaypoint(pickX, pickY) && TileMap.pxw > 160)
+				{
+					if (pickX < 72) pickX = 72;
+					else if (pickX > TileMap.pxw - 72) pickX = TileMap.pxw - 72;
+				}
+				if (!TileMap.isInAirMap())
+				{
+					int groundY = ModTanSatTargeting.FindGroundY(pickX, pickY, 48);
+					if (groundY != -1)
+					{
+						pickY = groundY;
+					}
+				}
+
+				int groundDist = Res.distance(me.cx, me.cy, pickX, pickY);
+
+				// Khi đang đánh dở quái Tàn Sát: Chỉ nhặt tại chỗ nếu item rơi sát bên (<= 60px), tuyệt đối không dịch chuyển bỏ dở quái đang đánh
+				if (isFightingTarget && groundDist > 60)
+				{
+					isBusy = false;
+					return;
+				}
+
 				if (closest.itemMapID == lastPickedItemMapId)
 				{
 					currentItemRetryCount++;
@@ -360,17 +413,24 @@ public static class ModAutoPick
 				}
 
 				lastPickTime = now;
-				isBusy = true;
-				if (minDistance <= 50)
+				if (groundDist <= 60)
 				{
-					me.itemFocus = closest;
+					isBusy = false;
+					ModTeleport.isWaitingSettle = false;
 					Service.gI().pickItem(closest.itemMapID);
 				}
 				else
 				{
-					ModTeleport.TeleportTo(closest.x, closest.y);
-					me.itemFocus = closest;
-					Service.gI().pickItem(closest.itemMapID);
+					isBusy = true;
+					if (ModTeleport.MoveSteppedTo(pickX, pickY))
+					{
+						me.itemFocus = closest;
+						Service.gI().pickItem(closest.itemMapID);
+					}
+					else
+					{
+						currentItemRetryCount--;
+					}
 				}
 			}
 			else

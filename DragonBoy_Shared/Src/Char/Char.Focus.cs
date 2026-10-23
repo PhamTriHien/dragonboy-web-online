@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Assets.src.e;
 using Assets.src.g;
 using UnityEngine;
@@ -13,6 +13,14 @@ public partial class Char : IMapObject
 	/// </summary>
 	public void searchFocus()
 			{
+				if (me && ModTanSat.autoTanSat && ModTanSat.currentFarmTarget != null && ModTanSat.currentFarmTarget.status != 0 && ModTanSat.currentFarmTarget.status != 1 && ModTanSat.currentFarmTarget.hp > 0)
+				{
+					mobFocus = ModTanSat.currentFarmTarget;
+					charFocus = null;
+					npcFocus = null;
+					itemFocus = null;
+					return;
+				}
 				if (myCharz().skillPaint != null || myCharz().arr != null || myCharz().dart != null)
 				{
 					timeFocusToMob = 200;

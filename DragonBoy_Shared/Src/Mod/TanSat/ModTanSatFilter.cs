@@ -10,7 +10,8 @@ public static class ModTanSatFilter
 	public static bool selectAllMobs = true;
 	public static List<int> tickedMobTemplateIds = new List<int>();
 
-	public static bool selectAllSkills = true;
+	public static bool selectAllSkills = false;
+	public static int skillSelectionMode = 0; // 0: Chỉ định 1 chiêu (mặc định), 1: Kết hợp (Combo nhiều chiêu), 2: Tất cả chiêu đánh
 	public static List<int> tickedSkillTemplateIds = new List<int>();
 
 	// Nhan dien ky nang tan cong 100% dua tren thong tin metadata cua Game Engine goc
@@ -19,19 +20,18 @@ public static class ModTanSatFilter
 		if (s == null || s.template == null) return false;
 		if (s.template.isBuffToPlayer() || s.template.isUseAlone()) return false;
 		sbyte id = s.template.id;
-		if (id == 6 || id == 7 || id == 8 || id == 12 || id == 13 || id == 14 || id == 19 || id == 20 || id == 21 || id == 23)
+		if (id == 6 || id == 7 || id == 8 || id == 12 || id == 13 || id == 14 || id == 18 || id == 19 || id == 20 || id == 21 || id == 22 || id == 23)
 		{
 			return false;
 		}
 		return s.template.isAttackSkill() || s.template.isSkillSpec() || s.template.type == 1 || s.template.type == 4;
 	}
 
-	private static bool IsAutoAttackSkill(Skill s)
+	public static bool IsAutoAttackSkill(Skill s)
 	{
 		if (!IsAttackSkill(s)) return false;
 		sbyte id = s.template.id;
-		if (id == 10 || id == 11) return false;
-		return true;
+		return id == 0 || id == 1 || id == 2 || id == 3 || id == 4 || id == 5 || id == 17;
 	}
 
 	/// <summary>
@@ -289,32 +289,212 @@ public static class ModTanSatFilter
 	}
 
 	/// <summary>
+	/// Đảm bảo luôn có ít nhất 1 kỹ năng chỉ định mặc định (ưu tiên chiêu đang cầm hoặc đấm cơ bản) khi chưa chọn chiêu.
+	/// </summary>
+	public static void EnsureDesignatedSkill()
+	{
+		if (selectAllSkills) return;
+		// Loai bo cac skill khong hop le neu co trong danh sach cu
+		for (int i = tickedSkillTemplateIds.Count - 1; i >= 0; i--)
+		{
+			Skill existing = FindSkillByTemplateId(tickedSkillTemplateIds[i]);
+			if (existing != null && !IsAttackSkill(existing))
+			{
+				tickedSkillTemplateIds.RemoveAt(i);
+			}
+		}
+		if (ModTanSat.lockedSkillTemplateId >= 0)
+		{
+			Skill lk = FindSkillByTemplateId(ModTanSat.lockedSkillTemplateId);
+			if (lk != null && !IsAttackSkill(lk))
+			{
+				ModTanSat.lockedSkillTemplateId = -1;
+			}
+		}
+		if (tickedSkillTemplateIds.Count > 0)
+		{
+			if (skillSelectionMode == 0 && ModTanSat.lockedSkillTemplateId < 0)
+			{
+				ModTanSat.lockedSkillTemplateId = tickedSkillTemplateIds[0];
+			}
+			return;
+		}
+		if (ModTanSat.lockedSkillTemplateId >= 0)
+		{
+			tickedSkillTemplateIds.Add(ModTanSat.lockedSkillTemplateId);
+			return;
+		}
+
+		Char me = Char.myCharz();
+		if (me == null) return;
+
+		Skill defaultSkill = null;
+		if (me.myskill != null && IsAutoAttackSkill(me.myskill))
+		{
+			defaultSkill = me.myskill;
+		}
+		if (defaultSkill == null && GameScr.keySkill != null)
+		{
+			for (int i = 0; i < GameScr.keySkill.Length; i++)
+			{
+				if (GameScr.keySkill[i] != null && IsAutoAttackSkill(GameScr.keySkill[i]))
+				{
+					defaultSkill = GameScr.keySkill[i];
+					break;
+				}
+			}
+		}
+		if (defaultSkill == null && GameScr.onScreenSkill != null)
+		{
+			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
+			{
+				if (GameScr.onScreenSkill[j] != null && IsAutoAttackSkill(GameScr.onScreenSkill[j]))
+				{
+					defaultSkill = GameScr.onScreenSkill[j];
+					break;
+				}
+			}
+		}
+		if (defaultSkill == null && me.vSkillFight != null)
+		{
+			for (int k = 0; k < me.vSkillFight.size(); k++)
+			{
+				Skill s = (Skill)me.vSkillFight.elementAt(k);
+				if (s != null && IsAutoAttackSkill(s))
+				{
+					defaultSkill = s;
+					break;
+				}
+			}
+		}
+		if (defaultSkill == null && me.vSkill != null)
+		{
+			for (int m = 0; m < me.vSkill.size(); m++)
+			{
+				Skill s2 = (Skill)me.vSkill.elementAt(m);
+				if (s2 != null && IsAutoAttackSkill(s2))
+				{
+					defaultSkill = s2;
+					break;
+				}
+			}
+		}
+
+		if (defaultSkill != null && defaultSkill.template != null)
+		{
+			tickedSkillTemplateIds.Add(defaultSkill.template.id);
+			if (skillSelectionMode == 0)
+			{
+				ModTanSat.lockedSkillTemplateId = defaultSkill.template.id;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Chỉ định duy nhất 1 kỹ năng cố định cho Tàn Sát (không tự động đổi sang chiêu khác).
+	/// </summary>
+	public static void DesignateSingleSkill(int templateId)
+	{
+		if (templateId < 0) return;
+		skillSelectionMode = 0;
+		selectAllSkills = false;
+		ModTanSat.lockedSkillTemplateId = templateId;
+		tickedSkillTemplateIds.Clear();
+		tickedSkillTemplateIds.Add(templateId);
+		ModConfig.SaveConfig();
+	}
+
+	/// <summary>
+	/// Thiết lập chế độ chọn kỹ năng Tàn Sát: 0 = Chỉ 1 chiêu, 1 = Kết hợp (Combo), 2 = Tất cả.
+	/// </summary>
+	public static void SetSkillSelectionMode(int mode)
+	{
+		skillSelectionMode = mode;
+		if (mode == 0)
+		{
+			selectAllSkills = false;
+			EnsureDesignatedSkill();
+			if (tickedSkillTemplateIds.Count > 0)
+			{
+				int keepId = (ModTanSat.lockedSkillTemplateId >= 0) ? ModTanSat.lockedSkillTemplateId : tickedSkillTemplateIds[0];
+				ModTanSat.lockedSkillTemplateId = keepId;
+				tickedSkillTemplateIds.Clear();
+				tickedSkillTemplateIds.Add(keepId);
+			}
+		}
+		else if (mode == 1)
+		{
+			selectAllSkills = false;
+			if (ModTanSat.lockedSkillTemplateId >= 0 && !tickedSkillTemplateIds.Contains(ModTanSat.lockedSkillTemplateId))
+			{
+				tickedSkillTemplateIds.Add(ModTanSat.lockedSkillTemplateId);
+			}
+			ModTanSat.lockedSkillTemplateId = -1;
+			EnsureDesignatedSkill();
+		}
+		else
+		{
+			skillSelectionMode = 2;
+			selectAllSkills = true;
+			ModTanSat.lockedSkillTemplateId = -1;
+			tickedSkillTemplateIds.Clear();
+		}
+		ModConfig.SaveConfig();
+	}
+
+	/// <summary>
 	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của IsSkillAllowed.
 	/// </summary>
 	public static bool IsSkillAllowed(Skill s)
 	{
 		if (s == null || s.template == null) return false;
-		if (selectAllSkills || tickedSkillTemplateIds.Count == 0) return true;
+		EnsureDesignatedSkill();
+		if (selectAllSkills) return IsAutoAttackSkill(s);
+		if (skillSelectionMode == 0 && ModTanSat.lockedSkillTemplateId >= 0)
+		{
+			return s.template.id == ModTanSat.lockedSkillTemplateId;
+		}
 		return tickedSkillTemplateIds.Contains(s.template.id);
 	}
 
 	public static bool IsSkillAllowedBySetup(Skill s) => IsSkillAllowed(s);
-	public static bool IsSkillTicked(int templateId) => tickedSkillTemplateIds.Contains(templateId);
+
+	public static bool IsSkillTicked(int templateId)
+	{
+		EnsureDesignatedSkill();
+		if (selectAllSkills) return false;
+		if (skillSelectionMode == 0 && ModTanSat.lockedSkillTemplateId >= 0)
+		{
+			return templateId == ModTanSat.lockedSkillTemplateId;
+		}
+		return tickedSkillTemplateIds.Contains(templateId);
+	}
 
 	/// <summary>
 	/// Bật hoặc tắt trạng thái kích hoạt của ToggleSkillTicked.
 	/// </summary>
 	public static void ToggleSkillTicked(int templateId)
 	{
+		if (skillSelectionMode == 0 || selectAllSkills)
+		{
+			DesignateSingleSkill(templateId);
+			return;
+		}
+
+		// Chế độ 1: Kết hợp (Combo nhiều chiêu)
+		selectAllSkills = false;
+		ModTanSat.lockedSkillTemplateId = -1;
 		if (tickedSkillTemplateIds.Contains(templateId))
 		{
-			tickedSkillTemplateIds.Remove(templateId);
+			if (tickedSkillTemplateIds.Count > 1)
+			{
+				tickedSkillTemplateIds.Remove(templateId);
+			}
 		}
 		else
 		{
 			tickedSkillTemplateIds.Add(templateId);
 		}
-		selectAllSkills = (tickedSkillTemplateIds.Count == 0);
 		ModConfig.SaveConfig();
 	}
 
@@ -323,12 +503,14 @@ public static class ModTanSatFilter
 	/// </summary>
 	public static void ToggleSelectAllSkills()
 	{
-		selectAllSkills = !selectAllSkills;
 		if (selectAllSkills)
 		{
-			tickedSkillTemplateIds.Clear();
+			SetSkillSelectionMode(0);
 		}
-		ModConfig.SaveConfig();
+		else
+		{
+			SetSkillSelectionMode(2);
+		}
 	}
 
 	/// <summary>
@@ -350,12 +532,28 @@ public static class ModTanSatFilter
 		Char me = Char.myCharz();
 		if (me == null) return null;
 
+		EnsureDesignatedSkill();
 		long now = mSystem.currentTimeMillis();
 
-		// 1. NEU NGUOI CHOI TICK CHON CAC O KY NANG CU THE (!selectAllSkills va tickedSkillTemplateIds.Count > 0)
+		// 1. CHẾ ĐỘ CHỈ ĐỊNH 1 CHIÊU CỐ ĐỊNH (skillSelectionMode == 0 hoặc lockedSkillTemplateId >= 0)
+		if (!selectAllSkills && (skillSelectionMode == 0 || ModTanSat.lockedSkillTemplateId >= 0))
+		{
+			int targetTplId = (ModTanSat.lockedSkillTemplateId >= 0)
+				? ModTanSat.lockedSkillTemplateId
+				: ((tickedSkillTemplateIds.Count > 0) ? tickedSkillTemplateIds[0] : -1);
+			if (targetTplId >= 0)
+			{
+				Skill designated = FindSkillByTemplateId(targetTplId);
+				if (designated != null && designated.template != null && IsAttackSkill(designated))
+				{
+					return designated;
+				}
+			}
+		}
+
+		// 2. CHẾ ĐỘ KẾT HỢP (COMBO CÁC CHIÊU ĐÃ TICK TRONG DANH SÁCH)
 		if (!selectAllSkills && tickedSkillTemplateIds.Count > 0)
 		{
-			// Uu tien chieu da het hoi chieu va du KI trong danh sach da tick
 			for (int k = 0; k < tickedSkillTemplateIds.Count; k++)
 			{
 				int tplId = tickedSkillTemplateIds[k];
@@ -370,7 +568,6 @@ public static class ModTanSatFilter
 				}
 			}
 
-			// Neu tat ca chieu da tick dang trong thoi gian hoi chieu, giu nguyen chieu dau tien da tick de cho hoi chieu
 			for (int k = 0; k < tickedSkillTemplateIds.Count; k++)
 			{
 				int tplId2 = tickedSkillTemplateIds[k];
@@ -382,23 +579,17 @@ public static class ModTanSatFilter
 			}
 		}
 
-		// 2. NEU NGUOI CHOI CHON "TAT CA KY NANG" HOAC FALLBACK DUNG KY NANG TAN CONG THUC TE CUA NHAN VAT
+		// 3. CHẾ ĐỘ TẤT CẢ KỸ NĂNG ĐÁNH CƠ BẢN (selectAllSkills == true): Ưu tiên theo thứ tự ô phím thay vì chọn bừa theo cooldown cao nhất
 		if (GameScr.keySkill != null)
 		{
-			Skill bestSpecial = null;
 			for (int i = 0; i < GameScr.keySkill.Length; i++)
 			{
 				Skill s = GameScr.keySkill[i];
 				if (s != null && IsAutoAttackSkill(s) && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
 				{
-					if (bestSpecial == null || s.coolDown > bestSpecial.coolDown)
-					{
-						bestSpecial = s;
-					}
+					return s;
 				}
 			}
-			if (bestSpecial != null) return bestSpecial;
-
 			for (int i = 0; i < GameScr.keySkill.Length; i++)
 			{
 				Skill s = GameScr.keySkill[i];
@@ -408,20 +599,14 @@ public static class ModTanSatFilter
 
 		if (GameScr.onScreenSkill != null)
 		{
-			Skill bestSpecial2 = null;
 			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
 			{
 				Skill s = GameScr.onScreenSkill[j];
 				if (s != null && IsAutoAttackSkill(s) && now - s.lastTimeUseThisSkill >= s.coolDown && HasEnoughMp(me, s))
 				{
-					if (bestSpecial2 == null || s.coolDown > bestSpecial2.coolDown)
-					{
-						bestSpecial2 = s;
-					}
+					return s;
 				}
 			}
-			if (bestSpecial2 != null) return bestSpecial2;
-
 			for (int j = 0; j < GameScr.onScreenSkill.Length; j++)
 			{
 				Skill s = GameScr.onScreenSkill[j];

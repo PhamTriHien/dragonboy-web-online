@@ -161,6 +161,7 @@ public class BgItemMn
 					continue;
 				}
 				Image v = Image.createImage(array, 0, array.Length);
+				if (v != null) { v.isZoomScaled = true; }
 				BgItem.imgNew.put(blendKey, v);
 			}
 		}

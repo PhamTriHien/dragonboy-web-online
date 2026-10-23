@@ -21,6 +21,7 @@ public partial class Controller : IMessageHandler
 				sbyte[] array = null;
 				array = NinjaUtil.readByteArray(msg);
 				Image img = createImage(array);
+				if (img != null) { img.isZoomScaled = true; }
 				ImgByName.SetImage(name, img, nFrame);
 				if (array == null)
 				{

@@ -16,7 +16,7 @@ public partial class Char : IMapObject
 				for (int i = 0; i < vEffChar.size(); i++)
 				{
 					Effect effect = (Effect)vEffChar.elementAt(i);
-					if (effect.effId >= 201)
+					if (effect.effId >= 201 && effect.layer != 0 && effect.layer != 1)
 					{
 						effect.paint(g);
 					}

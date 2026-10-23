@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Assets.src.g;
 /// <summary>
 /// Thành phần phân mảnh (partial) của lớp GameScr: Đảm nhiệm phân hệ chuyên trách Part4 ().
@@ -307,6 +307,10 @@ public partial class GameScr : mScreen, IChatable
 	/// </summary>
 	private void autoPlay()
 		{
+			if (ModTanSat.autoTanSat)
+			{
+				return;
+			}
 			if (timeSkill > 0)
 			{
 				timeSkill--;

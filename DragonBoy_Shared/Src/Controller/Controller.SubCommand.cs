@@ -135,7 +135,7 @@ public partial class Controller : IMessageHandler
 					Char.myCharz().xuStr = Res.formatNumber(Char.myCharz().xu);
 					Char.myCharz().luongStr = mSystem.numberTostring(Char.myCharz().luong);
 					Char.myCharz().luongKhoaStr = mSystem.numberTostring(Char.myCharz().luongKhoa);
-					Char.myCharz().arrItemBody = new Item[msg.reader().readByte()];
+					Char.myCharz().arrItemBody = new Item[msg.reader().readUnsignedByte()];
 					try
 					{
 						Char.myCharz().setDefaultPart();
@@ -147,7 +147,7 @@ public partial class Controller : IMessageHandler
 								continue;
 							}
 							ItemTemplate itemTemplate = ItemTemplates.get(num6);
-							int num7 = itemTemplate.type;
+							int num7 = (itemTemplate != null) ? itemTemplate.type : (-1);
 							Char.myCharz().arrItemBody[k] = new Item();
 							Char.myCharz().arrItemBody[k].template = itemTemplate;
 							Char.myCharz().arrItemBody[k].quantity = msg.reader().readInt();
@@ -182,7 +182,7 @@ public partial class Controller : IMessageHandler
 					catch (Exception)
 					{
 					}
-					Char.myCharz().arrItemBag = new Item[msg.reader().readByte()];
+					Char.myCharz().arrItemBag = new Item[msg.reader().readUnsignedByte()];
 					GameScr.hpPotion = 0;
 					GameScr.isudungCapsun4 = false;
 					GameScr.isudungCapsun3 = false;
@@ -199,7 +199,7 @@ public partial class Controller : IMessageHandler
 						Char.myCharz().arrItemBag[m].info = Res.changeString(msg.reader().readUTF());
 						Char.myCharz().arrItemBag[m].content = Res.changeString(msg.reader().readUTF());
 						Char.myCharz().arrItemBag[m].indexUI = m;
-						sbyte b7 = msg.reader().readByte();
+						int b7 = msg.reader().readUnsignedByte();
 						if (b7 != 0)
 						{
 							Char.myCharz().arrItemBag[m].itemOption = new ItemOption[b7];
@@ -213,7 +213,7 @@ public partial class Controller : IMessageHandler
 								}
 							}
 						}
-						if (Char.myCharz().arrItemBag[m].template.type == 6)
+						if (Char.myCharz().arrItemBag[m].template != null && Char.myCharz().arrItemBag[m].template.type == 6)
 						{
 							GameScr.hpPotion += Char.myCharz().arrItemBag[m].quantity;
 						}
@@ -230,7 +230,7 @@ public partial class Controller : IMessageHandler
 							break;
 						}
 					}
-					Char.myCharz().arrItemBox = new Item[msg.reader().readByte()];
+					Char.myCharz().arrItemBox = new Item[msg.reader().readUnsignedByte()];
 					GameCanvas.panel.hasUse = 0;
 					for (int num10 = 0; num10 < Char.myCharz().arrItemBox.Length; num10++)
 					{
@@ -244,7 +244,7 @@ public partial class Controller : IMessageHandler
 						Char.myCharz().arrItemBox[num10].quantity = msg.reader().readInt();
 						Char.myCharz().arrItemBox[num10].info = Res.changeString(msg.reader().readUTF());
 						Char.myCharz().arrItemBox[num10].content = Res.changeString(msg.reader().readUTF());
-						Char.myCharz().arrItemBox[num10].itemOption = new ItemOption[msg.reader().readByte()];
+						Char.myCharz().arrItemBox[num10].itemOption = new ItemOption[msg.reader().readUnsignedByte()];
 						for (int num12 = 0; num12 < Char.myCharz().arrItemBox[num10].itemOption.Length; num12++)
 						{
 							ItemOption itemOption3 = readItemOption(msg);

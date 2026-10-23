@@ -184,6 +184,13 @@ public partial class Panel : IActionListener, IChatable
 							mFont.tahoma_7_yellow.drawString(g, string.Empty + item.quantity, num6 + num8, num7 + num9 - mFont.tahoma_7_yellow.getHeight(), 1);
 						}
 					}
+					else if (flag)
+					{
+						string slotLabel = GetBodySlotGhostName(num);
+						mFont.tahoma_7_grey.drawString(g, slotLabel, num6 + num8 / 2, num7 + num9 / 2 - 4, mFont.CENTER);
+						mFont.tahoma_7_grey.drawString(g, "Ô trang bị: " + slotLabel, num3 + 5, num4 + 1, 0);
+						mFont.tahoma_7_grey.drawString(g, "Trống", num3 + 5, num4 + 11, 0);
+					}
 					else if (!flag)
 					{
 						Skill skill = arrPetSkill[num2];

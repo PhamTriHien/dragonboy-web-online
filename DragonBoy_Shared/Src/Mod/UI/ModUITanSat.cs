@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// CLASS ModUITanSat: Định nghĩa và điều phối logic trong hệ thống game.
+/// CLASS ModUITanSat: Giao diện điều khiển Tàn Sát Pro với thanh chỉ định kỹ năng trực tiếp và bộ lọc mục tiêu.
 /// </summary>
 public static class ModUITanSat
 {
@@ -14,6 +14,18 @@ public static class ModUITanSat
 	private static bool hasDragged = false;
 	private static int startDragY = 0;
 	private static int lastDragY = 0;
+
+	private static string GetCompactSkillButtonLabel(Skill s, int index)
+	{
+		if (s == null || s.template == null) return "Ô" + (index + 1);
+		int slot = ModTanSatFilter.GetSkillHotbarSlot(s.template.id);
+		string prefix = (slot >= 0) ? (((slot == 9) ? 0 : (slot + 1)) + ":") : "";
+		string raw = s.template.name ?? ("ID" + s.template.id);
+		if (raw.StartsWith("Chiêu ")) raw = raw.Substring(6).Trim();
+		if (raw.StartsWith("Đấm ")) raw = raw.Substring(4).Trim();
+		if (raw.Length > 6) raw = raw.Substring(0, 6);
+		return prefix + raw;
+	}
 
 	/// <summary>
 	/// Bộ xử lý sự kiện tiếp nhận và phản hồi OnMouseScroll.
@@ -26,7 +38,7 @@ public static class ModUITanSat
 			List<int> mobIds = ModUI.GetUniqueMobTemplateIds();
 			int totalRows = (mobIds.Count + 1 + 1) / 2;
 			int contentH = totalRows * 19 + 4;
-			int maxScroll = (contentH > 126) ? (contentH - 126) : 0;
+			int maxScroll = (contentH > 108) ? (contentH - 108) : 0;
 			if (maxScroll <= 0) return;
 
 			if (wheel > 0) { scrollMobY -= step; if (scrollMobY < 0) scrollMobY = 0; }
@@ -37,7 +49,7 @@ public static class ModUITanSat
 			List<Skill> skills = ModUI.GetPlayerAttackSkills();
 			int totalRows = (skills.Count + 1 + 1) / 2;
 			int contentH = totalRows * 19 + 4;
-			int maxScroll = (contentH > 126) ? (contentH - 126) : 0;
+			int maxScroll = (contentH > 108) ? (contentH - 108) : 0;
 			if (maxScroll <= 0) return;
 
 			if (wheel > 0) { scrollSkillY -= step; if (scrollSkillY < 0) scrollSkillY = 0; }
@@ -50,15 +62,21 @@ public static class ModUITanSat
 	/// </summary>
 	public static void UpdateDragScroll(int px, int py, int uiX, int uiY, int uiW, int uiH)
 	{
-		int row2Y = uiY + 45;
-		int row2H = 17;
+		int row0Y = uiY + 3;
+		int row0H = 16;
+		int skillRowY = row0Y + row0H + 2;
+		int skillRowH = 16;
+		int row1Y = skillRowY + skillRowH + 2;
+		int row1H = 17;
+		int row2Y = row1Y + row1H + 2;
+		int row2H = 16;
 		int listX = uiX + 4;
-		int listY = row2Y + row2H + 3;
+		int listY = row2Y + row2H + 2;
 		int listW = uiW - 8;
-		int footerH = 18;
-		int footerY = uiY + uiH - footerH - 4;
-		int listH = (footerY - 4) - listY;
-		if (listH < 40) listH = 40;
+		int footerH = 17;
+		int footerY = uiY + uiH - footerH - 3;
+		int listH = (footerY - 3) - listY;
+		if (listH < 36) listH = 36;
 
 		int maxScroll = 0;
 		if (ModUI.tanSatTab == 0)
@@ -125,45 +143,78 @@ public static class ModUITanSat
 	/// </summary>
 	public static void Paint(int uiX, int uiY, int uiW, int uiH, mGraphics g)
 	{
+		ModTanSatFilter.EnsureDesignatedSkill();
+
 		// Hàng 0: Trạng thái & Tiếp cận
-		int row0Y = uiY + 4;
-		int row0H = 17;
-		mFont.tahoma_7_grey.drawString(g, "Trạng thái:", uiX + 5, row0Y + 3, mFont.LEFT);
+		int row0Y = uiY + 3;
+		int row0H = 16;
+		mFont.tahoma_7_grey.drawString(g, "Trạng thái:", uiX + 5, row0Y + 2, mFont.LEFT);
 		ModUI.PaintNativeButton(uiX + 58, row0Y, 42, row0H, ModTanSat.autoTanSat ? "BẬT" : "TẮT", ModTanSat.autoTanSat, g);
 
 		int tpBtnW = 72;
 		int tpBtnX = uiX + uiW - tpBtnW - 4;
-		mFont.tahoma_7_grey.drawString(g, "Tiếp cận:", tpBtnX - 46, row0Y + 3, mFont.LEFT);
+		mFont.tahoma_7_grey.drawString(g, "Tiếp cận:", tpBtnX - 46, row0Y + 2, mFont.LEFT);
 		ModUI.PaintNativeButton(tpBtnX, row0Y, tpBtnW, row0H, ModTanSat.useTeleport ? "Dịch chuyển" : "Chạy bộ", ModTanSat.useTeleport, g);
 
-		// Hàng 1: 2 Sub-Tabs (1. Chọn Quái / 2. Chọn Kỹ Năng)
-		int row1Y = row0Y + row0H + 3;
-		int row1H = 18;
+		// Hàng 1 (Luôn hiển thị): Thanh chỉ định nhanh Skill sử dụng khi Tàn Sát
+		int skillRowY = row0Y + row0H + 2;
+		int skillRowH = 16;
+		mFont.tahoma_7_grey.drawString(g, "Chiêu TS:", uiX + 5, skillRowY + 2, mFont.LEFT);
+
+		List<Skill> quickSkills = ModUI.GetPlayerAttackSkills();
+		int quickStartX = uiX + 52;
+		int quickAreaW = uiW - 56;
+		if (quickSkills.Count == 0)
+		{
+			mFont.tahoma_7_grey.drawString(g, "(Chưa có kỹ năng)", quickStartX + 4, skillRowY + 2, mFont.LEFT);
+		}
+		else
+		{
+			int maxShow = (quickSkills.Count > 5) ? 5 : quickSkills.Count;
+			int gap = 2;
+			int btnW = (quickAreaW - gap * (maxShow - 1)) / maxShow;
+			if (btnW < 34) btnW = 34;
+			for (int i = 0; i < maxShow; i++)
+			{
+				Skill qSk = quickSkills[i];
+				int qx = quickStartX + i * (btnW + gap);
+				bool isActive = (qSk != null && qSk.template != null) &&
+				                (ModTanSatFilter.selectAllSkills
+				                 ? ModTanSatFilter.IsAutoAttackSkill(qSk)
+				                 : ModTanSatFilter.IsSkillTicked(qSk.template.id));
+				string qLabel = GetCompactSkillButtonLabel(qSk, i);
+				ModUI.PaintNativeButton(qx, skillRowY, btnW, skillRowH, qLabel, isActive, g);
+			}
+		}
+
+		// Hàng 2: 2 Sub-Tabs (1. Chọn Quái / 2. Chọn Kỹ Năng)
+		int row1Y = skillRowY + skillRowH + 2;
+		int row1H = 17;
 		int subTabW = (uiW - 12) / 2;
 		ModUI.PaintNativeButton(uiX + 4, row1Y, subTabW, row1H, "1. Chọn Quái", ModUI.tanSatTab == 0, g);
 		ModUI.PaintNativeButton(uiX + 8 + subTabW, row1Y, subTabW, row1H, "2. Chọn Kỹ Năng", ModUI.tanSatTab == 1, g);
 
-		// Hàng 2: Tiêu đề danh sách & Nút Chọn tất cả / Bỏ chọn hết
-		int row2Y = row1Y + row1H + 3;
-		int row2H = 17;
+		// Hàng 3: Tiêu đề danh sách & Chế độ
+		int row2Y = row1Y + row1H + 2;
+		int row2H = 16;
 		int allBtnW = 74;
 		int allBtnX = uiX + uiW - allBtnW - 4;
 
-		// Hàng 4 (Đáy): Thiết lập Time Attack
-		int footerH = 18;
-		int footerY = uiY + uiH - footerH - 4;
+		// Hàng 5 (Đáy): Thiết lập Time Attack
+		int footerH = 17;
+		int footerY = uiY + uiH - footerH - 3;
 
-		// Hàng 3 (Giữa): Khung danh sách Quái / Skill co dãn động 100%
+		// Hàng 4 (Giữa): Khung danh sách Quái / Skill co dãn động
 		int listX = uiX + 4;
-		int listY = row2Y + row2H + 3;
+		int listY = row2Y + row2H + 2;
 		int listW = uiW - 8;
-		int listH = (footerY - 4) - listY;
-		if (listH < 40) listH = 40;
+		int listH = (footerY - 3) - listY;
+		if (listH < 36) listH = 36;
 		int colW = (listW - 10) / 2;
 
 		if (ModUI.tanSatTab == 0)
 		{
-			mFont.tahoma_7_grey.drawString(g, "Quái map (Tick để đánh):", uiX + 5, row2Y + 3, mFont.LEFT);
+			mFont.tahoma_7_grey.drawString(g, "Quái map (Tick để đánh):", uiX + 5, row2Y + 2, mFont.LEFT);
 			ModUI.PaintNativeButton(allBtnX, row2Y, allBtnW, row2H, ModTanSat.selectAllMobs ? "Bỏ chọn hết" : "Chọn tất cả", ModTanSat.selectAllMobs, g);
 
 			GameCanvas.paintz.paintFrameSimple(listX, listY, listW, listH, g);
@@ -213,23 +264,19 @@ public static class ModUITanSat
 		}
 		else
 		{
-			mFont.tahoma_7_grey.drawString(g, "Kỹ năng:", uiX + 5, row2Y + 3, mFont.LEFT);
+			mFont.tahoma_7_grey.drawString(g, "Chế độ chiêu:", uiX + 5, row2Y + 2, mFont.LEFT);
 
-			int lockBtnW = 76;
-			int lockBtnX = uiX + uiW - lockBtnW - 4;
-			int skillAllBtnW = 62;
-			int skillAllBtnX = lockBtnX - skillAllBtnW - 3;
+			int modeAllW = 54;
+			int modeAllX = uiX + uiW - modeAllW - 4;
+			int modeComboW = 62;
+			int modeComboX = modeAllX - modeComboW - 3;
+			int modeSingleW = 70;
+			int modeSingleX = modeComboX - modeSingleW - 3;
 
-			ModUI.PaintNativeButton(skillAllBtnX, row2Y, skillAllBtnW, row2H, ModTanSat.selectAllSkills ? "Tự động" : "Tất cả", ModTanSat.selectAllSkills, g);
-
-			string lkText = "Khóa: TẮT";
-			if (ModTanSat.lockedSkillTemplateId >= 0)
-			{
-				Skill lkSk = ModTanSatFilter.FindSkillByTemplateId(ModTanSat.lockedSkillTemplateId);
-				string lkName = (lkSk != null && lkSk.template != null) ? ModUI.GetSkillShortName(lkSk) : ("ID " + ModTanSat.lockedSkillTemplateId);
-				lkText = "Khóa: " + lkName;
-			}
-			ModUI.PaintNativeButton(lockBtnX, row2Y, lockBtnW, row2H, lkText, ModTanSat.lockedSkillTemplateId >= 0, g);
+			int curMode = ModTanSatFilter.selectAllSkills ? 2 : ModTanSatFilter.skillSelectionMode;
+			ModUI.PaintNativeButton(modeSingleX, row2Y, modeSingleW, row2H, "Chỉ 1 chiêu", curMode == 0, g);
+			ModUI.PaintNativeButton(modeComboX, row2Y, modeComboW, row2H, "Kết hợp", curMode == 1, g);
+			ModUI.PaintNativeButton(modeAllX, row2Y, modeAllW, row2H, "Tất cả", curMode == 2, g);
 
 			GameCanvas.paintz.paintFrameSimple(listX, listY, listW, listH, g);
 			g.setColor(15196114);
@@ -261,7 +308,7 @@ public static class ModUITanSat
 					if (idx == 0)
 					{
 						ModUI.DrawCheckbox(itemX, itemY + 1, ModTanSat.selectAllSkills, g);
-						(ModTanSat.selectAllSkills ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, "Tất cả kỹ năng", itemX + 22, itemY + 2, mFont.LEFT);
+						(ModTanSat.selectAllSkills ? mFont.tahoma_7_green2 : mFont.tahoma_7_grey).drawString(g, "Tất cả chiêu đánh", itemX + 22, itemY + 2, mFont.LEFT);
 					}
 					else
 					{
@@ -278,8 +325,8 @@ public static class ModUITanSat
 			}
 		}
 
-		// Vẽ Hàng 4: Time Attack
-		mFont.tahoma_7_grey.drawString(g, "Time attack:", uiX + 5, footerY + 3, mFont.LEFT);
+		// Vẽ Hàng 5: Time Attack
+		mFont.tahoma_7_grey.drawString(g, "Time attack:", uiX + 5, footerY + 2, mFont.LEFT);
 		ModUI.PaintNativeButton(uiX + 68, footerY, 16, footerH, "-", false, g);
 		ModUI.PaintNativeButton(uiX + 86, footerY, 48, footerH, ModTanSat.timeAttack + "ms", true, g);
 		ModUI.PaintNativeButton(uiX + 136, footerY, 16, footerH, "+", false, g);
@@ -305,14 +352,16 @@ public static class ModUITanSat
 			return true;
 		}
 
-		int row0Y = uiY + 4;
-		int row0H = 17;
-		int row1Y = row0Y + row0H + 3;
-		int row1H = 18;
-		int row2Y = row1Y + row1H + 3;
-		int row2H = 17;
-		int footerH = 18;
-		int footerY = uiY + uiH - footerH - 4;
+		int row0Y = uiY + 3;
+		int row0H = 16;
+		int skillRowY = row0Y + row0H + 2;
+		int skillRowH = 16;
+		int row1Y = skillRowY + skillRowH + 2;
+		int row1H = 17;
+		int row2Y = row1Y + row1H + 2;
+		int row2H = 16;
+		int footerH = 17;
+		int footerY = uiY + uiH - footerH - 3;
 
 		// 1. Bật/Tắt Tàn sát
 		if (px >= uiX + 58 && px <= uiX + 100 && py >= row0Y - 1 && py <= row0Y + row0H + 1)
@@ -334,6 +383,44 @@ public static class ModUITanSat
 			return true;
 		}
 
+		// 2b. Thanh chỉ định nhanh Skill Tàn Sát (Hàng 1)
+		if (py >= skillRowY - 1 && py <= skillRowY + skillRowH + 1)
+		{
+			List<Skill> quickSkills = ModUI.GetPlayerAttackSkills();
+			if (quickSkills.Count > 0)
+			{
+				int quickStartX = uiX + 52;
+				int quickAreaW = uiW - 56;
+				int maxShow = (quickSkills.Count > 5) ? 5 : quickSkills.Count;
+				int gap = 2;
+				int btnW = (quickAreaW - gap * (maxShow - 1)) / maxShow;
+				if (btnW < 34) btnW = 34;
+
+				for (int i = 0; i < maxShow; i++)
+				{
+					int qx = quickStartX + i * (btnW + gap);
+					if (px >= qx && px <= qx + btnW)
+					{
+						Skill qSk = quickSkills[i];
+						if (qSk != null && qSk.template != null)
+						{
+							if (ModTanSatFilter.skillSelectionMode == 1 && !ModTanSatFilter.selectAllSkills)
+							{
+								ModTanSatFilter.ToggleSkillTicked(qSk.template.id);
+							}
+							else
+							{
+								ModTanSatFilter.DesignateSingleSkill(qSk.template.id);
+								GameScr.info1?.addInfo("Chỉ định chiêu Tàn Sát: " + qSk.template.name, 0);
+							}
+							SoundMn.gI().buttonClick();
+							return true;
+						}
+					}
+				}
+			}
+		}
+
 		// 3. Sub tabs (1. Chọn Quái / 2. Chọn Kỹ Năng)
 		int subTabW = (uiW - 12) / 2;
 		if (py >= row1Y - 1 && py <= row1Y + row1H + 1)
@@ -352,7 +439,7 @@ public static class ModUITanSat
 			}
 		}
 
-		// 4. Nút Chọn tất cả / Bỏ chọn hết & Khóa kỹ năng
+		// 4. Nút Chọn tất cả / Chế độ kỹ năng
 		if (ModUI.tanSatTab == 0)
 		{
 			int allBtnW = 74;
@@ -365,65 +452,43 @@ public static class ModUITanSat
 				return true;
 			}
 		}
-		else
+		else if (py >= row2Y - 1 && py <= row2Y + row2H + 1)
 		{
-			int lockBtnW = 76;
-			int lockBtnX = uiX + uiW - lockBtnW - 4;
-			int skillAllBtnW = 62;
-			int skillAllBtnX = lockBtnX - skillAllBtnW - 3;
+			int modeAllW = 54;
+			int modeAllX = uiX + uiW - modeAllW - 4;
+			int modeComboW = 62;
+			int modeComboX = modeAllX - modeComboW - 3;
+			int modeSingleW = 70;
+			int modeSingleX = modeComboX - modeSingleW - 3;
 
-			if (px >= skillAllBtnX && px <= skillAllBtnX + skillAllBtnW && py >= row2Y - 1 && py <= row2Y + row2H + 1)
+			if (px >= modeSingleX && px <= modeSingleX + modeSingleW)
 			{
-				ModTanSat.ToggleSelectAllSkills();
-				ModConfig.SaveConfig();
+				ModTanSatFilter.SetSkillSelectionMode(0);
+				GameScr.info1?.addInfo("Chế độ Tàn Sát: Chỉ định 1 chiêu cố định", 0);
 				SoundMn.gI().buttonClick();
 				return true;
 			}
-
-			if (px >= lockBtnX && px <= lockBtnX + lockBtnW && py >= row2Y - 1 && py <= row2Y + row2H + 1)
+			if (px >= modeComboX && px <= modeComboX + modeComboW)
 			{
-				List<Skill> atkSkills = ModUI.GetPlayerAttackSkills();
-				if (atkSkills != null && atkSkills.Count > 0)
-				{
-					int currentIdx = -1;
-					for (int k = 0; k < atkSkills.Count; k++)
-					{
-						if (atkSkills[k]?.template != null && atkSkills[k].template.id == ModTanSat.lockedSkillTemplateId)
-						{
-							currentIdx = k;
-							break;
-						}
-					}
-					if (currentIdx == -1)
-					{
-						ModTanSat.lockedSkillTemplateId = atkSkills[0].template.id;
-					}
-					else if (currentIdx < atkSkills.Count - 1)
-					{
-						ModTanSat.lockedSkillTemplateId = atkSkills[currentIdx + 1].template.id;
-					}
-					else
-					{
-						ModTanSat.lockedSkillTemplateId = -1;
-					}
-				}
-				else
-				{
-					ModTanSat.lockedSkillTemplateId = -1;
-				}
-				ModConfig.SaveConfig();
-				string lkInfo = (ModTanSat.lockedSkillTemplateId >= 0) ? ("Khóa chiêu ID " + ModTanSat.lockedSkillTemplateId) : "Khóa chiêu: TẮT";
-				GameScr.info1?.addInfo(lkInfo, 0);
+				ModTanSatFilter.SetSkillSelectionMode(1);
+				GameScr.info1?.addInfo("Chế độ Tàn Sát: Kết hợp các chiêu đã tick", 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+			if (px >= modeAllX && px <= modeAllX + modeAllW)
+			{
+				ModTanSatFilter.SetSkillSelectionMode(2);
+				GameScr.info1?.addInfo("Chế độ Tàn Sát: Tất cả chiêu đánh cơ bản", 0);
 				SoundMn.gI().buttonClick();
 				return true;
 			}
 		}
 
 		int listX = uiX + 4;
-		int listY = row2Y + row2H + 3;
+		int listY = row2Y + row2H + 2;
 		int listW = uiW - 8;
-		int listH = (footerY - 4) - listY;
-		if (listH < 40) listH = 40;
+		int listH = (footerY - 3) - listY;
+		if (listH < 36) listH = 36;
 		int colW = (listW - 10) / 2;
 
 		// 5. Checklist quái / skill trong khung cuộn
@@ -476,7 +541,12 @@ public static class ModUITanSat
 						}
 						else
 						{
-							ModTanSat.ToggleSkillTicked(skills[idx - 1].template.id);
+							Skill chosen = skills[idx - 1];
+							ModTanSat.ToggleSkillTicked(chosen.template.id);
+							if (ModTanSatFilter.skillSelectionMode == 0 && chosen.template != null)
+							{
+								GameScr.info1?.addInfo("Chỉ định chiêu Tàn Sát: " + chosen.template.name, 0);
+							}
 						}
 						SoundMn.gI().buttonClick();
 						return true;

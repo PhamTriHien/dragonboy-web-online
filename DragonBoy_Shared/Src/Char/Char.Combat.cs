@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Assets.src.e;
 using Assets.src.g;
 using UnityEngine;
@@ -339,6 +339,11 @@ public partial class Char : IMapObject
 					}
 					MyVector myVector = new MyVector();
 					MyVector myVector2 = new MyVector();
+					if (ModTanSat.autoTanSat && ModTanSat.currentFarmTarget != null && ModTanSat.currentFarmTarget.status != 0 && ModTanSat.currentFarmTarget.status != 1 && ModTanSat.currentFarmTarget.hp > 0)
+					{
+						mobFocus = ModTanSat.currentFarmTarget;
+						charFocus = null;
+					}
 					if (charFocus != null)
 					{
 						myVector2.addElement(charFocus);

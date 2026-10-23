@@ -166,7 +166,7 @@ public class Effect
 		{
 			typeEff = 4;
 		}
-		if (id >= 201 && id < 2000)
+		if (id >= 201 && id < 2000 && layer == 2)
 		{
 			typeEff = 5;
 		}
@@ -410,7 +410,11 @@ public class Effect
 				{
 					return;
 				}
-				if (typeEff == 5)
+				if (c != null && effId >= 201 && effId < 2000)
+				{
+					typeEff = ((getEffDataById(effId).hasAnimData || layer == 2) ? 5 : 4);
+				}
+				if (typeEff == 5 && getEffDataById(effId).hasAnimData)
 				{
 					data = getEffDataById(effId).get(c.statusMe);
 				}

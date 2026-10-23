@@ -563,6 +563,7 @@ public partial class Controller : IMessageHandler
 					}
 					sbyte[] array2 = NinjaUtil.readByteArray(msg);
 					Image img = Image.createImage(array2, 0, array2.Length);
+					if (img != null) { img.isZoomScaled = true; }
 					Mob.arrMobTemplate[num14].data.img = img;
 					int num15 = msg.reader().readByte();
 					Mob.arrMobTemplate[num14].data.typeData = num15;

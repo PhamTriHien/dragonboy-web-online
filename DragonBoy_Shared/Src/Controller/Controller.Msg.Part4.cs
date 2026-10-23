@@ -95,7 +95,7 @@ public partial class Controller : IMessageHandler
 					effDataById.img = Image.createImage(array15, 0, array15.Length);
 					if (mGraphics.zoomLevel > 1 && effDataById.img != null && !effDataById.img.isZoomScaled)
 					{
-						effDataById.img.scaleNN(mGraphics.zoomLevel);
+						effDataById.img.isZoomScaled = true;
 					}
 					break;
 				}
@@ -115,7 +115,7 @@ public partial class Controller : IMessageHandler
 						image = Image.createImage(array11, 0, num136);
 						if (mGraphics.zoomLevel > 1 && image != null && !image.isZoomScaled)
 						{
-							image.scaleNN(mGraphics.zoomLevel);
+							image.isZoomScaled = true;
 						}
 						BgItem.imgNew.put(num135 + string.Empty, image);
 					}

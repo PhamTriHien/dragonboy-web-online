@@ -67,7 +67,7 @@ public class ImgByName
 			result.img = Image.createImage(array, 1, array.Length - 1);
 			if (mGraphics.zoomLevel > 1 && result.img != null && !result.img.isZoomScaled)
 			{
-				result.img.scaleNN(mGraphics.zoomLevel);
+				result.img.isZoomScaled = true;
 			}
 		}
 		catch (Exception)

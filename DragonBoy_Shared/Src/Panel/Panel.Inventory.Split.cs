@@ -11,6 +11,12 @@ public partial class Panel : IActionListener, IChatable
 
 	private int invSplitBagSel = 0;
 
+	private int cmyBody = 0;
+
+	private int cmtoYBody = 0;
+
+	private int cmyLimBody = 0;
+
 	private const int INV_SPLIT_HEADER_H = 18;
 
 	private const int INV_SPLIT_DIV = 2;
@@ -19,66 +25,159 @@ public partial class Panel : IActionListener, IChatable
 
 	private const int BODY_SLOT_GAP = 5;
 
-	/// <summary>
-	/// Thành phần phân mảnh (partial) của lớp PaperdollSlotDef: Đảm nhiệm phân hệ chuyên trách Inventory (Split).
-	/// </summary>
-	private struct PaperdollSlotDef
+	private static readonly string[] bodySlotGhostNames = new string[]
 	{
-		public int slotIdx;
+		"Áo",
+		"Quần",
+		"Găng",
+		"Giày",
+		"Rada",
+		"C.Trang",
+		"Giáp",
+		"Sách",
+		"P.Kiện",
+		"T.Cưỡi",
+		"Pet",
+		"D.Hiệu",
+		"C.Mệnh",
+		"B.Tai",
+		"Đai"
+	};
 
-		public string ghostName;
-
-		public int col;
-
-		public int row;
-
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		public PaperdollSlotDef(int slotIdx, string ghostName, int col, int row)
+	/// <summary>
+	/// Truy xuất nhãn tên ô trang bị theo chỉ số slotIdx.
+	/// </summary>
+	internal static string GetBodySlotGhostName(int slotIdx)
+	{
+		if (slotIdx >= 0 && slotIdx < bodySlotGhostNames.Length)
 		{
-			this.slotIdx = slotIdx;
-			this.ghostName = ghostName;
-			this.col = col;
-			this.row = row;
+			return bodySlotGhostNames[slotIdx];
+		}
+		return "Ô " + (slotIdx + 1);
+	}
+
+	/// <summary>
+	/// Tính toán dòng và cột hiển thị của ô trang bị trên khung nhân vật (Rows 0..2 hai bên nhân vật, Rows 3+ lưới 4 cột phía dưới).
+	/// </summary>
+	private static void GetBodySlotGridPos(int slotIdx, out int row, out int col)
+	{
+		switch (slotIdx)
+		{
+		case 0:
+			row = 0;
+			col = 0;
+			return;
+		case 1:
+			row = 1;
+			col = 0;
+			return;
+		case 2:
+			row = 0;
+			col = 3;
+			return;
+		case 3:
+			row = 2;
+			col = 0;
+			return;
+		case 4:
+			row = 1;
+			col = 3;
+			return;
+		case 5:
+			row = 2;
+			col = 3;
+			return;
+		default:
+		{
+			int extra = slotIdx - 6;
+			if (extra < 0)
+			{
+				extra = 0;
+			}
+			row = 3 + extra / 4;
+			col = extra % 4;
+			return;
+		}
 		}
 	}
 
-	private static readonly PaperdollSlotDef[] paperdollSlots = new PaperdollSlotDef[]
+	/// <summary>
+	/// Tính toán kích thước và toạ độ lưới Paperdoll bên trái đảm bảo hiển thị đầy đủ 100% số ô trong arrItemBody.
+	/// </summary>
+	private static void GetPaperdollMetrics(int leftX, int leftW, int listY, int listH, int bodyLen, out int slotSize, out int rowGap, out int startY, out int totalRows, out int totalBodyH)
 	{
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(0, "Áo", 0, 0),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(1, "Quần", 0, 1),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(3, "Giày", 0, 2),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(2, "Găng", 1, 0),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(4, "Rada", 1, 1),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(5, "C.Trang", 1, 2),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(6, "Pet", 0, 3),
-		/// <summary>
-		/// Thực thi phương thức nghiệp vụ PaperdollSlotDef.
-		/// </summary>
-		new PaperdollSlotDef(7, "Phụ kiện", 1, 3)
-	};
+		int extraCount = (bodyLen > 6) ? (bodyLen - 6) : 0;
+		int extraRows = (extraCount + 3) / 4;
+		totalRows = 3 + extraRows;
+		rowGap = (totalRows >= 5) ? 3 : 4;
+		int maxSlotByW = (leftW - 8 - 6) / 4;
+		if (maxSlotByW > 32)
+		{
+			maxSlotByW = 32;
+		}
+		int fitSlotByH = (listH - 6 - (totalRows - 1) * rowGap) / totalRows;
+		int targetSlot = (totalRows >= 5) ? 28 : 30;
+		if (fitSlotByH >= 32 && totalRows <= 4)
+		{
+			targetSlot = 32;
+		}
+		else if (fitSlotByH >= 30)
+		{
+			targetSlot = 30;
+		}
+		else if (fitSlotByH >= 26)
+		{
+			targetSlot = fitSlotByH;
+		}
+		else
+		{
+			targetSlot = 26;
+		}
+		slotSize = (targetSlot < maxSlotByW) ? targetSlot : maxSlotByW;
+		if (slotSize < 24)
+		{
+			slotSize = 24;
+		}
+		int slotsH = totalRows * slotSize + (totalRows - 1) * rowGap;
+		totalBodyH = slotsH + 6;
+		if (totalBodyH <= listH)
+		{
+			startY = listY + (listH - slotsH) / 2;
+		}
+		else
+		{
+			startY = listY + 3;
+		}
+		if (startY < listY + 3)
+		{
+			startY = listY + 3;
+		}
+	}
+
+	/// <summary>
+	/// Tính toán toạ độ vẽ (sx, sy) của ô trang bị slotIdx trên khung bên trái.
+	/// </summary>
+	private static void GetBodySlotRect(int slotIdx, int leftX, int leftW, int startY, int slotSize, int rowGap, out int sx, out int sy)
+	{
+		int row, col;
+		GetBodySlotGridPos(slotIdx, out row, out col);
+		int sidePad = 5;
+		if (leftW - sidePad * 2 < 4 * slotSize + 6)
+		{
+			sidePad = (leftW - (4 * slotSize + 6)) / 2;
+			if (sidePad < 2)
+			{
+				sidePad = 2;
+			}
+		}
+		int availSpan = leftW - sidePad * 2 - slotSize;
+		if (availSpan < 0)
+		{
+			availSpan = 0;
+		}
+		sx = leftX + sidePad + (availSpan * col) / 3;
+		sy = startY + row * (slotSize + rowGap);
+	}
 
 	/// <summary>
 	/// Truy xuất và trả về dữ liệu của GetBagGridLayout.
@@ -93,20 +192,6 @@ public partial class Panel : IActionListener, IChatable
 		int remainder = availW % cols;
 		startPad = pad + remainder / 2;
 		slotH = slotW;
-	}
-
-	/// <summary>
-	/// Truy xuất và trả về dữ liệu của GetPaperdollY.
-	/// </summary>
-	private static int GetPaperdollY(int listY, int listH)
-	{
-		int totalSlotsH = 3 * BODY_SLOT_SIZE + 2 * BODY_SLOT_GAP;
-		int py = listY + (listH - totalSlotsH) / 2;
-		if (py < listY + 6)
-		{
-			py = listY + 6;
-		}
-		return py;
 	}
 
 	/// <summary>
@@ -165,64 +250,6 @@ public partial class Panel : IActionListener, IChatable
 		{
 			listH = 24;
 		}
-	}
-
-	/// <summary>
-	/// Truy xuất và trả về dữ liệu của GetPaperdollSlotX.
-	/// </summary>
-	private static int GetPaperdollSlotX(PaperdollSlotDef def, int leftX, int leftW)
-	{
-		if (def.col == 0)
-		{
-			return leftX + 8;
-		}
-		if (def.col == 1)
-		{
-			return leftX + leftW - BODY_SLOT_SIZE - 8;
-		}
-		if (def.col == 2)
-		{
-			return leftX + 28;
-		}
-		return leftX + leftW - BODY_SLOT_SIZE - 28;
-	}
-
-	/// <summary>
-	/// Truy xuất và trả về dữ liệu của GetPaperdollSlotY.
-	/// </summary>
-	private static int GetPaperdollSlotY(PaperdollSlotDef def, int paperdollY)
-	{
-		return paperdollY + def.row * (BODY_SLOT_SIZE + BODY_SLOT_GAP);
-	}
-
-	/// <summary>
-	/// Thực thi phương thức nghiệp vụ TryGetPaperdollDef.
-	/// </summary>
-	private static bool TryGetPaperdollDef(int slotIdx, out PaperdollSlotDef def)
-	{
-		for (int i = 0; i < paperdollSlots.Length; i++)
-		{
-			if (paperdollSlots[i].slotIdx == slotIdx)
-			{
-				def = paperdollSlots[i];
-				return true;
-			}
-		}
-		def = default(PaperdollSlotDef);
-		return false;
-	}
-
-	/// <summary>
-	/// Truy xuất và trả về dữ liệu của GetPaperdollSlotYForIndex.
-	/// </summary>
-	private int GetPaperdollSlotYForIndex(int slotIdx, int paperdollY)
-	{
-		PaperdollSlotDef def;
-		if (TryGetPaperdollDef(slotIdx, out def))
-		{
-			return GetPaperdollSlotY(def, paperdollY);
-		}
-		return paperdollY;
 	}
 
 	/// <summary>
@@ -298,6 +325,29 @@ public partial class Panel : IActionListener, IChatable
 			}
 			int lx, lw, rx, rw, ly, lh;
 			GetInventorySplitLayout(out lx, out lw, out rx, out rw, out ly, out lh);
+			int slotSize, rowGap, startY, totalRows, totalBodyH;
+			GetPaperdollMetrics(lx, lw, ly, lh, bodyLen, out slotSize, out rowGap, out startY, out totalRows, out totalBodyH);
+			cmyLimBody = totalBodyH - lh;
+			if (cmyLimBody < 0)
+			{
+				cmyLimBody = 0;
+			}
+			if (cmtoYBody < 0)
+			{
+				cmtoYBody = 0;
+			}
+			if (cmtoYBody > cmyLimBody)
+			{
+				cmtoYBody = cmyLimBody;
+			}
+			if (cmyBody < 0)
+			{
+				cmyBody = 0;
+			}
+			if (cmyBody > cmyLimBody)
+			{
+				cmyBody = cmyLimBody;
+			}
 			int cols, slotW, slotH, gap, startPad;
 			GetBagGridLayout(rw, out cols, out slotW, out slotH, out gap, out startPad);
 			int bagRows = (bagLen + cols - 1) / cols;
@@ -366,6 +416,7 @@ public partial class Panel : IActionListener, IChatable
 				invSplitBodySel = 0;
 				invSplitBagSel = 0;
 				cmy = (cmtoY = 0);
+				cmyBody = (cmtoYBody = 0);
 				cmRun = 0;
 				currItem = null;
 				cp = null;
@@ -438,6 +489,47 @@ public partial class Panel : IActionListener, IChatable
 			}
 			newSelected = 0;
 			lastSelect[currentTabIndex] = selected;
+		}
+		catch
+		{
+		}
+	}
+
+	/// <summary>
+	/// Đảm bảo ô trang bị đang chọn trên khung trái luôn nằm trong vùng nhìn thấy.
+	/// </summary>
+	private void EnsureInventorySplitBodyVisible()
+	{
+		try
+		{
+			Char me = Char.myCharz();
+			if (me == null || me.arrItemBody == null)
+			{
+				return;
+			}
+			int lx, lw, rx, rw, ly, lh;
+			GetInventorySplitLayout(out lx, out lw, out rx, out rw, out ly, out lh);
+			int slotSize, rowGap, startY, totalRows, totalBodyH;
+			GetPaperdollMetrics(lx, lw, ly, lh, me.arrItemBody.Length, out slotSize, out rowGap, out startY, out totalRows, out totalBodyH);
+			int sx, sy;
+			GetBodySlotRect(invSplitBodySel, lx, lw, startY, slotSize, rowGap, out sx, out sy);
+			if (sy < ly + cmyBody)
+			{
+				cmtoYBody = sy - ly - 2;
+			}
+			else if (sy + slotSize > ly + cmyBody + lh)
+			{
+				cmtoYBody = (sy + slotSize) - (ly + lh) + 2;
+			}
+			if (cmtoYBody < 0)
+			{
+				cmtoYBody = 0;
+			}
+			if (cmtoYBody > cmyLimBody)
+			{
+				cmtoYBody = cmyLimBody;
+			}
+			cmyBody = cmtoYBody;
 		}
 		catch
 		{
@@ -630,6 +722,7 @@ public partial class Panel : IActionListener, IChatable
 			GetInventorySplitLayout(out leftX, out leftW, out rightX, out rightW, out listY, out listH);
 			Item[] arrBody = me.arrItemBody;
 			Item[] arrBag = me.arrItemBag;
+			int bodyLen = arrBody.Length;
 			int hlY = yScroll + 1;
 			bool leftFocus = invSplitIsBody;
 
@@ -672,9 +765,13 @@ public partial class Panel : IActionListener, IChatable
 			g.setColor(9993045);
 			g.drawRect(leftX, listY, leftW, listH);
 
-			int paperdollY = GetPaperdollY(listY, listH);
+			int slotSize, rowGap, startY, totalRows, totalBodyH;
+			GetPaperdollMetrics(leftX, leftW, listY, listH, bodyLen, out slotSize, out rowGap, out startY, out totalRows, out totalBodyH);
 			int avatarX = leftX + leftW / 2;
-			int avatarFeetY = paperdollY + 2 * (BODY_SLOT_SIZE + BODY_SLOT_GAP) + BODY_SLOT_SIZE - 2;
+			int avatarFeetY = startY + 2 * (slotSize + rowGap) + slotSize - 2;
+
+			g.setClip(leftX + 1, listY + 1, leftW - 2, listH - 2);
+			g.translate(0, -cmyBody);
 
 			g.setColor(11837316);
 			g.fillRoundRect(avatarX - 22, avatarFeetY - 3, 44, 7, 4, 4);
@@ -689,22 +786,36 @@ public partial class Panel : IActionListener, IChatable
 			{
 			}
 
-			for (int s = 0; s < paperdollSlots.Length; s++)
+			for (int s = 0; s < bodyLen; s++)
 			{
-				PaperdollSlotDef pDef = paperdollSlots[s];
-				if (pDef.slotIdx >= arrBody.Length)
+				int sx, sy;
+				GetBodySlotRect(s, leftX, leftW, startY, slotSize, rowGap, out sx, out sy);
+				if (sy - cmyBody > listY + listH || sy - cmyBody < listY - slotSize)
 				{
 					continue;
 				}
-				if (pDef.row == 3 && listH < 170)
+				bool isSel = leftFocus && (s == invSplitBodySel);
+				Item bItem = arrBody[s];
+				string ghostName = GetBodySlotGhostName(s);
+				DrawEquipmentPaperdollSlot(g, bItem, s, ghostName, sx, sy, slotSize, isSel);
+			}
+
+			g.translate(0, cmyBody);
+			g.setClip(xScroll, yScroll, wScroll, hScroll);
+
+			if (cmyLimBody > 0)
+			{
+				int trackHBody = listH - 8;
+				int thumbHBody = trackHBody * listH / totalBodyH;
+				if (thumbHBody < 14)
 				{
-					continue;
+					thumbHBody = 14;
 				}
-				int sx = GetPaperdollSlotX(pDef, leftX, leftW);
-				int sy = GetPaperdollSlotY(pDef, paperdollY);
-				bool isSel = leftFocus && (pDef.slotIdx == invSplitBodySel);
-				Item bItem = (pDef.slotIdx < arrBody.Length) ? arrBody[pDef.slotIdx] : null;
-				DrawEquipmentPaperdollSlot(g, bItem, pDef.slotIdx, pDef.ghostName, sx, sy, BODY_SLOT_SIZE, isSel);
+				int thumbYBody = listY + 4 + (cmyBody * (trackHBody - thumbHBody) / cmyLimBody);
+				g.setColor(15196114);
+				g.fillRect(leftX + leftW - 3, listY + 4, 2, trackHBody);
+				g.setColor(13524492);
+				g.fillRect(leftX + leftW - 3, thumbYBody, 2, thumbHBody);
 			}
 
 			g.setColor(15196114);
@@ -779,7 +890,8 @@ public partial class Panel : IActionListener, IChatable
 			int cols, slotW, slotH, gap, startPad;
 			GetBagGridLayout(rightW, out cols, out slotW, out slotH, out gap, out startPad);
 			int gridStartX = rightX + startPad;
-			int paperdollY = GetPaperdollY(listY, listH);
+			int slotSize, rowGap, startY, totalRows, totalBodyH;
+			GetPaperdollMetrics(leftX, leftW, listY, listH, bodyLen, out slotSize, out rowGap, out startY, out totalRows, out totalBodyH);
 			bool handledKey = false;
 
 			if (GameCanvas.keyPressed[23] || GameCanvas.keyPressed[4])
@@ -792,7 +904,7 @@ public partial class Panel : IActionListener, IChatable
 					{
 						invSplitBagSel--;
 					}
-					else
+					else if (bodyLen > 0)
 					{
 						invSplitIsBody = true;
 						int r = invSplitBagSel / cols;
@@ -802,11 +914,24 @@ public partial class Panel : IActionListener, IChatable
 						}
 						else if (r == 1)
 						{
-							invSplitBodySel = (bodyLen > 4) ? 4 : 1;
+							invSplitBodySel = (bodyLen > 4) ? 4 : ((bodyLen > 1) ? 1 : 0);
+						}
+						else if (r == 2)
+						{
+							invSplitBodySel = (bodyLen > 5) ? 5 : ((bodyLen > 3) ? 3 : 0);
 						}
 						else
 						{
-							invSplitBodySel = (bodyLen > 5) ? 5 : ((bodyLen > 3) ? 3 : 0);
+							int targetIdx = 6 + (r - 3) * 4 + 3;
+							if (targetIdx >= bodyLen)
+							{
+								targetIdx = bodyLen - 1;
+							}
+							if (targetIdx < 0)
+							{
+								targetIdx = 0;
+							}
+							invSplitBodySel = targetIdx;
 						}
 					}
 				}
@@ -824,10 +949,25 @@ public partial class Panel : IActionListener, IChatable
 					{
 						invSplitBodySel = (bodyLen > 3) ? 3 : ((bodyLen > 1) ? 1 : 0);
 					}
+					else if (invSplitBodySel >= 6)
+					{
+						int extraCol = (invSplitBodySel - 6) % 4;
+						if (extraCol > 0)
+						{
+							invSplitBodySel--;
+						}
+					}
 				}
 				SoundMn.gI().panelClick();
 				SyncInventorySplitSelected();
-				EnsureInventorySplitBagVisible();
+				if (invSplitIsBody)
+				{
+					EnsureInventorySplitBodyVisible();
+				}
+				else
+				{
+					EnsureInventorySplitBagVisible();
+				}
 				currItem = GetInventorySplitCurrItem();
 				if (currItem != null)
 				{
@@ -852,22 +992,19 @@ public partial class Panel : IActionListener, IChatable
 					{
 						invSplitBodySel = 5;
 					}
-					else
+					else if (invSplitBodySel >= 6 && ((invSplitBodySel - 6) % 4) < 3 && invSplitBodySel + 1 < bodyLen)
 					{
+						invSplitBodySel++;
+					}
+					else if (bagLen > 0)
+					{
+						int bRow, bCol;
+						GetBodySlotGridPos(invSplitBodySel, out bRow, out bCol);
 						invSplitIsBody = false;
-						int targetR = 0;
-						if (invSplitBodySel == 4 || invSplitBodySel == 1)
-						{
-							targetR = 1;
-						}
-						else if (invSplitBodySel == 5 || invSplitBodySel == 3)
-						{
-							targetR = 2;
-						}
-						invSplitBagSel = targetR * cols;
+						invSplitBagSel = bRow * cols;
 						if (invSplitBagSel >= bagLen)
 						{
-							invSplitBagSel = (bagLen > 0) ? (bagLen - 1) : 0;
+							invSplitBagSel = bagLen - 1;
 						}
 					}
 				}
@@ -880,7 +1017,14 @@ public partial class Panel : IActionListener, IChatable
 				}
 				SoundMn.gI().panelClick();
 				SyncInventorySplitSelected();
-				EnsureInventorySplitBagVisible();
+				if (invSplitIsBody)
+				{
+					EnsureInventorySplitBodyVisible();
+				}
+				else
+				{
+					EnsureInventorySplitBagVisible();
+				}
 				currItem = GetInventorySplitCurrItem();
 				if (currItem != null)
 				{
@@ -910,14 +1054,23 @@ public partial class Panel : IActionListener, IChatable
 					{
 						invSplitBodySel = (bodyLen > 4) ? 4 : ((bodyLen > 2) ? 2 : 0);
 					}
-					else if (invSplitBodySel == 6)
+					else if (invSplitBodySel >= 6 && invSplitBodySel < 10)
 					{
-						invSplitBodySel = 3;
+						int c = invSplitBodySel - 6;
+						if (c <= 1)
+						{
+							invSplitBodySel = (bodyLen > 3) ? 3 : ((bodyLen > 1) ? 1 : 0);
+						}
+						else
+						{
+							invSplitBodySel = (bodyLen > 5) ? 5 : ((bodyLen > 3) ? 3 : 0);
+						}
 					}
-					else if (invSplitBodySel == 7)
+					else if (invSplitBodySel >= 10)
 					{
-						invSplitBodySel = 5;
+						invSplitBodySel -= 4;
 					}
+					EnsureInventorySplitBodyVisible();
 				}
 				else
 				{
@@ -961,10 +1114,20 @@ public partial class Panel : IActionListener, IChatable
 					{
 						invSplitBodySel = 6;
 					}
-					else if (invSplitBodySel == 5 && bodyLen > 7)
+					else if (invSplitBodySel == 5 && bodyLen > 6)
 					{
-						invSplitBodySel = 7;
+						invSplitBodySel = (bodyLen > 9) ? 9 : (bodyLen - 1);
 					}
+					else if (invSplitBodySel >= 6)
+					{
+						int nextRowStart = 6 + ((invSplitBodySel - 6) / 4 + 1) * 4;
+						if (nextRowStart < bodyLen)
+						{
+							int nextIdx = invSplitBodySel + 4;
+							invSplitBodySel = (nextIdx < bodyLen) ? nextIdx : (bodyLen - 1);
+						}
+					}
+					EnsureInventorySplitBodyVisible();
 				}
 				else
 				{
@@ -996,6 +1159,7 @@ public partial class Panel : IActionListener, IChatable
 				pointerIsDowning = false;
 				pointerDownTime = 0;
 				cmtoY = cmy;
+				cmtoYBody = cmyBody;
 			}
 
 			if (GameCanvas.isPointerDown)
@@ -1046,6 +1210,30 @@ public partial class Panel : IActionListener, IChatable
 							}
 						}
 					}
+					else if (GameCanvas.isPointer(leftX, listY, leftW, listH) && cmyLimBody > 0)
+					{
+						if (dy != 0)
+						{
+							cmtoYBody -= dy;
+							if (cmtoYBody < 0)
+							{
+								cmtoYBody = 0;
+							}
+							if (cmtoYBody > cmyLimBody)
+							{
+								cmtoYBody = cmyLimBody;
+							}
+							cmyBody -= dy;
+							if (cmyBody < 0)
+							{
+								cmyBody = 0;
+							}
+							if (cmyBody > cmyLimBody)
+							{
+								cmyBody = cmyLimBody;
+							}
+						}
+					}
 					for (int n2 = pointerDownLastX.Length - 1; n2 > 0; n2--)
 					{
 						pointerDownLastX[n2] = pointerDownLastX[n2 - 1];
@@ -1068,6 +1256,7 @@ public partial class Panel : IActionListener, IChatable
 				{
 					cmRun = 0;
 					cmtoY = cmy;
+					cmtoYBody = cmyBody;
 					pointerDownFirstX = -1000;
 					int px = GameCanvas.px;
 					int py = GameCanvas.py;
@@ -1075,24 +1264,17 @@ public partial class Panel : IActionListener, IChatable
 
 					if (px >= leftX && px < leftX + leftW && py >= listY && py < listY + listH)
 					{
-						for (int s2 = 0; s2 < paperdollSlots.Length; s2++)
+						int pyBody = py + cmyBody;
+						for (int s2 = 0; s2 < bodyLen; s2++)
 						{
-							PaperdollSlotDef pDef2 = paperdollSlots[s2];
-							if (pDef2.slotIdx >= bodyLen)
-							{
-								continue;
-							}
-							if (pDef2.row == 3 && listH < 170)
-							{
-								continue;
-							}
-							int sx3 = GetPaperdollSlotX(pDef2, leftX, leftW);
-							int sy3 = GetPaperdollSlotY(pDef2, paperdollY);
-							if (px >= sx3 && px < sx3 + BODY_SLOT_SIZE && py >= sy3 && py < sy3 + BODY_SLOT_SIZE)
+							int sx3, sy3;
+							GetBodySlotRect(s2, leftX, leftW, startY, slotSize, rowGap, out sx3, out sy3);
+							if (px >= sx3 && px < sx3 + slotSize && pyBody >= sy3 && pyBody < sy3 + slotSize)
 							{
 								invSplitIsBody = true;
-								invSplitBodySel = pDef2.slotIdx;
+								invSplitBodySel = s2;
 								SyncInventorySplitSelected();
+								EnsureInventorySplitBodyVisible();
 								currItem = GetInventorySplitCurrItem();
 								if (currItem != null)
 								{
@@ -1193,9 +1375,13 @@ public partial class Panel : IActionListener, IChatable
 			GetInventorySplitLayout(out leftX, out leftW, out rightX, out rightW, out listY, out listH);
 			if (invSplitIsBody)
 			{
-				int paperdollY = GetPaperdollY(listY, listH);
-				int sy = GetPaperdollSlotYForIndex(invSplitBodySel, paperdollY);
-				return sy + BODY_SLOT_SIZE / 2;
+				Char me = Char.myCharz();
+				int bodyLen = (me != null && me.arrItemBody != null) ? me.arrItemBody.Length : 8;
+				int slotSize, rowGap, startY, totalRows, totalBodyH;
+				GetPaperdollMetrics(leftX, leftW, listY, listH, bodyLen, out slotSize, out rowGap, out startY, out totalRows, out totalBodyH);
+				int sx, sy;
+				GetBodySlotRect(invSplitBodySel, leftX, leftW, startY, slotSize, rowGap, out sx, out sy);
+				return sy - cmyBody + slotSize / 2;
 			}
 			int cols, slotW, slotH, gap, startPad;
 			GetBagGridLayout(rightW, out cols, out slotW, out slotH, out gap, out startPad);

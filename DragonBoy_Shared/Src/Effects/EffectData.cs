@@ -15,6 +15,8 @@ public class EffectData
 
 	public short[][] anim_data = new short[16][];
 
+	public bool hasAnimData;
+
 	public int ID;
 
 	public int typeData;
@@ -246,9 +248,10 @@ public class EffectData
 					if (num9 + 500 >= 500)
 					{
 						array[num8++] = num9;
-						flag = true;
 						continue;
 					}
+					hasAnimData = true;
+					flag = true;
 					num7 = (short)Res.abs(num9 + 500);
 					anim_data[num7] = new short[num8];
 					Array.Copy(array, 0, anim_data[num7], 0, num8);
@@ -257,14 +260,15 @@ public class EffectData
 				if (!flag)
 				{
 					anim_data[0] = new short[num8];
-					Array.Copy(array, 0, anim_data[num7], 0, num8);
+					Array.Copy(array, 0, anim_data[0], 0, num8);
+					for (int m = 1; m < 16; m++) { anim_data[m] = anim_data[0]; }
 					return;
 				}
 				for (int m = 0; m < 16; m++)
 				{
 					if (anim_data[m] == null)
 					{
-						anim_data[m] = anim_data[2];
+						anim_data[m] = anim_data[2] ?? anim_data[1] ?? anim_data[0];
 					}
 				}
 			}
@@ -305,7 +309,7 @@ public class EffectData
 	/// </summary>
 	public void paintFrame(mGraphics g, int f, int x, int y, int trans, int layer)
 	{
-		if (this.frame == null || this.frame.Length == 0)
+		if (this.frame == null || this.frame.Length == 0 || f < 0 || f >= this.frame.Length)
 		{
 			return;
 		}

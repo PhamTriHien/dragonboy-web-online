@@ -157,7 +157,7 @@ public class BgItem
 			Image v = Image.createImage(array, 0, array.Length);
 			if (mGraphics.zoomLevel > 1 && v != null && !v.isZoomScaled)
 			{
-				v.scaleNN(mGraphics.zoomLevel);
+				v.isZoomScaled = true;
 			}
 			imgNew.put(blendKey, v);
 		}
