@@ -15,7 +15,7 @@ public static class ModUIAutomation
 
 	private static int GetContentHeight()
 	{
-		return (subTab == 0) ? 196 : 224;
+		return (subTab == 0) ? 256 : 224;
 	}
 
 	/// <summary>
@@ -165,10 +165,24 @@ public static class ModUIAutomation
 		mFont.tahoma_7_green2.drawString(g, "AUTO DÙNG ITEM (TÚI):", x + 2, curY + 2, mFont.LEFT);
 		ModUI.PaintNativeButton(x + w - 114, curY, 68, 16, ModAutoItem.autoOpenCskb ? "CSKB: BẬT" : "CSKB: TẮT", ModAutoItem.autoOpenCskb, g);
 		ModUI.PaintNativeButton(x + w - 42, curY, 40, 16, ModAutoItem.isEnabled ? "BẬT" : "TẮT", ModAutoItem.isEnabled, g);
-		curY += 19;
+		curY += 18;
+
+		// Lưới 12 nút chọn nhanh item có thời gian sử dụng (Cuồng nộ, Bổ huyết, Bổ khí, Giáp xên, Ẩn danh, Đồ ăn, Hải sản, Máy dò...)
+		int presetBtnW = (w - 9) / 4;
+		for (int row = 0; row < 3; row++)
+		{
+			for (int col = 0; col < 4; col++)
+			{
+				int pIdx = row * 4 + col;
+				int pbx = x + col * (presetBtnW + 3);
+				ModUI.PaintNativeButton(pbx, curY, presetBtnW, 16, ModAutoItem.PresetNames[pIdx], ModAutoItem.IsPresetActive(pIdx), g);
+			}
+			curY += 18;
+		}
+		curY += 1;
 
 		int condBtnW = (w - 6) / 3;
-		string[] condNames = new string[] { "Chu kỳ", "HP < X%", "MP < X%" };
+		string[] condNames = new string[] { "Khi hết / Chu kỳ", "HP < X%", "MP < X%" };
 		for (int c = 0; c < 3; c++)
 		{
 			int cx = x + c * (condBtnW + 3);
@@ -204,10 +218,11 @@ public static class ModUIAutomation
 		}
 		curY += 20;
 
-		string idList = string.IsNullOrEmpty(ModAutoItem.itemIdsRaw) ? "(Chưa đặt ID)" : ("[" + ModAutoItem.itemIdsRaw + "]");
-		if (idList.Length > 28) idList = idList.Substring(0, 25) + "...]";
-		mFont.tahoma_7_grey.drawString(g, "ID item: " + idList, x + 2, curY + 3, mFont.LEFT);
-		ModUI.PaintNativeButton(x + w - 66, curY, 64, 16, "Nhập ID", false, g);
+		string idList = string.IsNullOrEmpty(ModAutoItem.itemIdsRaw) ? "(Chưa chọn)" : ("[" + ModAutoItem.itemIdsRaw + "]");
+		if (idList.Length > 21) idList = idList.Substring(0, 18) + "...]";
+		mFont.tahoma_7_grey.drawString(g, "ID: " + idList, x + 2, curY + 3, mFont.LEFT);
+		ModUI.PaintNativeButton(x + w - 103, curY, 44, 16, "Xóa ID", false, g);
+		ModUI.PaintNativeButton(x + w - 56, curY, 54, 16, "Nhập ID", false, g);
 		curY += 24;
 
 		// 3. AUTO HỢP THỂ (FUSION)
@@ -431,7 +446,26 @@ public static class ModUIAutomation
 			SoundMn.gI().buttonClick();
 			return true;
 		}
-		curY += 19;
+		curY += 18;
+
+		// Lưới 12 nút chọn nhanh item có thời gian sử dụng
+		int presetBtnW = (w - 9) / 4;
+		for (int row = 0; row < 3; row++)
+		{
+			for (int col = 0; col < 4; col++)
+			{
+				int pIdx = row * 4 + col;
+				int pbx = x + col * (presetBtnW + 3);
+				if (px >= pbx && px <= pbx + presetBtnW && py >= curY - 2 && py <= curY + 17)
+				{
+					ModAutoItem.TogglePreset(pIdx);
+					SoundMn.gI().buttonClick();
+					return true;
+				}
+			}
+			curY += 18;
+		}
+		curY += 1;
 
 		// Điều kiện dùng item
 		int condBtnW = (w - 6) / 3;
@@ -482,8 +516,14 @@ public static class ModUIAutomation
 		}
 		curY += 20;
 
-		// Nút Nhập ID Item
-		if (px >= x + w - 68 && px <= x + w && py >= curY - 2 && py <= curY + 18)
+		// Nút Xóa ID & Nhập ID Item
+		if (px >= x + w - 105 && px <= x + w - 58 && py >= curY - 2 && py <= curY + 18)
+		{
+			ModAutoItem.ClearAllIds();
+			SoundMn.gI().buttonClick();
+			return true;
+		}
+		if (px >= x + w - 57 && px <= x + w && py >= curY - 2 && py <= curY + 18)
 		{
 			ModAutoItem.ShowInputItemIds();
 			return true;

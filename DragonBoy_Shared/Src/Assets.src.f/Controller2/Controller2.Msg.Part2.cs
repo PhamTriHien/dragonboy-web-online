@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Assets.src.e;
 using Assets.src.g;
 using UnityEngine;
@@ -402,6 +402,15 @@ public partial class Controller2
 				{
 					short num30 = msg.reader().readShort();
 					int num31 = msg.reader().readShort();
+					ModAutoItem.OnServerItemTime(num30, num31);
+					if (num31 <= 0)
+					{
+						if (ItemTime.isExistItem(num30))
+						{
+							Char.vItemTime.removeElement(ItemTime.getItemById(num30));
+						}
+						break;
+					}
 					if (ItemTime.isExistItem(num30))
 					{
 						ItemTime.getItemById(num30).initTime(num31);
