@@ -85,7 +85,7 @@ public partial class Service
 				return;
 			}
 			lastCharMoveTime = mSystem.currentTimeMillis();
-			if (GameScr.canAutoPlay || ModTanSat.autoTanSat)
+			if (GameScr.canAutoPlay || ModTanSat.autoTanSat || ModNextMap.isNextMapActive || ModGoBack.isReturning)
 			{
 				ModTdltLogger.LogCharMove("charMove", Char.myCharz().cx, Char.myCharz().cy, Char.myCharz().cxSend, Char.myCharz().cySend);
 			}
@@ -151,7 +151,7 @@ public partial class Service
 				message.writer().writeShort(me.cx);
 				message.writer().writeShort(me.cy);
 				session.sendMessage(message);
-				if (GameScr.canAutoPlay || ModTanSat.autoTanSat)
+				if (GameScr.canAutoPlay || ModTanSat.autoTanSat || ModNextMap.isNextMapActive || ModGoBack.isReturning)
 				{
 					ModTdltLogger.LogCharMove($"charMoveTo({x},{y})", me.cx, me.cy, me.cxSend, me.cySend);
 				}
