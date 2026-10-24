@@ -124,6 +124,7 @@ public partial class Char : IMapObject
 	/// </summary>
 	public void setResetPoint(int x, int y)
 			{
+				ModTdltLogger.Log("RESET_POINT_RAW", $"Packet 46 received -> resetPos=({x},{y}), curPos=({cx},{cy}), Map='{TileMap.mapName}' (ID:{TileMap.mapID}), HP={cHP}/{cHPFull}");
 				InfoDlg.hide();
 				currentMovePoint = null;
 				vMovePoints.removeAllElements();
@@ -131,6 +132,8 @@ public partial class Char : IMapObject
 				myCharz().cySend = y;
 				if (ModNextMap.isNextMapActive)
 				{
+					int prevCx = cx;
+					int prevCy = cy;
 					cx = x;
 					cy = y;
 					myCharz().cxSend = x;
@@ -140,7 +143,7 @@ public partial class Char : IMapObject
 					statusMe = 1;
 					delayFall = 0;
 					cp1 = (cp2 = (cp3 = 0));
-					ModWaypoint.OnServerResetPoint(x, y);
+					ModWaypoint.OnServerResetPoint(x, y, prevCx, prevCy);
 					return;
 				}
 				if (ModTanSat.autoTanSat || ModAutoPick.isBusy || ModGoBack.isReturning || cy - y == 0)

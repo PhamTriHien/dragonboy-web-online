@@ -399,6 +399,7 @@ public static class ModMenu
 				GameScr.canAutoPlay = false;
 				ModUI.uiCustomOpen = false;
 				modMenuOpen = false;
+				ModTeleport.ResetSessionColdCounters();
 				return;
 			}
 

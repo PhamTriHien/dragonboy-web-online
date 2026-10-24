@@ -635,12 +635,24 @@ public static class ModAutoPick
 				}
 
 				isBusy = true;
-				if (now - lastPickTime < 180)
+				bool coldPick = ModTeleport.IsColdPlanetAntiCheckActive();
+				if (coldPick && ModTeleport.isWaitingSettle && !TileMap.tileTypeAt(me.cx, me.cy, 2))
+				{
+					me.statusMe = 1;
+					me.delayFall = 0;
+					me.cvx = 0;
+					me.cvy = 0;
+				}
+				int pickInterval = (coldPick && ModTeleport.isWaitingSettle)
+					? 135
+					: ((closest.itemMapID == lastPickedItemMapId && currentItemRetryCount >= 1) ? 300 : 180);
+				if (now - lastPickTime < pickInterval)
 				{
 					return;
 				}
 
-				bool canPickInPlace = dx <= 6 && dy <= 8 && (closest.itemMapID != lastPickedItemMapId || currentItemRetryCount < 1);
+				int inPlaceTolY = (coldPick && TileMap.tileTypeAt(pickX, pickY, 2)) ? 2 : 8;
+				bool canPickInPlace = dx <= 6 && dy <= inPlaceTolY && (closest.itemMapID != lastPickedItemMapId || currentItemRetryCount < 1);
 				if (canPickInPlace)
 				{
 					if (ModTeleport.IsWaitingServerSyncForAttack())
@@ -684,10 +696,10 @@ public static class ModAutoPick
 				}
 				else
 				{
-					bool wasAlreadyThere = Res.abs(me.cx - pickX) <= 12 && Res.abs(me.cy - pickY) <= 16;
+					bool wasAlreadyThere = Res.abs(me.cx - pickX) <= 12 && Res.abs(me.cy - pickY) <= (coldPick ? 2 : 16);
 					if (ModTeleport.MoveSteppedTo(pickX, pickY))
 					{
-						if (wasAlreadyThere && currentItemRetryCount >= 2)
+						if (wasAlreadyThere && (!coldPick ? (currentItemRetryCount >= 2) : (currentItemRetryCount == 3)))
 						{
 							ModTeleport.SendSingleCharMove(pickX, pickY);
 						}
@@ -706,6 +718,15 @@ public static class ModAutoPick
 					{
 						ModTanSat.lastTeleportTime = 0;
 						currentItemRetryCount--;
+						if (ModTeleport.IsColdStepTimedOut())
+						{
+							ignoredItemUntil[closest.itemMapID] = now + 10000L;
+							lastPickedItemMapId = -1;
+							currentItemRetryCount = 0;
+							ModTeleport.ResetColdStepTracking();
+							isBusy = false;
+							return;
+						}
 					}
 				}
 			}

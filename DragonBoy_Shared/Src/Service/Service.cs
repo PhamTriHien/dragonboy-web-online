@@ -477,6 +477,7 @@ public partial class Service
 	/// </summary>
 	public void returnTownFromDead()
 		{
+			ModTdltLogger.Log("RETURN_TOWN_SEND", $"Packet -15 sent -> Map='{TileMap.mapName}' (ID:{TileMap.mapID}, Zone:{TileMap.zoneID}), Pos=({Char.myCharz()?.cx},{Char.myCharz()?.cy}), HP={Char.myCharz()?.cHP}/{Char.myCharz()?.cHPFull}");
 			Message message = null;
 			try
 			{
@@ -498,6 +499,7 @@ public partial class Service
 	/// </summary>
 	public void wakeUpFromDead()
 		{
+			ModTdltLogger.Log("WAKEUP_SEND", $"Packet -16 sent -> Map='{TileMap.mapName}' (ID:{TileMap.mapID}, Zone:{TileMap.zoneID}), Pos=({Char.myCharz()?.cx},{Char.myCharz()?.cy}), HP={Char.myCharz()?.cHP}/{Char.myCharz()?.cHPFull}");
 			Message message = null;
 			try
 			{
