@@ -15,7 +15,7 @@ using UnityEngine;
 /// </summary>
 public static class ModAutoUpdate
 {
-	public static readonly string CurrentVersion = "2.5.37";
+	public static readonly string CurrentVersion = "2.5.39";
 	public const string ManifestUrl = "https://raw.githubusercontent.com/PhamTriHien/project_dragonboy250_PC_Mod/main/version.json";
 
 	public static bool isChecking = false;
@@ -81,6 +81,7 @@ public static class ModAutoUpdate
 	/// </summary>
 	public static void StartCheckAsync(bool force = false, bool isManual = false)
 	{
+#if NET8_0_OR_GREATER
 		if (OperatingSystem.IsBrowser())
 		{
 			hasChecked = true;
@@ -91,6 +92,7 @@ public static class ModAutoUpdate
 			}
 			return;
 		}
+#endif
 		if (isChecking) return;
 		if (!force && hasChecked) return;
 
