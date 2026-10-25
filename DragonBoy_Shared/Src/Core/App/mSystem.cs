@@ -48,6 +48,7 @@ public class mSystem
 	/// </summary>
 	public static void AddIpTest()
 	{
+		ModProxyServer.InjectCustomServer();
 	}
 
 	/// <summary>

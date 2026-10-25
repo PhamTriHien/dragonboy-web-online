@@ -12,6 +12,10 @@ public partial class Panel : IActionListener, IChatable
 	/// </summary>
 	public void perform(int idAction, object p)
 			{
+				if (ModInventoryExt.PerformPanelAction(idAction, p))
+				{
+					return;
+				}
 				if (idAction == 9999)
 				{
 					TopInfo topInfo = (TopInfo)p;

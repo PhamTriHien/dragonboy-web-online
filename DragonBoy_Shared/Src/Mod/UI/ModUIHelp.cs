@@ -145,7 +145,7 @@ public static class ModUIHelp
 		/// <summary>
 		/// Thực thi phương thức nghiệp vụ CommandInfo.
 		/// </summary>
-		new CommandInfo("autofreeze", "autofreeze=ID khóa skill; autofreeze bỏ khóa", "Chat", 0x00e676),
+		new CommandInfo("autofreeze", "Bật/tắt đóng băng hồi chiêu; autofreeze=ID theo chiêu", "Chat", 0x00e676),
 		/// <summary>
 		/// Thực thi phương thức nghiệp vụ CommandInfo.
 		/// </summary>
@@ -192,6 +192,13 @@ public static class ModUIHelp
 		/// <summary>
 		/// Thực thi phương thức nghiệp vụ CommandInfo.
 		/// </summary>
+		new CommandInfo("set1 / set2 / xoaset", "Mặc nhanh Set Đồ 1 / Set Đồ 2 / Xóa Set", "Chat", 0x00e676),
+		new CommandInfo("xoanguoi / ttsp", "Xóa người chơi khác / Bật HUD Sư Phụ", "Chat", 0x29b6f6),
+		new CommandInfo("tusat / captcha", "Tự sát nhanh / Bật tắt Auto Giải Captcha", "Chat", 0xff9800),
+		new CommandInfo("Phím E / N / Z", "Tự đánh / Auto Nhặt / Bật tắt Cờ đen", "Phím", 0xffca28),
+		new CommandInfo("Phím C / F / T", "Dùng Capsule / Bông tai / Tự Động Luyện Tập", "Phím", 0xffca28),
+		new CommandInfo("Phím J / K / L", "Qua nhanh cổng Map Trái / Giữa / Phải", "Phím", 0xffca28),
+		new CommandInfo("Phím B / G / I / M / X", "Bạn bè / Giao dịch / Khóa mục tiêu / Khu / Menu Mod", "Phím", 0xffca28),
 		new CommandInfo("update", "Kiểm tra & Tải cập nhật mới (GitHub)", "Hệ thống", 0x00e676),
 	};
 
@@ -531,9 +538,21 @@ public static class ModUIHelp
 			}
 			else if (cmd.Equals("autofreeze"))
 			{
-				ModTanSat.lockedSkillTemplateId = -1;
+				ModTanSat.freezeSkillCooldown = !ModTanSat.freezeSkillCooldown;
 				ModConfig.SaveConfig();
-				GameScr.info1?.addInfo("Đã bỏ khóa skill cố định (dùng luân phiên).", 0);
+				GameScr.info1?.addInfo("Đóng băng hồi chiêu tất cả chiêu: " + (ModTanSat.freezeSkillCooldown ? "BẬT" : "TẮT"), 0);
+			}
+			else if (cmd.StartsWith("set1"))
+			{
+				ModInventoryExt.EquipSet(1);
+			}
+			else if (cmd.StartsWith("xoanguoi"))
+			{
+				ModGraphics.ToggleHideOtherPlayers();
+			}
+			else if (cmd.StartsWith("tusat"))
+			{
+				ModSelfKill.Toggle();
 			}
 			else if (cmd.Equals("autoitemhp"))
 			{

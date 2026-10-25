@@ -397,6 +397,9 @@ public static class ModMenu
 			ModAutoPet.Update();
 			ModAutoFusion.Update();
 			ModAutoNewAccount.Update();
+			ModInventoryExt.Update();
+			ModAutoCaptcha.Update();
+			ModSelfKill.Update();
 
 			if (!IsInGame())
 			{
@@ -535,7 +538,7 @@ public static class ModMenu
 			ModAutoPick.RunRealAutoPick();
 
 			// Tự động Tàn Sát (hoặc đóng băng hồi chiêu / buff hỗ trợ khi đánh tay)
-			if (!ModTanSat.autoTanSat && (ModTanSat.freezeSkillCooldown || ModTanSat.autoSupportSkills) && !me.isDie && me.cHP > 0)
+			if (!ModTanSat.autoTanSat && (ModTanSat.freezeSkillCooldown || ModTanSat.frozenSkillIds.Count > 0 || ModTanSat.autoSupportSkills) && !me.isDie && me.cHP > 0)
 			{
 				ModTanSat.UpdateSupportAndFreezeSkills(me, now);
 			}

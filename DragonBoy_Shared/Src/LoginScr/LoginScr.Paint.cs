@@ -62,5 +62,6 @@ public partial class LoginScr : mScreen, IActionListener
 		base.paint(g);
 		cmdBack.paint(g);
 		ModAutoUpdate.PaintLobbyUI(g);
+		ModProxyServer.PaintLobbyUI(g);
 	}
 }

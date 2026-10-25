@@ -348,6 +348,7 @@ public partial class Char : IMapObject
 	public void removeHuytSao()
 		{
 			huytSao = false;
+			if (me) ModMapEntityHUD.OnRemoveSelfHuytSao();
 		}
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ removeEffChar.

@@ -601,6 +601,10 @@ public static class ModUI
 						{
 							ModUINextMap.OnMouseScroll(wheel);
 						}
+						else if (selectedTab == 9)
+						{
+							ModUISetActivator.OnMouseScroll(wheel);
+						}
 					}
 				}
 
@@ -676,6 +680,10 @@ public static class ModUI
 				else if (selectedTab == 7)
 				{
 					ModUINextMap.UpdateDragScroll(px, py, detailX, detailY, detailW, detailH);
+				}
+				else if (selectedTab == 9)
+				{
+					ModUISetActivator.UpdateDragScroll(px, py, detailX, detailY, detailW, detailH);
 				}
 				else if (selectedTab == 5 && ModUIBackground.isOpen)
 				{

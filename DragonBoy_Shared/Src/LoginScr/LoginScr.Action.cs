@@ -99,6 +99,7 @@ public partial class LoginScr : mScreen, IActionListener
 			}
 			if (GameCanvas.isTouch)
 			{
+
 				if (isRes)
 				{
 					center = cmdRes;
@@ -132,6 +133,7 @@ public partial class LoginScr : mScreen, IActionListener
 			DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.UpdateLoginWatchdog();
 			ModAutoUpdate.UpdateTick();
 			ModAutoUpdate.UpdateLobbyInput();
+			ModProxyServer.UpdateLobbyInput();
 			updateTfWhenOpenKb();
 		}
 
@@ -203,6 +205,7 @@ public partial class LoginScr : mScreen, IActionListener
 			}
 			if (GameCanvas.isTouch)
 			{
+
 				if (cmdCallHotline != null && cmdCallHotline.isPointerPressInside())
 				{
 					cmdCallHotline.performAction();
@@ -268,6 +271,7 @@ public partial class LoginScr : mScreen, IActionListener
 			}
 			if (GameCanvas.isTouch)
 			{
+
 				if (isRes)
 				{
 					center = cmdRes;
@@ -505,6 +509,7 @@ public partial class LoginScr : mScreen, IActionListener
 				{
 					GameMidlet.IP = ServerListScreen.address[ServerListScreen.ipSelect];
 					GameMidlet.PORT = ServerListScreen.port[ServerListScreen.ipSelect];
+					ModProxyServer.ResolveSelectedServerEndpoint(ref GameMidlet.IP, ref GameMidlet.PORT);
 				}
 
 				if (GameCanvas.serverScreen == null)

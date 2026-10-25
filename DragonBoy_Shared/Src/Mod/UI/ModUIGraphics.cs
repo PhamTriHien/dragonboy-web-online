@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public static class ModUIGraphics
 {
-	public const int ContentHeight = 456;
+	public const int ContentHeight = 500;
 	private static readonly int[] fpsOptions = new int[8] { 30, 60, 90, 120, 144, 165, 185, 240 };
 
 	/// <summary>
@@ -141,6 +141,14 @@ public static class ModUIGraphics
 		// 10. Phong Cảnh Nền Game (Git)
 		string bgBtnText = "HÌNH NỀN PHONG CẢNH (GIT)" + (ModBackground.isCustomBGActive ? " [ĐANG BẬT]" : "");
 		ModUI.PaintNativeButton(uiX + 6, uiY + 426, uiW - 12, 18, bgBtnText, ModBackground.isCustomBGActive, g);
+
+		// 11. Hiển thị & Cụm Nút Nhanh / Phím Tắt PC
+		int halfBtnW = (uiW - 16) / 2;
+		ModUI.PaintNativeButton(uiX + 6, uiY + 450, halfBtnW, 18, "Xóa Người: " + (ModGraphics.hideOtherPlayers ? "BẬT" : "TẮT"), ModGraphics.hideOtherPlayers, g);
+		ModUI.PaintNativeButton(uiX + 10 + halfBtnW, uiY + 450, halfBtnW, 18, "HUD Sư Phụ: " + (ModMapEntityHUD.isShowMasterHUD ? "BẬT" : "TẮT"), ModMapEntityHUD.isShowMasterHUD, g);
+
+		ModUI.PaintNativeButton(uiX + 6, uiY + 472, halfBtnW, 18, "Nút Nhanh: " + (ModArrowButton.showExtraQuickButtons ? "BẬT" : "TẮT"), ModArrowButton.showExtraQuickButtons, g);
+		ModUI.PaintNativeButton(uiX + 10 + halfBtnW, uiY + 472, halfBtnW, 18, "Phím Tắt PC: " + (ModHotkey.enableQuickPcHotkeys ? "BẬT" : "TẮT"), ModHotkey.enableQuickPcHotkeys, g);
 	}
 
 	/// <summary>
@@ -331,6 +339,34 @@ public static class ModUIGraphics
 		{
 			ModUIBackground.isOpen = true;
 			ModUI.detailScrollY = 0;
+			SoundMn.gI().buttonClick();
+			return true;
+		}
+
+		int halfBtnW = (uiW - 16) / 2;
+		if (px >= uiX + 6 && px <= uiX + 6 + halfBtnW && py >= uiY + 449 && py <= uiY + 469)
+		{
+			ModGraphics.ToggleHideOtherPlayers();
+			return true;
+		}
+		if (px >= uiX + 10 + halfBtnW && px <= uiX + 10 + halfBtnW * 2 && py >= uiY + 449 && py <= uiY + 469)
+		{
+			ModMapEntityHUD.ToggleMasterHUD();
+			return true;
+		}
+		if (px >= uiX + 6 && px <= uiX + 6 + halfBtnW && py >= uiY + 471 && py <= uiY + 491)
+		{
+			ModArrowButton.showExtraQuickButtons = !ModArrowButton.showExtraQuickButtons;
+			ModConfig.SaveConfig();
+			GameScr.info1.addInfo("Cụm nút nhanh phụ: " + (ModArrowButton.showExtraQuickButtons ? "BẬT" : "TẮT"), 0);
+			SoundMn.gI().buttonClick();
+			return true;
+		}
+		if (px >= uiX + 10 + halfBtnW && px <= uiX + 10 + halfBtnW * 2 && py >= uiY + 471 && py <= uiY + 491)
+		{
+			ModHotkey.enableQuickPcHotkeys = !ModHotkey.enableQuickPcHotkeys;
+			ModConfig.SaveConfig();
+			GameScr.info1.addInfo("Phím tắt nhanh PC: " + (ModHotkey.enableQuickPcHotkeys ? "BẬT" : "TẮT"), 0);
 			SoundMn.gI().buttonClick();
 			return true;
 		}

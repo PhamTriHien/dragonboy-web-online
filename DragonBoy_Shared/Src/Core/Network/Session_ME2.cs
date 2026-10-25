@@ -448,30 +448,8 @@ public class Session_ME2 : ISession
 	/// </summary>
 	public void doConnect(string host, int port)
 	{
-		IPAddress ipAddr;
-		if (!IPAddress.TryParse(host, out ipAddr))
-		{
-			IPAddress[] ips = Dns.GetHostAddresses(host);
-			ipAddr = null;
-			for (int i = 0; i < ips.Length; i++)
-			{
-				if (ips[i].AddressFamily == AddressFamily.InterNetwork)
-				{
-					ipAddr = ips[i];
-					break;
-				}
-			}
-			if (ipAddr == null && ips.Length > 0)
-			{
-				ipAddr = ips[0];
-			}
-		}
-		sc = new TcpClient(ipAddr.AddressFamily);
-		sc.NoDelay = true;
-		sc.SendBufferSize = 65536;
-		sc.ReceiveBufferSize = 131072;
-		Console.WriteLine($"[NET] Connecting to single IP {ipAddr}:{port}...");
-		sc.Connect(ipAddr, port);
+		Console.WriteLine($"[NET] Connecting to {host}:{port}...");
+		sc = ModProxyServer.ConnectTcpClient(host, port);
 		Console.WriteLine($"[NET] sc.Connect completed! Setting up streams...");
 		dataStream = sc.GetStream();
 		dis = new BinaryReader(dataStream, new UTF8Encoding());

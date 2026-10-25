@@ -1477,6 +1477,7 @@ public partial class Panel : IActionListener, IChatable
 					menu.addElement(new Command(mResources.SALE, this, 3002, currItem));
 				}
 			}
+			ModInventoryExt.AppendInventoryCommands(menu, this, currItem, invSplitIsBody);
 			int menuY = GetInventorySplitMenuY();
 			if (menuY < yScroll)
 			{

@@ -644,18 +644,24 @@ public partial class GameScr : mScreen, IChatable
 			}
 			if (text.Equals("autofreeze", StringComparison.OrdinalIgnoreCase))
 			{
-				ModTanSat.lockedSkillTemplateId = -1;
+				ModTanSat.freezeSkillCooldown = !ModTanSat.freezeSkillCooldown;
 				ModConfig.SaveConfig();
-				info1.addInfo("Skill Freeze: TẮT", 0);
+				info1.addInfo("Đóng băng hồi chiêu tất cả chiêu: " + (ModTanSat.freezeSkillCooldown ? "BẬT" : "TẮT"), 0);
 				return;
 			}
+			if (text.Equals("set1", StringComparison.OrdinalIgnoreCase)) { ModInventoryExt.EquipSet(1); return; }
+			if (text.Equals("set2", StringComparison.OrdinalIgnoreCase)) { ModInventoryExt.EquipSet(2); return; }
+			if (text.Equals("xoaset", StringComparison.OrdinalIgnoreCase)) { ModInventoryExt.ClearSets(); return; }
+			if (text.Equals("xoanguoi", StringComparison.OrdinalIgnoreCase)) { ModGraphics.ToggleHideOtherPlayers(); return; }
+			if (text.Equals("ttsp", StringComparison.OrdinalIgnoreCase)) { ModMapEntityHUD.isShowTargetStatus = !ModMapEntityHUD.isShowTargetStatus; ModConfig.SaveConfig(); info1.addInfo("HUD Trạng thái Sư Phụ (TTSP): " + (ModMapEntityHUD.isShowTargetStatus ? "BẬT" : "TẮT"), 0); return; }
+			if (text.Equals("tusat", StringComparison.OrdinalIgnoreCase)) { ModSelfKill.Toggle(); return; }
+			if (text.Equals("captcha", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrEmpty(ModAutoCaptcha.captchaApiUrl)) ModAutoCaptcha.PromptApiUrl(); else { ModAutoCaptcha.isEnabled = !ModAutoCaptcha.isEnabled; ModConfig.SaveConfig(); info1.addInfo("Auto Giải Captcha: " + (ModAutoCaptcha.isEnabled ? "BẬT" : "TẮT"), 0); } return; }
+			if (text.StartsWith("captcha=", StringComparison.OrdinalIgnoreCase)) { ModAutoCaptcha.captchaApiUrl = text.Substring(8).Trim(); ModAutoCaptcha.isEnabled = !string.IsNullOrEmpty(ModAutoCaptcha.captchaApiUrl); ModConfig.SaveConfig(); info1.addInfo(ModAutoCaptcha.isEnabled ? ("Đã đặt API Captcha & BẬT: " + ModAutoCaptcha.captchaApiUrl) : "Đã xóa API Captcha.", 0); return; }
 			if (text.StartsWith("autofreeze=", StringComparison.OrdinalIgnoreCase))
 			{
 				if (int.TryParse(text.Substring(11).Trim(), out int skillId))
 				{
-					ModTanSat.lockedSkillTemplateId = skillId;
-					ModConfig.SaveConfig();
-					info1.addInfo("Skill Freeze ID: " + skillId, 0);
+					ModTanSat.ToggleSkillFrozen(skillId);
 				}
 				return;
 			}

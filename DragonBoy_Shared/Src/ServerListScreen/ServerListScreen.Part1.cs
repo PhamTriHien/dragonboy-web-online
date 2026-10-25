@@ -316,6 +316,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.UpdateLoginWatchdog();
 			ModAutoUpdate.UpdateTick();
 			ModAutoUpdate.UpdateLobbyInput();
+			ModProxyServer.UpdateLobbyInput();
 			base.update();
 			if (LoginScr.isUpdateAll && !LoginScr.isUpdateData && !LoginScr.isUpdateItem && !LoginScr.isUpdateMap && !LoginScr.isUpdateSkill)
 			{

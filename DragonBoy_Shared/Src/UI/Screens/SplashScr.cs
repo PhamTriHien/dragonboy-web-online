@@ -84,6 +84,7 @@ public class SplashScr : mScreen
 	/// </summary>
 	public static void loadIP()
 	{
+		ModProxyServer.InjectCustomServer();
 		int sv = Rms.loadRMSInt(ServerListScreen.RMS_svselect);
 		Res.err(">>>>>loadIP:  svselect == " + sv + "  clientType:" + mSystem.clientType);
 		if (sv >= 0 && (ServerListScreen.nameServer == null || sv < ServerListScreen.nameServer.Length))

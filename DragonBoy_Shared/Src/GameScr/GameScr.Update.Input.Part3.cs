@@ -176,7 +176,7 @@ public partial class GameScr : mScreen, IChatable
 					for (int j = 0; j < array[i].size(); j++)
 					{
 						IMapObject mapObject2 = (IMapObject)array[i].elementAt(j);
-						if (mapObject2.isInvisible())
+						if (mapObject2.isInvisible() || (mapObject2 is Char && ModGraphics.ShouldHideChar((Char)mapObject2)))
 						{
 							continue;
 						}

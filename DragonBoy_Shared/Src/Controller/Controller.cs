@@ -749,11 +749,12 @@ public partial class Controller : IMessageHandler
 					}
 					@char.addInfo(text9);
 
-					// Hook: Ăn đậu khi đệ tử xin
+					// Hook: Ăn đậu khi đệ tử xin & Đánh mồi khi đệ tử sủa
+					ModAutoPet.OnCharChatMap(@char, text9);
 					if (ModAutoHeal.autoFeedPetOnAsk && !string.IsNullOrEmpty(text9))
 					{
 						string lower = text9.ToLower();
-						if (lower.Contains("đậu") || lower.Contains("dau") || lower.Contains("sư phụ") || lower.Contains("su phu") || lower.Contains("cho con"))
+						if (!lower.Contains("không đánh") && !lower.Contains("khong danh") && (lower.Contains("đậu") || lower.Contains("dau") || lower.Contains("cho con") || lower.Contains("đói") || lower.Contains("doi")))
 						{
 							Char myPet = Char.myPetz();
 							bool isMyPet = Char.myCharz() != null && Char.myCharz().havePet && (@char.charID == -Char.myCharz().charID || (myPet != null && !string.IsNullOrEmpty(myPet.cName) && !string.IsNullOrEmpty(@char.cName) && @char.cName.EndsWith(myPet.cName)));
