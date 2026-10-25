@@ -62,6 +62,48 @@ public static class ModGraphics
 	public static readonly string[] fontSizeNames = new string[4] { "Chuẩn 60%", "Vừa 75%", "Lớn 90%", "Gốc 100%" };
 	public static readonly float[] fontSizeScales = new float[4] { 0.60f, 0.75f, 0.90f, 1.0f };
 
+	// Tốc độ hoạt ảnh game (nhân hệ số chu kỳ mô phỏng 50Hz gốc): 0: x1.0 Gốc .. 7: x5.0
+	public static int animSpeedIndex = 0;
+	public static readonly float[] animSpeedValues = new float[8] { 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f, 4.0f, 5.0f };
+	public static readonly string[] animSpeedNames = new string[8] { "x1.0 Gốc", "x1.25", "x1.5", "x2.0", "x2.5", "x3.0", "x4.0", "x5.0" };
+
+	public static float GetAnimSpeed()
+	{
+		if (animSpeedIndex >= 0 && animSpeedIndex < animSpeedValues.Length)
+		{
+			return animSpeedValues[animSpeedIndex];
+		}
+		return 1.0f;
+	}
+
+	public static void ApplyAnimSpeed()
+	{
+		try
+		{
+			float speed = GetAnimSpeed();
+			Time.timeScale = speed;
+			Time.fixedDeltaTime = 0.02f;
+			Time.maximumDeltaTime = (speed > 1.0f) ? (0.1f * speed) : 0.1f;
+		}
+		catch
+		{
+		}
+	}
+
+	public static void SetAnimSpeed(int index, bool save = true)
+	{
+		if (index < 0 || index >= animSpeedValues.Length)
+		{
+			index = 0;
+		}
+		animSpeedIndex = index;
+		ApplyAnimSpeed();
+		if (save)
+		{
+			ModConfig.SaveConfig();
+		}
+	}
+
 	private static int lastScreenWidth = 0;
 	private static int lastScreenHeight = 0;
 	private static bool lastFullscreen = false;
@@ -90,6 +132,7 @@ public static class ModGraphics
 				ApplyResolution(resolutionIndex);
 			}
 			ApplyBitDepth();
+			ApplyAnimSpeed();
 		}
 		catch
 		{

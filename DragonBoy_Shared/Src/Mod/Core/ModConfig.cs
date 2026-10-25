@@ -132,6 +132,7 @@ public static class ModConfig
 			sb.AppendLine("fontSizePreset=" + ModGraphics.fontSizeIndex);
 			sb.AppendLine("targetFps=" + ModFps.targetFps);
 			sb.AppendLine("isAutoFps=" + ModFps.isAutoFps);
+			sb.AppendLine("animSpeedIndex=" + ModGraphics.animSpeedIndex);
 			sb.AppendLine("isAfkLowCpu=" + ModGraphics.isAfkLowCpu);
 			sb.AppendLine("isAnalog=" + (GameScr.isAnalog == 1));
 
@@ -608,6 +609,12 @@ public static class ModConfig
 						break;
 					case "isAutoFps":
 						bool.TryParse(val, out ModFps.isAutoFps);
+						break;
+					case "animSpeedIndex":
+						if (int.TryParse(val, out int asi))
+						{
+							ModGraphics.SetAnimSpeed(asi, false);
+						}
 						break;
 					case "isAfkLowCpu":
 						bool.TryParse(val, out ModGraphics.isAfkLowCpu);

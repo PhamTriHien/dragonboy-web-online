@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public static class ModHotkey
 {
+	private static int _lastHotkeyFrame = -1;
+
 	/// <summary>
 	/// Cập nhật trạng thái logic của UpdateHotkeys theo chu kỳ khung hình.
 	/// </summary>
@@ -13,6 +15,15 @@ public static class ModHotkey
 	{
 		try
 		{
+			int curFrame = Time.frameCount;
+			if (curFrame > 0)
+			{
+				if (curFrame == _lastHotkeyFrame)
+				{
+					return;
+				}
+				_lastHotkeyFrame = curFrame;
+			}
 			// Phím F11 hoặc Alt + Enter: Bật / Tắt Toàn Màn Hình (Fullscreen) ở mọi nơi
 			if (Input.GetKeyDown(KeyCode.F11) || ((Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)) && Input.GetKeyDown(KeyCode.Return)))
 			{

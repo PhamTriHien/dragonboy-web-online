@@ -140,6 +140,7 @@ namespace DragonBoy_Web_Host
                 if (dtMs > 250) dtMs = 250;
 
                 Time.deltaTime = (float)(dtMs / 1000.0);
+                Time.frameCount++;
 
                 WebGraphicsBackend.UpdateDynamicViewport();
                 if (GameMidlet.gameCanvas != null)
@@ -149,15 +150,16 @@ namespace DragonBoy_Web_Host
 
                 EventPump.ProcessInput(global::Main.main);
 
-                _fixedAccumulatorMs += dtMs;
-                int maxSteps = 5;
-                while (_fixedAccumulatorMs >= 16.0 && maxSteps-- > 0)
+                double animScale = ModGraphics.GetAnimSpeed();
+                _fixedAccumulatorMs += dtMs * animScale;
+                int maxSteps = System.Math.Clamp((int)System.Math.Ceiling(5.0 * animScale), 5, 25);
+                while (_fixedAccumulatorMs >= 20.0 && maxSteps-- > 0)
                 {
                     global::Main.main.FixedUpdate();
                     WebInputBridge.ResetKeyDownFlags();
-                    _fixedAccumulatorMs -= 16.0;
+                    _fixedAccumulatorMs -= 20.0;
                 }
-                if (_fixedAccumulatorMs > 32.0) _fixedAccumulatorMs = 0;
+                if (_fixedAccumulatorMs > 40.0 * animScale) _fixedAccumulatorMs = 0;
 
                 global::Main.main.Update();
 
@@ -197,10 +199,11 @@ namespace DragonBoy_Web_Host
                 {
                     ModGraphics.UpdateResolutionWatcher();
                 }
+                Time.frameCount++;
                 EventPump.ProcessInput(global::Main.main);
                 global::Main.main.FixedUpdate();
                 WebInputBridge.ResetKeyDownFlags();
-                _fixedAccumulatorMs = System.Math.Max(-16.0, _fixedAccumulatorMs - 16.0);
+                _fixedAccumulatorMs = System.Math.Max(-20.0, _fixedAccumulatorMs - 20.0);
                 global::Main.main.Update();
                 WebInputBridge.EndFrameInputReset();
             }

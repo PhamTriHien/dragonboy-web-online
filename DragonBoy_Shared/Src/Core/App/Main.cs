@@ -86,6 +86,7 @@ public class Main : MonoBehaviour
 		Application.runInBackground = true; // DUY TRÌ GAME CHẠY LIÊN TỤC 24/7 KHI THU NHỎ HOẶC CHẠY DƯỚI NỀN
 		GameTabRegistry.EnsureTab(Application.CurrentTabId);
 		ModConfig.LoadConfig();
+		ModGraphics.ApplyAnimSpeed();
 		ModTdltLogger.InitSession();
 		ModFps.LoadFPS();
 		if (started)
@@ -150,8 +151,7 @@ public class Main : MonoBehaviour
 	/// </summary>
 	private void OnHideUnity(bool isGameShown)
 	{
-		// Luôn duy trì Time.timeScale = 1f để nhân vật tiếp tục di chuyển và nhận gói tin mạng
-		Time.timeScale = 1f;
+		Time.timeScale = ModGraphics.GetAnimSpeed();
 	}
 
 	/// <summary>
@@ -397,10 +397,16 @@ public class Main : MonoBehaviour
 	/// </summary>
 	public void Update()
 	{
-		if (Time.fixedDeltaTime != 0.02f)
+		float animSpeed = ModGraphics.GetAnimSpeed();
+		if (Time.timeScale != animSpeed)
+		{
+			Time.timeScale = animSpeed;
+		}
+		float maxDt = (animSpeed > 1f) ? (0.1f * animSpeed) : 0.1f;
+		if (Time.fixedDeltaTime != 0.02f || Time.maximumDeltaTime != maxDt)
 		{
 			Time.fixedDeltaTime = 0.02f;
-			Time.maximumDeltaTime = 0.1f;
+			Time.maximumDeltaTime = maxDt;
 		}
 	}
 
@@ -856,17 +862,37 @@ public class Main : MonoBehaviour
 		}
 	}
 
+	private double _activeSimAcc;
+	private double _bgSimAcc;
+
 	public static void HostStepActive(double frameTime, int subSteps, int virtualW, int virtualH)
 	{
 		if (main == null) return;
 		Application.IsActiveTab = true;
 		SyncVirtualSize(virtualW, virtualH);
 		Time.deltaTime = (float)frameTime;
+		Time.frameCount++;
 		if (_suppressInputFrames == 0)
 		{
 			EventPump.ProcessInput(main);
 		}
-		for (int i = 0; i < subSteps; i++)
+		double scale = ModGraphics.GetAnimSpeed();
+		if (frameTime > 0.0)
+		{
+			main._activeSimAcc += frameTime * scale;
+		}
+		int maxSteps = System.Math.Clamp((int)System.Math.Ceiling(5.0 * scale), 5, 25);
+		int scaledSteps = 0;
+		while (main._activeSimAcc >= 0.02 && scaledSteps < maxSteps)
+		{
+			main._activeSimAcc -= 0.02;
+			scaledSteps++;
+		}
+		if (scaledSteps == maxSteps)
+		{
+			main._activeSimAcc = 0.0;
+		}
+		for (int i = 0; i < scaledSteps; i++)
 		{
 			main.FixedUpdate();
 			main.Update();
@@ -875,11 +901,24 @@ public class Main : MonoBehaviour
 
 	public static void HostStepBackground(double frameTime, int subSteps, int virtualW, int virtualH)
 	{
-		if (main == null || subSteps <= 0) return;
+		if (main == null || frameTime <= 0.0) return;
 		Application.IsActiveTab = false;
 		SyncVirtualSize(virtualW, virtualH);
 		Time.deltaTime = (float)frameTime;
-		for (int i = 0; i < subSteps; i++)
+		double scale = ModGraphics.GetAnimSpeed();
+		main._bgSimAcc += frameTime * scale;
+		int maxSteps = System.Math.Clamp((int)System.Math.Ceiling(5.0 * scale), 5, 15);
+		int scaledSteps = 0;
+		while (main._bgSimAcc >= 0.02 && scaledSteps < maxSteps)
+		{
+			main._bgSimAcc -= 0.02;
+			scaledSteps++;
+		}
+		if (scaledSteps == maxSteps)
+		{
+			main._bgSimAcc = 0.0;
+		}
+		for (int i = 0; i < scaledSteps; i++)
 		{
 			main.BackgroundUpdate();
 			main.Update();

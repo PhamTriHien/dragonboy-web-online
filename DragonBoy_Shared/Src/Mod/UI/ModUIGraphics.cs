@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public static class ModUIGraphics
 {
+	public const int ContentHeight = 456;
 	private static readonly int[] fpsOptions = new int[8] { 30, 60, 90, 120, 144, 165, 185, 240 };
 
 	/// <summary>
@@ -92,41 +93,54 @@ public static class ModUIGraphics
 
 		mFont.tahoma_7_green2.drawString(g, "FPS: " + Main.realFPS + " | Màn: " + ModFps.GetDeviceMaxRefreshRate() + "Hz | Cửa sổ: " + Screen.width + "x" + Screen.height, uiX + uiW / 2, uiY + 233, mFont.CENTER);
 
-		// 6. Việt Hoá Server Data & Logo
-		mFont.tahoma_7_grey.drawString(g, "Việt Hoá:", uiX + 6, uiY + 252, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 62, uiY + 249, 38, 16, ModConfig.isTranslate ? "BẬT" : "TẮT", ModConfig.isTranslate, g);
+		// 6. Tốc độ hoạt ảnh game
+		int curAnimIdx = (ModGraphics.animSpeedIndex >= 0 && ModGraphics.animSpeedIndex < ModGraphics.animSpeedNames.Length) ? ModGraphics.animSpeedIndex : 0;
+		mFont.tahoma_7_grey.drawString(g, "Tốc độ hoạt ảnh game:", uiX + 6, uiY + 250, mFont.LEFT);
+		mFont.tahoma_7_green2.drawString(g, ModGraphics.animSpeedNames[curAnimIdx] + " (" + (int)(50f * ModGraphics.GetAnimSpeed() + 0.5f) + "Hz)", uiX + 122, uiY + 250, mFont.LEFT);
+		for (int a = 0; a < ModGraphics.animSpeedNames.Length; a++)
+		{
+			int col = a % 4;
+			int row = a / 4;
+			int ax = uiX + 5 + col * (rBtnW + 3);
+			int ay = uiY + 265 + row * 20;
+			ModUI.PaintNativeButton(ax, ay, rBtnW, 16, ModGraphics.animSpeedNames[a], curAnimIdx == a, g);
+		}
 
-		mFont.tahoma_7_grey.drawString(g, "Logo:", uiX + 108, uiY + 252, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 144, uiY + 249, 38, 16, ModLogo.isShowLogoInGame ? "BẬT" : "TẮT", ModLogo.isShowLogoInGame, g);
-		ModUI.PaintNativeButton(uiX + 186, uiY + 249, 60, 16, ModLogo.logoPosition == 0 ? "Góc Phải" : "Ở Giữa", ModLogo.isShowLogoInGame, g);
+		// 7. Việt Hoá Server Data & Logo
+		mFont.tahoma_7_grey.drawString(g, "Việt Hoá:", uiX + 6, uiY + 310, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 62, uiY + 307, 38, 16, ModConfig.isTranslate ? "BẬT" : "TẮT", ModConfig.isTranslate, g);
 
-		// 7. Menu HUB Nổi, Bàn phím ảo Analog & Treo Giảm CPU
-		mFont.tahoma_7_grey.drawString(g, "HUB Nổi:", uiX + 6, uiY + 274, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 54, uiY + 271, 34, 16, ModFloatingHUD.isShowFloatingHUD ? "BẬT" : "TẮT", ModFloatingHUD.isShowFloatingHUD, g);
+		mFont.tahoma_7_grey.drawString(g, "Logo:", uiX + 108, uiY + 310, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 144, uiY + 307, 38, 16, ModLogo.isShowLogoInGame ? "BẬT" : "TẮT", ModLogo.isShowLogoInGame, g);
+		ModUI.PaintNativeButton(uiX + 186, uiY + 307, 60, 16, ModLogo.logoPosition == 0 ? "Góc Phải" : "Ở Giữa", ModLogo.isShowLogoInGame, g);
 
-		mFont.tahoma_7_grey.drawString(g, "Analog:", uiX + 92, uiY + 274, mFont.LEFT);
-		ModUI.PaintNativeButton(uiX + 132, uiY + 271, 34, 16, (GameScr.isAnalog == 1) ? "BẬT" : "TẮT", GameScr.isAnalog == 1, g);
+		// 8. Menu HUB Nổi, Bàn phím ảo Analog & Treo Giảm CPU
+		mFont.tahoma_7_grey.drawString(g, "HUB Nổi:", uiX + 6, uiY + 332, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 54, uiY + 329, 34, 16, ModFloatingHUD.isShowFloatingHUD ? "BẬT" : "TẮT", ModFloatingHUD.isShowFloatingHUD, g);
 
-		ModUI.PaintNativeButton(uiX + 170, uiY + 271, 76, 16, "Giảm CPU: " + (ModGraphics.isAfkLowCpu ? "BẬT" : "TẮT"), ModGraphics.isAfkLowCpu, g);
+		mFont.tahoma_7_grey.drawString(g, "Analog:", uiX + 92, uiY + 332, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 132, uiY + 329, 34, 16, (GameScr.isAnalog == 1) ? "BẬT" : "TẮT", GameScr.isAnalog == 1, g);
 
-		// 8. Chủ Đề Font Chữ & Kích Thước Font Chữ
-		mFont.tahoma_7_grey.drawString(g, "Chủ đề Font chữ:", uiX + 6, uiY + 293, mFont.LEFT);
+		ModUI.PaintNativeButton(uiX + 170, uiY + 329, 76, 16, "Giảm CPU: " + (ModGraphics.isAfkLowCpu ? "BẬT" : "TẮT"), ModGraphics.isAfkLowCpu, g);
+
+		// 9. Chủ Đề Font Chữ & Kích Thước Font Chữ
+		mFont.tahoma_7_grey.drawString(g, "Chủ đề Font chữ:", uiX + 6, uiY + 351, mFont.LEFT);
 		for (int ft = 0; ft < ModGraphics.fontThemeNames.Length; ft++)
 		{
 			int ftx = uiX + 5 + ft * (rBtnW + 3);
-			ModUI.PaintNativeButton(ftx, uiY + 308, rBtnW, 16, ModGraphics.fontThemeNames[ft], ModGraphics.fontTheme == ft, g);
+			ModUI.PaintNativeButton(ftx, uiY + 366, rBtnW, 16, ModGraphics.fontThemeNames[ft], ModGraphics.fontTheme == ft, g);
 		}
 
-		mFont.tahoma_7_grey.drawString(g, "Kích thước Font chữ:", uiX + 6, uiY + 330, mFont.LEFT);
+		mFont.tahoma_7_grey.drawString(g, "Kích thước Font chữ:", uiX + 6, uiY + 388, mFont.LEFT);
 		for (int fs = 0; fs < ModGraphics.fontSizeNames.Length; fs++)
 		{
 			int fsx = uiX + 5 + fs * (rBtnW + 3);
-			ModUI.PaintNativeButton(fsx, uiY + 345, rBtnW, 16, ModGraphics.fontSizeNames[fs], ModGraphics.fontSizeIndex == fs, g);
+			ModUI.PaintNativeButton(fsx, uiY + 403, rBtnW, 16, ModGraphics.fontSizeNames[fs], ModGraphics.fontSizeIndex == fs, g);
 		}
 
-		// 9. Phong Cảnh Nền Game (Git)
+		// 10. Phong Cảnh Nền Game (Git)
 		string bgBtnText = "HÌNH NỀN PHONG CẢNH (GIT)" + (ModBackground.isCustomBGActive ? " [ĐANG BẬT]" : "");
-		ModUI.PaintNativeButton(uiX + 6, uiY + 368, uiW - 12, 18, bgBtnText, ModBackground.isCustomBGActive, g);
+		ModUI.PaintNativeButton(uiX + 6, uiY + 426, uiW - 12, 18, bgBtnText, ModBackground.isCustomBGActive, g);
 	}
 
 	/// <summary>
@@ -211,8 +225,24 @@ public static class ModUIGraphics
 			}
 		}
 
+		// 6b. Chọn Tốc Độ Hoạt Ảnh Game
+		for (int a = 0; a < ModGraphics.animSpeedNames.Length; a++)
+		{
+			int col = a % 4;
+			int row = a / 4;
+			int ax = uiX + 5 + col * (rBtnW + 3);
+			int ay = uiY + 265 + row * 20;
+			if (px >= ax && px <= ax + rBtnW && py >= ay && py <= ay + 18)
+			{
+				ModGraphics.SetAnimSpeed(a);
+				GameScr.info1?.addInfo("Tốc độ hoạt ảnh game: " + ModGraphics.animSpeedNames[a], 0);
+				SoundMn.gI().buttonClick();
+				return true;
+			}
+		}
+
 		// 7. Bật / Tắt Việt Hoá Server Data
-		if (px >= uiX + 62 && px <= uiX + 100 && py >= uiY + 248 && py <= uiY + 266)
+		if (px >= uiX + 62 && px <= uiX + 100 && py >= uiY + 306 && py <= uiY + 324)
 		{
 			ModConfig.isTranslate = !ModConfig.isTranslate;
 			ModConfig.SaveConfig();
@@ -223,7 +253,7 @@ public static class ModUIGraphics
 		}
 
 		// 8. Bật / Tắt Logo TriHienKun trong game
-		if (px >= uiX + 144 && px <= uiX + 182 && py >= uiY + 248 && py <= uiY + 266)
+		if (px >= uiX + 144 && px <= uiX + 182 && py >= uiY + 306 && py <= uiY + 324)
 		{
 			ModLogo.isShowLogoInGame = !ModLogo.isShowLogoInGame;
 			ModConfig.SaveConfig();
@@ -232,7 +262,7 @@ public static class ModUIGraphics
 		}
 
 		// 9. Vị trí Logo (Góc Phải / Ở Giữa)
-		if (px >= uiX + 186 && px <= uiX + 246 && py >= uiY + 248 && py <= uiY + 266)
+		if (px >= uiX + 186 && px <= uiX + 246 && py >= uiY + 306 && py <= uiY + 324)
 		{
 			ModLogo.logoPosition = (ModLogo.logoPosition == 0) ? 1 : 0;
 			ModConfig.SaveConfig();
@@ -242,7 +272,7 @@ public static class ModUIGraphics
 		}
 
 		// 10. Bật / Tắt Menu HUB Nổi
-		if (px >= uiX + 54 && px <= uiX + 88 && py >= uiY + 270 && py <= uiY + 288)
+		if (px >= uiX + 54 && px <= uiX + 88 && py >= uiY + 328 && py <= uiY + 346)
 		{
 			ModFloatingHUD.isShowFloatingHUD = !ModFloatingHUD.isShowFloatingHUD;
 			ModConfig.SaveConfig();
@@ -252,7 +282,7 @@ public static class ModUIGraphics
 		}
 
 		// 11. Bật / Tắt Bàn Phím Ảo & Analog
-		if (px >= uiX + 132 && px <= uiX + 166 && py >= uiY + 270 && py <= uiY + 288)
+		if (px >= uiX + 132 && px <= uiX + 166 && py >= uiY + 328 && py <= uiY + 346)
 		{
 			GameScr.isAnalog = (GameScr.isAnalog == 1) ? 0 : 1;
 			GameScr.setSkillBarPosition();
@@ -264,7 +294,7 @@ public static class ModUIGraphics
 		}
 
 		// 11b. Bật / Tắt Treo Giảm CPU
-		if (px >= uiX + 170 && px <= uiX + 246 && py >= uiY + 270 && py <= uiY + 288)
+		if (px >= uiX + 170 && px <= uiX + 246 && py >= uiY + 328 && py <= uiY + 346)
 		{
 			ModGraphics.ToggleAfkLowCpu();
 			return true;
@@ -274,7 +304,7 @@ public static class ModUIGraphics
 		for (int ft = 0; ft < ModGraphics.fontThemeNames.Length; ft++)
 		{
 			int ftx = uiX + 5 + ft * (rBtnW + 3);
-			if (px >= ftx && px <= ftx + rBtnW && py >= uiY + 307 && py <= uiY + 325)
+			if (px >= ftx && px <= ftx + rBtnW && py >= uiY + 365 && py <= uiY + 383)
 			{
 				ModGraphics.SetFontTheme(ft);
 				GameScr.info1.addInfo("Font chữ: " + ModGraphics.fontThemeNames[ft], 0);
@@ -287,7 +317,7 @@ public static class ModUIGraphics
 		for (int fs = 0; fs < ModGraphics.fontSizeNames.Length; fs++)
 		{
 			int fsx = uiX + 5 + fs * (rBtnW + 3);
-			if (px >= fsx && px <= fsx + rBtnW && py >= uiY + 344 && py <= uiY + 362)
+			if (px >= fsx && px <= fsx + rBtnW && py >= uiY + 402 && py <= uiY + 420)
 			{
 				ModGraphics.SetFontSize(fs);
 				GameScr.info1.addInfo("Cỡ chữ: " + ModGraphics.fontSizeNames[fs], 0);
@@ -297,7 +327,7 @@ public static class ModUIGraphics
 		}
 
 		// 14. Mở Giao diện Hình Nền Phong Cảnh
-		if (px >= uiX + 6 && px <= uiX + uiW - 6 && py >= uiY + 367 && py <= uiY + 388)
+		if (px >= uiX + 6 && px <= uiX + uiW - 6 && py >= uiY + 425 && py <= uiY + 446)
 		{
 			ModUIBackground.isOpen = true;
 			ModUI.detailScrollY = 0;

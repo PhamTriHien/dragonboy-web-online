@@ -32,6 +32,7 @@ namespace UnityEngine
         public static float fixedDeltaTime { get; set; } = 0.02f;
         public static float maximumDeltaTime { get; set; } = 0.1f;
         public static float timeScale { get; set; } = 1.0f;
+        public static int frameCount { get; set; } = 1;
     }
 
     /// <summary>

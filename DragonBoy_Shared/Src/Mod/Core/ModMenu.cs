@@ -242,6 +242,7 @@ public static class ModMenu
 	#region Core State & Lifecycle
 
 	private static bool inited = false;
+	private static int _lastUiInputFrame = -1;
 	private static long mapChangeWatchdogTime = 0;
 	public static bool modMenuOpen = false;
 	private static Command[] cmds;
@@ -372,13 +373,17 @@ public static class ModMenu
 				}
 
 				ModHotkey.UpdateHotkeys();
-				ModUI.HandleTap();
-				GameTabStatus.RefreshAllTabs();
-
-				if (GameCanvas.isPointerJustRelease && ModLogo.IsPointerInsideLogo(GameCanvas.px, GameCanvas.py))
+				int curFrame = Time.frameCount;
+				if (curFrame <= 0 || curFrame != _lastUiInputFrame)
 				{
-					OpenMenu();
+					_lastUiInputFrame = curFrame;
+					ModUI.HandleTap();
+					if (GameCanvas.isPointerJustRelease && ModLogo.IsPointerInsideLogo(GameCanvas.px, GameCanvas.py))
+					{
+						OpenMenu();
+					}
 				}
+				GameTabStatus.RefreshAllTabs();
 			}
 
 			// Tự động kết nối lại & đăng nhập lại khi mất kết nối mạng

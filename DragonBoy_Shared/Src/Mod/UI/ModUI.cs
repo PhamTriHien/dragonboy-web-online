@@ -419,6 +419,9 @@ public static class ModUI
 			bool useDetailScroll = (selectedTab == 5 && !ModUIBackground.isOpen);
 			if (useDetailScroll)
 			{
+				int maxPaintDetailScroll = (ModUIGraphics.ContentHeight - (detailH - 4) > 0) ? (ModUIGraphics.ContentHeight - (detailH - 4)) : 0;
+				if (detailScrollY > maxPaintDetailScroll) detailScrollY = maxPaintDetailScroll;
+				if (detailScrollY < 0) detailScrollY = 0;
 				g.translate(0, -detailScrollY);
 			}
 
@@ -544,7 +547,7 @@ public static class ModUI
 					GameCanvas.clearAllPointerEvent();
 					return;
 				}
-				int maxDetailScroll = (400 - (detailH - 4) > 0) ? (400 - (detailH - 4)) : 0;
+				int maxDetailScroll = (ModUIGraphics.ContentHeight - (detailH - 4) > 0) ? (ModUIGraphics.ContentHeight - (detailH - 4)) : 0;
 
 				// Đọc trạng thái chuột & cảm ứng chuẩn hóa qua GameCanvas
 				bool isDown = GameCanvas.isPointerDown;
