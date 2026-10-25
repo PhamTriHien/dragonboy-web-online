@@ -420,6 +420,10 @@ namespace UnityEngine
                     }
                     Texture2D t2d = new Texture2D(img.Width, img.Height, allocatePixelBuffer: false);
                     t2d.RaylibTexture = Raylib_cs.Raylib.LoadTextureFromImage(img);
+                    Raylib_cs.Raylib.SetTextureWrap(t2d.RaylibTexture, Raylib_cs.TextureWrap.Clamp);
+                    Raylib_cs.TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? Raylib_cs.TextureFilter.Point : Raylib_cs.TextureFilter.Bilinear;
+                    Raylib_cs.Raylib.SetTextureFilter(t2d.RaylibTexture, desiredFilter);
+                    t2d.currentRaylibFilter = desiredFilter;
                     t2d.HasRaylibTexture = true;
                     t2d.IsSharedGpuTexture = true;
                     t2d._sourceFilePath = fullPath;

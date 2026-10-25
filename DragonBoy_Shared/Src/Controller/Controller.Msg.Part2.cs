@@ -440,7 +440,6 @@ public partial class Controller : IMessageHandler
 						string text2 = Rms.loadRMSString(Rms.RMS_ResVersion);
 						int num23 = ((text2 == null || !(text2 != string.Empty)) ? (-1) : int.Parse(text2));
 						Res.outz("4>>>GET_IMAGE_SOURCE: version>> " + text2 + " <> " + num23 + "!=" + num22);
-						Rms.saveRMSString(Rms.RMS_ResVersion, num22.ToString());
 
 						if (GameCanvas.currentScreen is SplashScr || GameCanvas.currentScreen == null)
 						{
@@ -508,6 +507,12 @@ public partial class Controller : IMessageHandler
 						SmallImage.loadBigRMS();
 						TileMap.tileDataCache.Clear();
 						TileMap.lastTileID = -1;
+						TileMap.imgWaterfall = null;
+						TileMap.imgTopWaterfall = null;
+						TileMap.imgWaterflow = null;
+						TileMap.imgWaterlowN = null;
+						TileMap.imgWaterlowN2 = null;
+						TileMap.loadTileImage();
 						GameCanvas.bgDataCache.Clear();
 						TileMap.lastBgID = -1;
 						mSystem.gcc();

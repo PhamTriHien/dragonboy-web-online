@@ -88,9 +88,14 @@ public partial class GameScr : mScreen, IChatable
 		{
 			gssy = 0;
 		}
-		if (gssye > TileMap.tmh - 1)
+		if (gssxe > TileMap.tmw)
 		{
-			gssye = TileMap.tmh - 1;
+			gssxe = TileMap.tmw;
+		}
+		int maxGssye = (((TileMap.tmh - 1) * TileMap.size < gH) ? TileMap.tmh : (TileMap.tmh - 1));
+		if (gssye > maxGssye)
+		{
+			gssye = maxGssye;
 		}
 		TileMap.countx = (gssxe - gssx) * 4;
 		if (TileMap.countx > TileMap.tmw)
@@ -208,9 +213,14 @@ public partial class GameScr : mScreen, IChatable
 		{
 			gssy = 0;
 		}
-		if (gssye > TileMap.tmh - 1)
+		if (gssxe > TileMap.tmw)
 		{
-			gssye = TileMap.tmh - 1;
+			gssxe = TileMap.tmw;
+		}
+		int maxGssye = (((TileMap.tmh - 1) * TileMap.size < gH) ? TileMap.tmh : (TileMap.tmh - 1));
+		if (gssye > maxGssye)
+		{
+			gssye = maxGssye;
 		}
 		TileMap.gssx = (Char.myCharz().cx - 2 * gW) / TileMap.size;
 		if (TileMap.gssx < 0)

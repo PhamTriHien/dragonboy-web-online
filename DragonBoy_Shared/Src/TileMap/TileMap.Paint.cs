@@ -14,17 +14,14 @@ public partial class TileMap
 		{
 			if (imgTile.Length == 1)
 			{
-				if (imgTile[0] != null)
+				if (imgTile[0] != null && frame >= 0)
 				{
 					g.drawRegion(imgTile[0], 0, frame * size, size, size, 0, indexX * size, indexY * size, 0);
 				}
 			}
-			else
+			else if (frame >= 0 && frame < imgTile.Length && imgTile[frame] != null)
 			{
-				if (frame >= 0 && frame < imgTile.Length && imgTile[frame] != null)
-				{
-					g.drawImage(imgTile[frame], indexX * size, indexY * size, 0);
-				}
+				g.drawImage(imgTile[frame], indexX * size, indexY * size, 0);
 			}
 		}
 	}
@@ -38,24 +35,14 @@ public partial class TileMap
 		{
 			if (imgTile.Length == 1)
 			{
-				if (imgTile[0] != null)
+				if (imgTile[0] != null && frame >= 0)
 				{
-					g.drawRegion(imgTile[0], 0, frame * size, w, h, 0, x, y, 0);
+					g.drawRegion(imgTile[0], 0, frame * w, w, w, 0, x, y, 0);
 				}
 			}
-			else
+			else if (frame >= 0 && frame < imgTile.Length && imgTile[frame] != null)
 			{
-				if (frame >= 0 && frame < imgTile.Length && imgTile[frame] != null)
-				{
-					if (w == size && h == size)
-					{
-						g.drawImage(imgTile[frame], x, y, 0);
-					}
-					else
-					{
-						g.drawRegion(imgTile[frame], 0, 0, w, h, 0, x, y, 0);
-					}
-				}
+				g.drawImage(imgTile[frame], x, y, 0);
 			}
 		}
 	}
@@ -138,26 +125,93 @@ public partial class TileMap
 		{
 			return;
 		}
-		try
+		int startX = System.Math.Max(0, GameScr.gssx);
+		int endX = System.Math.Min(tmw, GameScr.gssxe);
+		int startY = System.Math.Max(0, GameScr.gssy);
+		int endY = System.Math.Min(tmh, GameScr.gssye);
+		for (int j = startX; j < endX; j++)
 		{
-			int startX = System.Math.Max(0, GameScr.gssx);
-			int endX = System.Math.Min(tmw, GameScr.gssxe);
-			int startY = System.Math.Max(0, GameScr.gssy);
-			int endY = System.Math.Min(tmh, GameScr.gssye);
-			for (int j = startX; j < endX; j++)
+			for (int k = startY; k < endY; k++)
 			{
-				for (int k = startY; k < endY; k++)
+				if (j == 0 || j == tmw - 1)
 				{
-					int num = maps[k * tmw + j] - 1;
-					if (num != -1)
+					continue;
+				}
+				int num = maps[k * tmw + j] - 1;
+				int type = tileTypeAt(j, k);
+				if ((type & 0x100) == 256)
+				{
+					continue;
+				}
+				if ((type & 0x20) == 32)
+				{
+					if (imgWaterfall != null)
+					{
+						g.drawRegion(imgWaterfall, 0, 24 * (GameCanvas.gameTick % 8 >> 1), 24, 24, 0, j * size, k * size, 0);
+					}
+				}
+				else if ((type & 0x80) == 128)
+				{
+					if (imgTopWaterfall != null)
+					{
+						g.drawRegion(imgTopWaterfall, 0, 24 * (GameCanvas.gameTick % 8 >> 1), 24, 24, 0, j * size, k * size, 0);
+					}
+				}
+				else
+				{
+					if (tileID == 13 && num != -1)
+					{
+						continue;
+					}
+					if ((type & 0x10) == 16)
+					{
+						bx = j * size - GameScr.cmx;
+						dbx = bx - GameScr.gW2;
+						dfx = (size - 2) * dbx / size;
+						fx = dfx + GameScr.gW2;
+						paintTile(g, num, fx + GameScr.cmx, k * size, 24, 24);
+					}
+					else if ((type & 0x200) == 512)
+					{
+						if (num != -1)
+						{
+							paintTile(g, num, j * size, k * size, 24, 1);
+							paintTile(g, num, j * size, k * size + 1, 24, 24);
+						}
+					}
+					else if (num != -1)
 					{
 						paintTile(g, num, j, k);
 					}
 				}
 			}
 		}
-		catch
+		if (tmw > 1 && GameScr.cmx < 24)
 		{
+			for (int l = startY; l < endY; l++)
+			{
+				int num2 = maps[l * tmw + 1] - 1;
+				if (num2 != -1)
+				{
+					paintTile(g, num2, 0, l);
+				}
+			}
+		}
+		if (GameScr.cmx <= GameScr.cmxLim)
+		{
+			return;
+		}
+		int num3 = tmw - 2;
+		if (num3 >= 0)
+		{
+			for (int m = startY; m < endY; m++)
+			{
+				int num4 = maps[m * tmw + num3] - 1;
+				if (num4 != -1)
+				{
+					paintTile(g, num4, num3 + 1, m);
+				}
+			}
 		}
 	}
 
@@ -248,7 +302,7 @@ public partial class TileMap
 				}
 			}
 		}
-		if (GameScr.cmx < 24)
+		if (tmw > 1 && GameScr.cmx < 24)
 		{
 			for (int l = startY; l < endY; l++)
 			{
@@ -282,7 +336,7 @@ public partial class TileMap
 	/// </summary>
 	public static void paintOutTilemap(mGraphics g)
 	{
-		if (GameCanvas.lowGraphic || ModMenu.graphicsQuality == 3)
+		if (GameCanvas.lowGraphic || ModMenu.graphicsQuality == 3 || maps == null)
 		{
 			return;
 		}

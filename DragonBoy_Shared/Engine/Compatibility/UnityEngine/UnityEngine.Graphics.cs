@@ -533,6 +533,7 @@ namespace UnityEngine
                         Raylib.UnloadImage(img);
                         this.RaylibImage = default;
                         TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
+                        Raylib.SetTextureWrap(this.RaylibTexture, TextureWrap.Clamp);
                         Raylib.SetTextureFilter(this.RaylibTexture, desiredFilter);
                         this.currentRaylibFilter = desiredFilter;
                         this.HasRaylibTexture = true;
@@ -628,7 +629,7 @@ namespace UnityEngine
                         Raylib.UnloadImage(img);
                         this.RaylibImage = default;
                         TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
-                        Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
+                        Raylib.SetTextureWrap(RaylibTexture, TextureWrap.Clamp); Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
                         this.currentRaylibFilter = desiredFilter;
                         HasRaylibTexture = true;
                         IsSharedGpuTexture = true;
@@ -652,7 +653,7 @@ namespace UnityEngine
                         RaylibTexture = Raylib.LoadTextureFromImage(img);
                         Raylib.UnloadImage(img);
                         TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
-                        Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
+                        Raylib.SetTextureWrap(RaylibTexture, TextureWrap.Clamp); Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
                         this.currentRaylibFilter = desiredFilter;
                         HasRaylibTexture = true;
                         IsSharedGpuTexture = false;
@@ -789,7 +790,7 @@ namespace UnityEngine
                 }
                 RaylibTexture = Raylib.LoadTextureFromImage(img);
                 TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
-                Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
+                Raylib.SetTextureWrap(RaylibTexture, TextureWrap.Clamp); Raylib.SetTextureFilter(RaylibTexture, desiredFilter);
                 this.currentRaylibFilter = desiredFilter;
                 Raylib.UnloadImage(img);
                 HasRaylibTexture = true;

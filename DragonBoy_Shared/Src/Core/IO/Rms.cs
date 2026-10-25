@@ -250,17 +250,20 @@ public class Rms
 			{
 				string docsPath = GetiPhoneDocumentsPath();
 				string fullPath = docsPath + "/" + filename;
-				if (!File.Exists(fullPath) && Application.CurrentTabId > 1 && !IsPerTabIsolatedFile(filename))
+				if (!File.Exists(fullPath) && !IsPerTabIsolatedFile(filename))
 				{
 					string rootDir = Path.GetDirectoryName(docsPath);
 					if (!string.IsNullOrEmpty(rootDir))
 					{
-						string tab1Path = Path.Combine(rootDir, "tab1", filename);
-						if (File.Exists(tab1Path))
+						if (Application.CurrentTabId > 1)
 						{
-							fullPath = tab1Path;
+							string tab1Path = Path.Combine(rootDir, "tab1", filename);
+							if (File.Exists(tab1Path))
+							{
+								fullPath = tab1Path;
+							}
 						}
-						else
+						if (!File.Exists(fullPath))
 						{
 							string sharedRootPath = Path.Combine(rootDir, filename);
 							if (File.Exists(sharedRootPath))
