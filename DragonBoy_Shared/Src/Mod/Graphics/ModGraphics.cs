@@ -84,7 +84,7 @@ public static class ModGraphics
 			{
 				resolutionIndex = 0;
 			}
-			if (Application.CurrentTabId == 1)
+			if (Application.CurrentTabId == 1 || OperatingSystem.IsBrowser())
 			{
 				ApplyResolution(resolutionIndex);
 			}
@@ -123,7 +123,8 @@ public static class ModGraphics
 			resolutionIndex = index;
 			int w = resolutionList[index, 0];
 			int h = resolutionList[index, 1];
-			Screen.SetResolution(w, h, isFullscreen);
+			bool wantFs = isFullscreen && Application.CurrentTabId == 1;
+			Screen.SetResolution(w, h, wantFs);
 			ModConfig.SaveConfig();
 		}
 		catch

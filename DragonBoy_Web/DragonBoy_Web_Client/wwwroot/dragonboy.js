@@ -175,9 +175,12 @@
             return;
         }
         isMobileOrTablet = detectMobileOrTabletDevice();
+        const rect = canvas.getBoundingClientRect();
         const vv = window.visualViewport;
-        const cssW = Math.max(240, Math.floor((vv && vv.width > 0) ? vv.width : (window.innerWidth || document.documentElement.clientWidth || 1024)));
-        const cssH = Math.max(240, Math.floor((vv && vv.height > 0) ? vv.height : (window.innerHeight || document.documentElement.clientHeight || 600)));
+        const fallbackW = (vv && vv.width > 0) ? vv.width : (window.innerWidth || document.documentElement.clientWidth || 1024);
+        const fallbackH = (vv && vv.height > 0) ? vv.height : (window.innerHeight || document.documentElement.clientHeight || 600);
+        const cssW = Math.max(240, Math.round((rect && rect.width > 0) ? rect.width : fallbackW));
+        const cssH = Math.max(240, Math.round((rect && rect.height > 0) ? rect.height : fallbackH));
 
         isPortraitRotated = isMobileOrTablet && (cssW < cssH);
         const landscapeW = isPortraitRotated ? cssH : cssW;
@@ -367,6 +370,12 @@
     if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", updateCanvasViewportSize);
         window.visualViewport.addEventListener("scroll", updateCanvasViewportSize);
+    }
+    if (typeof ResizeObserver !== "undefined") {
+        try {
+            const canvasResizeObserver = new ResizeObserver(() => updateCanvasViewportSize());
+            canvasResizeObserver.observe(canvas);
+        } catch (_) { }
     }
     updateCanvasViewportSize();
 
@@ -651,6 +660,7 @@
                 }
             }
         } else if (d.type === "db_tab_activated") {
+            updateCanvasViewportSize();
             if (wasmExports) {
                 wasmExports.DragonBoy_Web_Host.Program.OnTabActivated(d.keepHubOpen || 0, d.bx ?? -1, d.by ?? -1);
             }

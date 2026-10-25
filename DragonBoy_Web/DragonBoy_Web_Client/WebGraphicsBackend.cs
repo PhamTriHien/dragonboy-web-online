@@ -51,7 +51,7 @@ namespace DragonBoy_Web_Host
         {
             int cw = WebInterop.GetCanvasWidth();
             int ch = WebInterop.GetCanvasHeight();
-            if (cw > 0 && ch > 0 && (_virtualW != cw || _virtualH != ch))
+            if (cw > 0 && ch > 0 && (_virtualW != cw || _virtualH != ch || Screen.customWidth != cw || Screen.customHeight != ch))
             {
                 _virtualW = cw;
                 _virtualH = ch;

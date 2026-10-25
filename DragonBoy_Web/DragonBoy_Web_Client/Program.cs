@@ -96,6 +96,7 @@ namespace DragonBoy_Web_Host
                 }
 
                 global::Main.main.Start();
+                WebGraphicsBackend.UpdateDynamicViewport();
 
                 if (Application.CurrentTabId > 1)
                 {
@@ -141,6 +142,10 @@ namespace DragonBoy_Web_Host
                 Time.deltaTime = (float)(dtMs / 1000.0);
 
                 WebGraphicsBackend.UpdateDynamicViewport();
+                if (GameMidlet.gameCanvas != null)
+                {
+                    ModGraphics.UpdateResolutionWatcher();
+                }
 
                 EventPump.ProcessInput(global::Main.main);
 
@@ -188,6 +193,10 @@ namespace DragonBoy_Web_Host
             try
             {
                 WebGraphicsBackend.UpdateDynamicViewport();
+                if (GameMidlet.gameCanvas != null)
+                {
+                    ModGraphics.UpdateResolutionWatcher();
+                }
                 EventPump.ProcessInput(global::Main.main);
                 global::Main.main.FixedUpdate();
                 WebInputBridge.ResetKeyDownFlags();
@@ -207,6 +216,11 @@ namespace DragonBoy_Web_Host
             if (!_isInitialized) return;
             try
             {
+                WebGraphicsBackend.UpdateDynamicViewport();
+                if (GameMidlet.gameCanvas != null)
+                {
+                    ModGraphics.UpdateResolutionWatcher();
+                }
                 WebStorageSync.RefreshSharedFilesFromLocalStorage();
                 GameTabStatus.RefreshAllTabs(force: true);
                 ModBackground.Update();

@@ -84,8 +84,19 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     ContentTypeProvider = contentTypeProvider,
-    ServeUnknownFileTypes = true
+    ServeUnknownFileTypes = true,
+    OnPrepareResponse = ctx =>
+    {
+        string name = ctx.File.Name;
+        if (name.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("blazor.boot.json", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
+        }
+    }
 });
+
+app.MapMethods("/healthz", new[] { "GET", "HEAD" }, () => Results.Ok("ok"));
 
 app.MapGet("/api/startup-pack", () => Results.Bytes(startupPackBytes, "application/octet-stream"));
 

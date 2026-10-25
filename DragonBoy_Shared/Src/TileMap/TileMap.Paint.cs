@@ -197,7 +197,7 @@ public partial class TileMap
 				}
 			}
 		}
-		if (GameScr.cmx <= GameScr.cmxLim)
+		if (GameScr.cmx <= GameScr.cmxLim && (tmw - 1) * size - GameScr.cmx >= GameCanvas.w)
 		{
 			return;
 		}
@@ -313,7 +313,7 @@ public partial class TileMap
 				}
 			}
 		}
-		if (GameScr.cmx <= GameScr.cmxLim)
+		if (GameScr.cmx <= GameScr.cmxLim && (tmw - 1) * size - GameScr.cmx >= GameCanvas.w)
 		{
 			return;
 		}

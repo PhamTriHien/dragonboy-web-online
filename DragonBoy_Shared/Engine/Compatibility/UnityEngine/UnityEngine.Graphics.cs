@@ -837,6 +837,10 @@ namespace UnityEngine
         {
             get
             {
+#if BROWSER
+                if (OperatingSystem.IsBrowser())
+                    return DragonBoy_Web_Host.WebGraphicsBackend.ScreenWidth;
+#endif
                 if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser())
                     return customWidth;
                 try { return Raylib.GetScreenWidth(); } catch { return customWidth; }
@@ -848,6 +852,10 @@ namespace UnityEngine
         {
             get
             {
+#if BROWSER
+                if (OperatingSystem.IsBrowser())
+                    return DragonBoy_Web_Host.WebGraphicsBackend.ScreenHeight;
+#endif
                 if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser())
                     return customHeight;
                 try { return Raylib.GetScreenHeight(); } catch { return customHeight; }
@@ -906,8 +914,8 @@ namespace UnityEngine
                 Resolution r = default;
                 if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser())
                 {
-                    r.width = customWidth;
-                    r.height = customHeight;
+                    r.width = width;
+                    r.height = height;
                     r.refreshRate = 60;
                     return r;
                 }
