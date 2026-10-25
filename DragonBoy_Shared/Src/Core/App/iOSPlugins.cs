@@ -10,6 +10,15 @@ public class iOSPlugins
 
 	public static string Myname;
 
+#if BROWSER
+	private static void _SMSsend(string tophone, string withtext, int n) { }
+	private static int _unpause() => 0;
+	private static int _checkRotation() => 0;
+	private static int _back() => 0;
+	private static int _Send() => 0;
+	private static void _purchaseItem(string itemID, string userName, string gameID) { }
+#else
+
 	[DllImport("__Internal")]
 	private static extern void _SMSsend(string tophone, string withtext, int n);
 
@@ -27,6 +36,7 @@ public class iOSPlugins
 
 	[DllImport("__Internal")]
 	private static extern void _purchaseItem(string itemID, string userName, string gameID);
+#endif
 
 	/// <summary>
 	/// Kiểm tra điều kiện hợp lệ hoặc trạng thái của Check.

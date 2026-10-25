@@ -11,5 +11,9 @@ services:
         value: Production
       - key: DOTNET_gcServer
         value: "0"
+      - key: DOTNET_GCDynamicAdaptationMode
+        value: "0"
+      - key: DOTNET_GCHighMemPercent
+        value: "75"
       - key: PORT
         value: "10000"

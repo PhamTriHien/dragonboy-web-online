@@ -36,6 +36,9 @@ public class Session_ME2 : ISession
 			lock (sendingMessage)
 			{
 				sendingMessage.Add(message);
+#if BROWSER
+				if (OperatingSystem.IsBrowser()) NotifyWsSendReady();
+#endif
 			}
 		}
 
@@ -237,7 +240,7 @@ public class Session_ME2 : ISession
 				{
 					b = readKey(b);
 				}
-				if (b == -32 || b == -66 || b == 11 || b == -67 || b == -74 || b == -87)
+				if (b == -32 || b == -66 || b == 11 || b == -67 || b == -74 || b == -87 || b == 66 || b == 12)
 				{
 					return readMessage2(b);
 				}
@@ -652,6 +655,11 @@ public class Session_ME2 : ISession
 				try { _wsCts.Cancel(); _wsCts.Dispose(); } catch { }
 				_wsCts = null;
 			}
+			if (_wsSendWake != null)
+			{
+				try { _wsSendWake.Writer.TryComplete(); } catch { }
+				_wsSendWake = null;
+			}
 			if (_ws != null)
 			{
 				try { _ws.Dispose(); } catch { }
@@ -690,6 +698,12 @@ public class Session_ME2 : ISession
 #if BROWSER
 	private static System.Net.WebSockets.ClientWebSocket _ws;
 	private static CancellationTokenSource _wsCts;
+	private static System.Threading.Channels.Channel<bool> _wsSendWake;
+
+	internal static void NotifyWsSendReady()
+	{
+		_wsSendWake?.Writer.TryWrite(true);
+	}
 
 	private sealed class WsStreamReader2
 	{
@@ -750,8 +764,15 @@ public class Session_ME2 : ISession
 		connected = true;
 		var cts = new CancellationTokenSource();
 		var ws = new System.Net.WebSockets.ClientWebSocket();
+		var wake = System.Threading.Channels.Channel.CreateBounded<bool>(new System.Threading.Channels.BoundedChannelOptions(1)
+		{
+			SingleReader = true,
+			SingleWriter = false,
+			FullMode = System.Threading.Channels.BoundedChannelFullMode.DropWrite
+		});
 		_wsCts = cts;
 		_ws = ws;
+		_wsSendWake = wake;
 		try
 		{
 			Uri relayUri = DragonBoy_Web_Host.WebNetworkConfig.BuildRelayUri(targetHost, targetPort);
@@ -763,7 +784,7 @@ public class Session_ME2 : ISession
 			timeConnected = currentTimeMillis();
 			connecting = false;
 			await WsSendRawMessageAsync(ws, new Message(-27), cts.Token);
-			_ = WsSendLoopAsync(ws, cts.Token);
+			_ = WsSendLoopAsync(ws, wake.Reader, cts.Token);
 			_ = WsReceiveLoopAsync(ws, cts.Token);
 			messageHandler?.onConnectOK(isMainSession);
 		}
@@ -812,17 +833,61 @@ public class Session_ME2 : ISession
 		await ws.SendAsync(new ArraySegment<byte>(packet), System.Net.WebSockets.WebSocketMessageType.Binary, true, ct);
 	}
 
-	private static async System.Threading.Tasks.Task WsSendLoopAsync(System.Net.WebSockets.ClientWebSocket ws, CancellationToken ct)
+	private static int SerializeMessageInto(Message m, byte[] dst, int dstOffset)
 	{
+		sbyte[] data = m.getData();
+		int len = data != null ? data.Length : 0;
+		dst[dstOffset] = (byte)(getKeyComplete ? writeKey(m.command) : m.command);
+		if (getKeyComplete)
+		{
+			dst[dstOffset + 1] = (byte)writeKey((sbyte)(len >> 8));
+			dst[dstOffset + 2] = (byte)writeKey((sbyte)(len & 0xFF));
+			for (int i = 0; i < len; i++)
+			{
+				dst[dstOffset + 3 + i] = (byte)writeKey(data[i]);
+			}
+		}
+		else
+		{
+			dst[dstOffset + 1] = (byte)(len >> 8);
+			dst[dstOffset + 2] = (byte)(len & 0xFF);
+			for (int i = 0; i < len; i++)
+			{
+				dst[dstOffset + 3 + i] = (byte)data[i];
+			}
+		}
+		sendByteCount += 5 + len;
+		return 3 + len;
+	}
+
+	private static async System.Threading.Tasks.Task WsSendLoopAsync(System.Net.WebSockets.ClientWebSocket ws, System.Threading.Channels.ChannelReader<bool> wakeReader, CancellationToken ct)
+	{
+		byte[] batchBuf = System.Buffers.ArrayPool<byte>.Shared.Rent(32768);
 		try
 		{
-			while (connected && !ct.IsCancellationRequested && ws.State == System.Net.WebSockets.WebSocketState.Open)
+			while (connected && !ct.IsCancellationRequested && _ws == ws && ws.State == System.Net.WebSockets.WebSocketState.Open)
 			{
-				if (!getKeyComplete)
+				bool hasPending = false;
+				if (getKeyComplete)
 				{
-					await System.Threading.Tasks.Task.Delay(5, ct);
+					lock (sender.sendingMessage)
+					{
+						hasPending = sender.sendingMessage.Count > 0;
+					}
+				}
+				if (!hasPending)
+				{
+					if (!await wakeReader.WaitToReadAsync(ct))
+					{
+						break;
+					}
+				}
+				while (wakeReader.TryRead(out _)) { }
+				if (!getKeyComplete || !connected || ct.IsCancellationRequested || ws.State != System.Net.WebSockets.WebSocketState.Open)
+				{
 					continue;
 				}
+				int batchLen = 0;
 				while (true)
 				{
 					Message m = null;
@@ -835,13 +900,37 @@ public class Session_ME2 : ISession
 						}
 					}
 					if (m == null) break;
-					await WsSendRawMessageAsync(ws, m, ct);
+					sbyte[] mData = m.getData();
+					int pktLen = 3 + (mData != null ? mData.Length : 0);
+					if (pktLen > batchBuf.Length)
+					{
+						if (batchLen > 0)
+						{
+							await ws.SendAsync(new ArraySegment<byte>(batchBuf, 0, batchLen), System.Net.WebSockets.WebSocketMessageType.Binary, true, ct);
+							batchLen = 0;
+						}
+						await WsSendRawMessageAsync(ws, m, ct);
+						continue;
+					}
+					if (batchLen + pktLen > batchBuf.Length)
+					{
+						await ws.SendAsync(new ArraySegment<byte>(batchBuf, 0, batchLen), System.Net.WebSockets.WebSocketMessageType.Binary, true, ct);
+						batchLen = 0;
+					}
+					batchLen += SerializeMessageInto(m, batchBuf, batchLen);
 				}
-				await System.Threading.Tasks.Task.Delay(5, ct);
+				if (batchLen > 0)
+				{
+					await ws.SendAsync(new ArraySegment<byte>(batchBuf, 0, batchLen), System.Net.WebSockets.WebSocketMessageType.Binary, true, ct);
+				}
 			}
 		}
 		catch (Exception)
 		{
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(batchBuf);
 		}
 	}
 
@@ -863,6 +952,7 @@ public class Session_ME2 : ISession
 			curR = 0;
 			curW = 0;
 			getKeyComplete = true;
+			NotifyWsSendReady();
 			GameMidlet.IP2 = message.reader().readUTF();
 			GameMidlet.PORT2 = message.reader().readInt();
 			GameMidlet.isConnect2 = message.reader().readByte() != 0;
@@ -883,7 +973,7 @@ public class Session_ME2 : ISession
 		{
 			b = readKey(b);
 		}
-		if (b == -32 || b == -66 || b == 11 || b == -67 || b == -74 || b == -87)
+		if (b == -32 || b == -66 || b == 11 || b == -67 || b == -74 || b == -87 || b == 66 || b == 12)
 		{
 			int num = readKey(await reader.ReadSByteAsync(ct)) + 128;
 			int num2 = readKey(await reader.ReadSByteAsync(ct)) + 128;

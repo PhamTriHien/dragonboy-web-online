@@ -100,11 +100,11 @@ namespace DragonBoy_Web_Host
 
                 if (Application.CurrentTabId > 1)
                 {
-                    WebInterop.SetWindowTitle($"DragonBoy (Tab {Application.CurrentTabId}) - Mod TriHienKun [Web]");
+                    WebInterop.SetWindowTitle($"DragonBoy (Tab {Application.CurrentTabId}) - Mod TriHienKun [Web .NET 10]");
                 }
                 else
                 {
-                    WebInterop.SetWindowTitle("DragonBoy - Mod TriHienKun [Web]");
+                    WebInterop.SetWindowTitle("DragonBoy - Mod TriHienKun [Web .NET 10]");
                 }
 
                 _isInitialized = true;
@@ -255,6 +255,26 @@ namespace DragonBoy_Web_Host
             try
             {
                 GameTabManager.StopTab(Application.CurrentTabId);
+            }
+            catch { }
+        }
+
+        [JSExport]
+        public static void OnBroadcastFileUpdated(string encodedLine)
+        {
+            try
+            {
+                WebStorageSync.ApplyExternalUpdate(encodedLine);
+            }
+            catch { }
+        }
+
+        [JSExport]
+        public static void OnBroadcastFileDeleted(string vfsPath)
+        {
+            try
+            {
+                WebStorageSync.ApplyExternalDelete(vfsPath);
             }
             catch { }
         }

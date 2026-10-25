@@ -1,23 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
-    <LangVersion>12</LangVersion>
+    <LangVersion>14</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <NoWarn>CS0169;CS0649;CS0414;CS0219;CS0168;CS0114;CS0675;CS0162;CS0108;CS8632;CS0618;SYSLIB0006;CA1416</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <RunAOTCompilation>false</RunAOTCompilation>
-    <WasmBuildNative>false</WasmBuildNative>
+    <WasmBuildNative>true</WasmBuildNative>
+    <WasmAllowUndefinedSymbols>true</WasmAllowUndefinedSymbols>
     <PublishTrimmed>false</PublishTrimmed>
-    <BlazorEnableCompression>false</BlazorEnableCompression>
+    <BlazorEnableCompression>true</BlazorEnableCompression>
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <OverrideHtmlAssetPlaceholders>false</OverrideHtmlAssetPlaceholders>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
     <PackageReference Include="Raylib-cs" Version="8.1.0" ExcludeAssets="buildTransitive" />
   </ItemGroup>
 

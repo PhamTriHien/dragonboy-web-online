@@ -25,7 +25,13 @@ public static class GameTabManager
 		}
 		GameTabRegistry.EnsureTab(tabId);
 		string stopPath = Path.Combine(GameTabRegistry.Root, "stop_tab_" + tabId);
-		if (File.Exists(stopPath)) File.Delete(stopPath);
+		if (File.Exists(stopPath))
+		{
+			File.Delete(stopPath);
+#if BROWSER
+			if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(stopPath);
+#endif
+		}
 		DefaultDesktopBridge.RequestSwitchTab(tabId, closeHub);
 	}
 
@@ -56,7 +62,11 @@ public static class GameTabManager
 			try
 			{
 				Directory.CreateDirectory(GameTabRegistry.Root);
-				File.WriteAllText(Path.Combine(GameTabRegistry.Root, "stop_tab_" + tabId), "stop");
+				string stopPath = Path.Combine(GameTabRegistry.Root, "stop_tab_" + tabId);
+				File.WriteAllText(stopPath, "stop");
+#if BROWSER
+				if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnTextFileSaved(stopPath, "stop");
+#endif
 				GameTabStatus.MarkTabStopped(tabId);
 				GameScr.info1?.addInfo("Đã dừng Tab " + tabId + "!", 0);
 			}
@@ -87,6 +97,9 @@ public static class GameTabManager
 		string path = Path.Combine(GameTabRegistry.Root, "stop_tab_" + CurrentTab);
 		if (!File.Exists(path)) return;
 		File.Delete(path);
+#if BROWSER
+		if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(path);
+#endif
 		StopTab(CurrentTab);
 	}
 
@@ -119,8 +132,8 @@ public static class GameTabManager
 				try
 				{
 					string windowTitle = (targetTab > 1)
-						? "DragonBoy (Tab " + targetTab + ") - Mod TriHienKun [.NET 8 Native]"
-						: "DragonBoy - Mod TriHienKun [.NET 8 Native]";
+						? "DragonBoy (Tab " + targetTab + ") - Mod TriHienKun [.NET 10 Native 2.2]"
+						: "DragonBoy - Mod TriHienKun [.NET 10 Native 2.2]";
 					Raylib_cs.Raylib.SetWindowTitle(windowTitle);
 				}
 				catch { }

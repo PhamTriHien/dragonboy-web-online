@@ -20,7 +20,7 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
     {
         public static int WindowWidth = 1024;
         public static int WindowHeight = 600;
-        public static string WindowTitle = "DragonBoy - Mod TriHienKun [.NET 8 Native]";
+        public static string WindowTitle = "DragonBoy - Mod TriHienKun [.NET 10 Native 2.2]";
 
         public static int VirtualWidth = 1024;
         public static int VirtualHeight = 600;
@@ -34,7 +34,7 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
         /// <summary>
         /// Khởi tạo và nạp dữ liệu cấu hình cho Init.
         /// </summary>
-        public static void Init(int width = 1024, int height = 600, string title = "DragonBoy - Mod TriHienKun [.NET 8 Native]")
+        public static void Init(int width = 1024, int height = 600, string title = "DragonBoy - Mod TriHienKun [.NET 10 Native 2.2]")
         {
             WindowWidth = width;
             WindowHeight = height;

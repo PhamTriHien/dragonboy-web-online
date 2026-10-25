@@ -42,12 +42,112 @@
     // Texture storage: texId -> { img, canvas, ctx, width, height, loaded, tintCache }
     const textures = new Map();
 
-    // Persisted VFS storage in memory + IndexedDB + localStorage
+    // Persisted VFS storage in memory + batched IndexedDB + localStorage + BroadcastChannel 0ms sync
     const persistedFiles = new Map();
+    const pendingIdbOps = new Map();
     const DB_NAME = "DragonBoyWebVFS";
     const DB_STORE = "files";
     const LS_PREFIX = "db_vfs:";
+    const instanceUid = `${initialTabId}_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+    const vfsChannel = (typeof BroadcastChannel !== "undefined") ? new BroadcastChannel("dragonboy_vfs_sync") : null;
     let idbInstance = null;
+    let idbFlushTimer = 0;
+    let lastHealthPingMs = Date.now();
+    const HEALTH_KEEPALIVE_INTERVAL_MS = 180000;
+
+    function pingRenderHealthKeepAlive(force) {
+        if (isEmbeddedTab) return;
+        const now = Date.now();
+        if (!force && now - lastHealthPingMs < HEALTH_KEEPALIVE_INTERVAL_MS) return;
+        lastHealthPingMs = now;
+        try {
+            fetch(`/healthz?ka=${now}`, {
+                method: "GET",
+                cache: "no-store",
+                keepalive: true
+            }).catch(() => { });
+        } catch (_) { }
+    }
+
+    function flushIndexedDB() {
+        if (idbFlushTimer) {
+            clearTimeout(idbFlushTimer);
+            idbFlushTimer = 0;
+        }
+        if (!idbInstance || pendingIdbOps.size === 0) return;
+        const ops = Array.from(pendingIdbOps.entries());
+        pendingIdbOps.clear();
+        try {
+            const tx = idbInstance.transaction(DB_STORE, "readwrite");
+            const store = tx.objectStore(DB_STORE);
+            for (let i = 0; i < ops.length; i++) {
+                const [k, val] = ops[i];
+                if (val === null) {
+                    store.delete(k);
+                } else {
+                    store.put(val, k);
+                }
+            }
+        } catch (_) { }
+    }
+
+    function scheduleIdbFlush() {
+        if (idbFlushTimer || !idbInstance) return;
+        idbFlushTimer = setTimeout(flushIndexedDB, 120);
+    }
+
+    if (vfsChannel) {
+        vfsChannel.onmessage = (ev) => {
+            const msg = ev && ev.data;
+            if (!msg || msg.sender === instanceUid || !msg.vfsPath) return;
+            if (msg.type === "put" && typeof msg.encodedLine === "string") {
+                persistedFiles.set(msg.vfsPath, msg.encodedLine);
+                if (wasmExports) {
+                    try {
+                        wasmExports.DragonBoy_Web_Host.Program.OnBroadcastFileUpdated(msg.encodedLine);
+                    } catch (_) { }
+                }
+            } else if (msg.type === "del") {
+                persistedFiles.delete(msg.vfsPath);
+                if (wasmExports) {
+                    try {
+                        wasmExports.DragonBoy_Web_Host.Program.OnBroadcastFileDeleted(msg.vfsPath);
+                    } catch (_) { }
+                }
+            }
+        };
+    }
+
+    window.addEventListener("storage", (ev) => {
+        if (!ev || !ev.key || !ev.key.startsWith(LS_PREFIX)) return;
+        const vfsPath = ev.key.substring(LS_PREFIX.length);
+        if (!isSharedVfsPath(vfsPath)) return;
+        if (ev.newValue) {
+            persistedFiles.set(vfsPath, ev.newValue);
+            if (wasmExports && !vfsChannel) {
+                try {
+                    wasmExports.DragonBoy_Web_Host.Program.OnBroadcastFileUpdated(ev.newValue);
+                } catch (_) { }
+            }
+        } else {
+            persistedFiles.delete(vfsPath);
+            if (wasmExports && !vfsChannel) {
+                try {
+                    wasmExports.DragonBoy_Web_Host.Program.OnBroadcastFileDeleted(vfsPath);
+                } catch (_) { }
+            }
+        }
+    });
+
+    window.addEventListener("pagehide", flushIndexedDB);
+    window.addEventListener("beforeunload", flushIndexedDB);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+            flushIndexedDB();
+        } else if (document.visibilityState === "visible") {
+            pingRenderHealthKeepAlive(false);
+        }
+    });
 
     function openIndexedDB() {
         return new Promise((resolve) => {
@@ -107,36 +207,50 @@
 
     function isSharedVfsPath(vfsPath) {
         return vfsPath === "/rms/tabs.xml" ||
+            vfsPath === "/rms/mod_config.ini" ||
             vfsPath.indexOf("/rms/tab_status_") === 0 ||
             vfsPath.indexOf("/rms/stop_tab_") === 0;
     }
 
     function writeToStorage(vfsPath, encodedLine) {
         persistedFiles.set(vfsPath, encodedLine);
+        const shared = isSharedVfsPath(vfsPath);
         try {
-            if (isSharedVfsPath(vfsPath) || encodedLine.length < 32768) {
+            if (shared || encodedLine.length < 32768) {
                 localStorage.setItem(LS_PREFIX + vfsPath, encodedLine);
             }
         } catch (_) { }
-        if (idbInstance) {
+        if (shared && vfsChannel) {
             try {
-                const tx = idbInstance.transaction(DB_STORE, "readwrite");
-                tx.objectStore(DB_STORE).put(encodedLine, vfsPath);
+                vfsChannel.postMessage({
+                    type: "put",
+                    vfsPath,
+                    encodedLine,
+                    sender: instanceUid
+                });
             } catch (_) { }
         }
+        pendingIdbOps.set(vfsPath, encodedLine);
+        scheduleIdbFlush();
     }
 
     function removeFromStorage(vfsPath) {
         persistedFiles.delete(vfsPath);
+        const shared = isSharedVfsPath(vfsPath);
         try {
             localStorage.removeItem(LS_PREFIX + vfsPath);
         } catch (_) { }
-        if (idbInstance) {
+        if (shared && vfsChannel) {
             try {
-                const tx = idbInstance.transaction(DB_STORE, "readwrite");
-                tx.objectStore(DB_STORE).delete(vfsPath);
+                vfsChannel.postMessage({
+                    type: "del",
+                    vfsPath,
+                    sender: instanceUid
+                });
             } catch (_) { }
         }
+        pendingIdbOps.set(vfsPath, null);
+        scheduleIdbFlush();
     }
 
     function utf8ToBase64(str) {
@@ -706,7 +820,7 @@
         }
         requestAnimationFrame(onRaf);
 
-        // Background Web Worker heartbeat so Auto-Play & Socket Keep-Alive never pause when browser tab is minimized
+        // Background Web Worker heartbeat so Auto-Play, Socket Keep-Alive & Render Anti-Sleep never pause when browser tab is minimized
         try {
             const workerBlob = new Blob([
                 "setInterval(function(){ postMessage(Date.now()); }, 25);"
@@ -717,8 +831,13 @@
                 if (now - lastRafTime >= 40 && wasmExports) {
                     wasmExports.DragonBoy_Web_Host.Program.OnBrowserFrame(now, 0);
                 }
+                pingRenderHealthKeepAlive(false);
             };
-        } catch (_) { }
+        } catch (_) {
+            if (!isEmbeddedTab) {
+                setInterval(() => pingRenderHealthKeepAlive(false), 60000);
+            }
+        }
     }
 
     window.DragonBoyWeb = {
@@ -1313,10 +1432,25 @@
                 try { await document.fonts.ready; } catch (_) { }
             }
             await Blazor.start();
-            const runtime = await window.getDotnetRuntime(0);
-            wasmExports = await runtime.getAssemblyExports("DragonBoy_Web_Client.dll");
+            const runtime = (window.Blazor && window.Blazor.runtime)
+                ? window.Blazor.runtime
+                : (typeof window.getDotnetRuntime === "function" ? await window.getDotnetRuntime(0) : null);
+            try {
+                wasmExports = await runtime.getAssemblyExports("DragonBoy_Web_Client.dll");
+            } catch (_) {
+                wasmExports = await runtime.getAssemblyExports("DragonBoy_Web_Client");
+            }
+            if (vfsChannel && wasmExports) {
+                try {
+                    const sharedInit = persistedFiles.get("/rms/tabs.xml");
+                    if (sharedInit) {
+                        wasmExports.DragonBoy_Web_Host.Program.OnBroadcastFileUpdated(sharedInit);
+                    }
+                } catch (_) { }
+            }
             setupInputListeners();
             startGameLoops();
+            pingRenderHealthKeepAlive(false);
         }
     };
 })();

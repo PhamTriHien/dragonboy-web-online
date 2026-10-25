@@ -166,7 +166,7 @@ public static class GameTabStatus
 		_lastDiskRead = now;
 
 #if BROWSER
-		if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.RefreshSharedFilesFromLocalStorage();
+		if (OperatingSystem.IsBrowser() && !DragonBoy_Web_Host.WebStorageSync.IsBroadcastActive) DragonBoy_Web_Host.WebStorageSync.RefreshSharedFilesFromLocalStorage();
 #endif
 
 		int curTab = Application.CurrentTabId;

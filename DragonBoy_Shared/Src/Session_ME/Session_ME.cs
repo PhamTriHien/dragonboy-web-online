@@ -36,6 +36,9 @@ public partial class Session_ME : ISession
 			{
 				sendingQueue.Enqueue(message);
 				sendEvent.Set();
+#if BROWSER
+				if (OperatingSystem.IsBrowser()) NotifyWsSendReady();
+#endif
 			}
 
 			/// <summary>

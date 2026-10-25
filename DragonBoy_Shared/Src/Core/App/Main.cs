@@ -225,9 +225,11 @@ public class Main : MonoBehaviour
 			Application.runInBackground = true;
 			try
 			{
+#if !NET8_0_OR_GREATER
 				System.Net.ServicePointManager.DefaultConnectionLimit = 512;
 				System.Net.ServicePointManager.Expect100Continue = false;
 				System.Net.ServicePointManager.UseNagleAlgorithm = false;
+#endif
 			}
 			catch (System.Exception)
 			{

@@ -214,8 +214,8 @@ namespace DragonBoy_Net8_Native.Engine.Platform
         public static string GetTabWindowTitle(int tabId)
         {
             return (tabId > 1)
-                ? $"DragonBoy (Tab {tabId}) - Mod TriHienKun [.NET 8 Native]"
-                : "DragonBoy - Mod TriHienKun [.NET 8 Native]";
+                ? $"DragonBoy (Tab {tabId}) - Mod TriHienKun [.NET 10 Native 2.2]"
+                : "DragonBoy - Mod TriHienKun [.NET 10 Native 2.2]";
         }
 
         public static void RequestSwitchTab(int tabId, bool closeHub)

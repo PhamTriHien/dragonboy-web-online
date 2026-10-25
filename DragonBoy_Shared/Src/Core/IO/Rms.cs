@@ -278,7 +278,17 @@ public class Rms
 					using (FileStream fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 					{
 						byte[] array = new byte[fileStream.Length];
-						fileStream.Read(array, 0, array.Length);
+#if NET8_0_OR_GREATER
+						fileStream.ReadExactly(array, 0, array.Length);
+#else
+						int offset = 0;
+						while (offset < array.Length)
+						{
+							int n = fileStream.Read(array, offset, array.Length - offset);
+							if (n <= 0) break;
+							offset += n;
+						}
+#endif
 						return ArrayCast.cast(array);
 					}
 				}
