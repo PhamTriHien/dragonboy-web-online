@@ -51,11 +51,65 @@ public partial class mFont
 			_drawString(g, st, x, y - yAdd, align);
 		}
 
+	private bool CanUseJavaBitmapFont()
+		{
+			return (mGraphics.zoomLevel == 1 || ModGraphics.IsJavaGraphics)
+				&& fImages != null
+				&& fImages.Length > 0
+				&& !string.IsNullOrEmpty(strFont)
+				&& EnsureJavaImageLoaded() != null;
+		}
+
+	private int DrawJavaGlyph(mGraphics g, char ch, int drawX, int drawY)
+		{
+			int idx = ResolveJavaGlyphIndex(ch);
+			int gx = fImages[idx][0];
+			int gy = fImages[idx][1];
+			int gw = fImages[idx][2];
+			int gh = fImages[idx][3];
+			Image sheet = EnsureJavaImageLoaded();
+			if (sheet != null && sheet.texture != null)
+			{
+				int sheetH = sheet.getHeight();
+				int sheetW = sheet.getWidth();
+				if (sheetH > 0 && gy + gh > sheetH)
+				{
+					gy -= sheetH;
+					gx = sheetW / 2;
+				}
+				g.drawRegion(sheet, gx, gy, gw, gh, 0, drawX, drawY, 20);
+			}
+			return gw + space;
+		}
+
 	/// <summary>
 	/// Thực hiện vẽ và hiển thị thành phần drawString lên canvas đồ họa.
 	/// </summary>
 	public void drawString(mGraphics g, string st, int x, int y, int align)
 		{
+			if (string.IsNullOrEmpty(st))
+			{
+				return;
+			}
+			if (CanUseJavaBitmapFont())
+			{
+				int length = st.Length;
+				int num = align switch
+				{
+					0 => x,
+					1 => x - getWidth(st),
+					_ => x - (getWidth(st) >> 1),
+				};
+				for (int i = 0; i < length; i++)
+				{
+					if (char.IsLowSurrogate(st[i]))
+					{
+						continue;
+					}
+					num += DrawJavaGlyph(g, st[i], num, y);
+				}
+				return;
+			}
 			setTypePaint(g, st, x, y, align, 0);
 		}
 
@@ -64,7 +118,14 @@ public partial class mFont
 	/// </summary>
 	public void drawStringBorder(mGraphics g, string st, int x, int y, int align)
 		{
-			setTypePaint(g, st, x, y, align, 0);
+			if (CanUseJavaBitmapFont())
+			{
+				drawString(g, st, x, y, align);
+			}
+			else
+			{
+				setTypePaint(g, st, x, y, align, 0);
+			}
 		}
 
 	/// <summary>
@@ -72,7 +133,14 @@ public partial class mFont
 	/// </summary>
 	public void drawStringBorder(mGraphics g, string st, int x, int y, int align, mFont font2)
 		{
-			drawStringBd(g, st, x, y, align, font2);
+			if (CanUseJavaBitmapFont())
+			{
+				drawString(g, st, x, y, align, font2);
+			}
+			else
+			{
+				drawStringBd(g, st, x, y, align, font2);
+			}
 		}
 
 	/// <summary>
@@ -97,6 +165,40 @@ public partial class mFont
 	/// </summary>
 	public void drawString(mGraphics g, string st, int x, int y, int align, mFont font)
 		{
+			if (string.IsNullOrEmpty(st))
+			{
+				return;
+			}
+			if (CanUseJavaBitmapFont())
+			{
+				mFont shadow = font;
+				if (shadow == bigNumber_black && strFont != null && strFont.Length <= 16 && number_gray != null)
+				{
+					shadow = number_gray;
+				}
+				bool useShadow = !GameCanvas.lowGraphic && shadow != null && shadow.CanUseJavaBitmapFont();
+				int length = st.Length;
+				int num = align switch
+				{
+					0 => x,
+					1 => x - getWidth(st),
+					_ => x - (getWidth(st) >> 1),
+				};
+				for (int i = 0; i < length; i++)
+				{
+					if (char.IsLowSurrogate(st[i]))
+					{
+						continue;
+					}
+					if (useShadow)
+					{
+						shadow.DrawJavaGlyph(g, st[i], num + 1, y);
+						shadow.DrawJavaGlyph(g, st[i], num, y + 1);
+					}
+					num += DrawJavaGlyph(g, st[i], num, y);
+				}
+				return;
+			}
 			if (font != null)
 			{
 				setTypePaint(g, st, x, y + 1, align, font.id);

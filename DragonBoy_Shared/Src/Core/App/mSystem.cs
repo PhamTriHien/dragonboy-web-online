@@ -585,6 +585,12 @@ public class mSystem
 
 	private static readonly MyHashTable hashFraImage = new MyHashTable();
 
+	public static void ClearImageCache()
+	{
+		hashFraImage.clear();
+		ImgByName.hashImagePath?.clear();
+	}
+
 	/// <summary>
 	/// Truy xuất và trả về dữ liệu của getFraImage.
 	/// </summary>

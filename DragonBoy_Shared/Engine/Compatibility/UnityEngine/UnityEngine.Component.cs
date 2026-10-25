@@ -232,6 +232,14 @@ namespace UnityEngine
                 return new Font { name = System.IO.Path.GetFileNameWithoutExtension(cleanPath) };
             }
 
+            string withoutZoom = withoutRes;
+            if (withoutZoom.StartsWith("x1/") || withoutZoom.StartsWith("x2/") ||
+                withoutZoom.StartsWith("x3/") || withoutZoom.StartsWith("x4/"))
+            {
+                withoutZoom = withoutZoom.Substring(3);
+            }
+            bool isJavaMode = ModGraphics.IsJavaGraphics || withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
+
             if (type == typeof(TextAsset))
             {
                 if (_tabTextAssetCache.TryGetValue(cleanPath, out var cachedTa))
@@ -249,7 +257,7 @@ namespace UnityEngine
             }
             else
             {
-                string cacheKey = cleanPath + "@" + mGraphics.zoomLevel;
+                string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
                 if (_tabTextureCache.TryGetValue(cacheKey, out var cachedTex) && cachedTex != null)
                 {
                     return cachedTex;
@@ -294,34 +302,49 @@ namespace UnityEngine
                 @"C:\ModNRO\DragonBoy250_Assets"
             };
 
-            string withoutZoom = withoutRes;
-            if (withoutZoom.StartsWith("x1/") || withoutZoom.StartsWith("x2/") ||
-                withoutZoom.StartsWith("x3/") || withoutZoom.StartsWith("x4/"))
-            {
-                withoutZoom = withoutZoom.Substring(3);
-            }
-
-            string[] subPaths = new string[]
-            {
-                "x2/" + withoutZoom,
-                cleanPath,
-                withoutRes,
-                "x2/" + withoutRes,
-                "x2/" + cleanPath,
-                withoutZoom,
-                "data/" + cleanPath,
-                "data/" + withoutRes,
-                "data/" + withoutZoom,
-                "x4/" + withoutRes,
-                "x3/" + withoutRes,
-                "x1/" + withoutRes,
-                "x4/" + cleanPath,
-                "x3/" + cleanPath,
-                "x1/" + cleanPath,
-                "x4/" + withoutZoom,
-                "x3/" + withoutZoom,
-                "x1/" + withoutZoom
-            };
+            string[] subPaths = isJavaMode
+                ? new string[]
+                {
+                    "x1/" + withoutZoom,
+                    "x1/" + withoutRes,
+                    "x1/" + cleanPath,
+                    cleanPath,
+                    withoutRes,
+                    "x2/" + withoutZoom,
+                    "x2/" + withoutRes,
+                    "x2/" + cleanPath,
+                    withoutZoom,
+                    "data/" + cleanPath,
+                    "data/" + withoutRes,
+                    "data/" + withoutZoom,
+                    "x3/" + withoutZoom,
+                    "x4/" + withoutZoom,
+                    "x3/" + withoutRes,
+                    "x4/" + withoutRes,
+                    "x3/" + cleanPath,
+                    "x4/" + cleanPath
+                }
+                : new string[]
+                {
+                    "x2/" + withoutZoom,
+                    cleanPath,
+                    withoutRes,
+                    "x2/" + withoutRes,
+                    "x2/" + cleanPath,
+                    withoutZoom,
+                    "data/" + cleanPath,
+                    "data/" + withoutRes,
+                    "data/" + withoutZoom,
+                    "x4/" + withoutRes,
+                    "x3/" + withoutRes,
+                    "x1/" + withoutRes,
+                    "x4/" + cleanPath,
+                    "x3/" + cleanPath,
+                    "x1/" + cleanPath,
+                    "x4/" + withoutZoom,
+                    "x3/" + withoutZoom,
+                    "x1/" + withoutZoom
+                };
 
             if (type == typeof(TextAsset))
             {
@@ -350,7 +373,7 @@ namespace UnityEngine
             }
             else
             {
-                string cacheKey = cleanPath + "@" + mGraphics.zoomLevel;
+                string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
                 foreach (var root in searchRoots)
                 {
                     if (!System.IO.Directory.Exists(root)) continue;
@@ -397,7 +420,14 @@ namespace UnityEngine
                     {
                         if (norm.Contains("/x1/") || norm.StartsWith("x1/"))
                         {
-                            UpscaleSmart2x(ref img);
+                            if (ModGraphics.IsJavaGraphics || norm.Contains("/myfont/"))
+                            {
+                                Raylib_cs.Raylib.ImageResizeNN(ref img, img.Width * 2, img.Height * 2);
+                            }
+                            else
+                            {
+                                UpscaleSmart2x(ref img);
+                            }
                         }
                         else if (norm.Contains("/x3/") || norm.StartsWith("x3/"))
                         {

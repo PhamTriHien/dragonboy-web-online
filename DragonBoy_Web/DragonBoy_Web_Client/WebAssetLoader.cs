@@ -135,25 +135,38 @@ namespace DragonBoy_Web_Host
                 return null;
             }
 
-            string cacheKey = cleanPath + "@" + mGraphics.zoomLevel;
+            bool isJavaMode = ModGraphics.IsJavaGraphics || withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
+            string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
             if (_textureCache.TryGetValue(cacheKey, out Texture2D cachedTex))
             {
                 return cachedTex;
             }
 
-            string preferredZoom = "x" + mGraphics.zoomLevel + "/";
-            string[] candidates =
-            {
-                preferredZoom + withoutZoom + ".png",
-                baseNoRes + ".png",
-                baseClean + ".png",
-                "res/" + baseNoRes + ".png",
-                "x2/" + withoutZoom + ".png",
-                "x1/" + withoutZoom + ".png",
-                "x3/" + withoutZoom + ".png",
-                "x4/" + withoutZoom + ".png",
-                withoutZoom + ".png"
-            };
+            string preferredZoom = isJavaMode ? "x1/" : ("x" + mGraphics.zoomLevel + "/");
+            string[] candidates = isJavaMode
+                ? new[]
+                {
+                    "x1/" + withoutZoom + ".png",
+                    baseNoRes + ".png",
+                    baseClean + ".png",
+                    "res/" + baseNoRes + ".png",
+                    "x2/" + withoutZoom + ".png",
+                    "x3/" + withoutZoom + ".png",
+                    "x4/" + withoutZoom + ".png",
+                    withoutZoom + ".png"
+                }
+                : new[]
+                {
+                    preferredZoom + withoutZoom + ".png",
+                    baseNoRes + ".png",
+                    baseClean + ".png",
+                    "res/" + baseNoRes + ".png",
+                    "x2/" + withoutZoom + ".png",
+                    "x1/" + withoutZoom + ".png",
+                    "x3/" + withoutZoom + ".png",
+                    "x4/" + withoutZoom + ".png",
+                    withoutZoom + ".png"
+                };
 
             for (int i = 0; i < candidates.Length; i++)
             {

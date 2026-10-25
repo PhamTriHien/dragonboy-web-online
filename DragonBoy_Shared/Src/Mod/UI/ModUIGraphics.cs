@@ -55,8 +55,8 @@ public static class ModUIGraphics
 			mFont.tahoma_7_green2.drawString(g, "* Super Low: Xóa cây cỏ trang trí, chỉ giữ base map.", uiX + 6, descY, mFont.LEFT);
 		}
 
-		// 4. 2 Chế Độ Render (1 là Java Gốc, 2 là Bản HD PC/Android)
-		mFont.tahoma_7_grey.drawString(g, "Chế Độ Render (F10):", uiX + 6, uiY + 116, mFont.LEFT);
+		// 4. 2 Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD)
+		mFont.tahoma_7_grey.drawString(g, "Chế Độ Đồ Hoạ (F10):", uiX + 6, uiY + 116, mFont.LEFT);
 		int mBtnW = (uiW - 15) / 2;
 		for (int m = 0; m < 2; m++)
 		{
@@ -64,15 +64,14 @@ public static class ModUIGraphics
 			ModUI.PaintNativeButton(mx, uiY + 131, mBtnW, 16, ModGraphics.renderModeNames[m], ModGraphics.renderMode == m, g);
 		}
 
-		// Mô tả chi tiết 2 chế độ render
 		int bdDescY = uiY + 151;
 		if (ModGraphics.renderMode == 0)
 		{
-			mFont.tahoma_7_green2.drawString(g, "* 1. Java Gốc: Pixel to " + mGraphics.zoomLevel + "x" + mGraphics.zoomLevel + ", màu RGB565 như máy Java.", uiX + 6, bdDescY, mFont.LEFT);
+			mFont.tahoma_7_green2.drawString(g, "* Đồ Hoạ Java: Tài nguyên x1 & font bitmap từ src Java gốc.", uiX + 6, bdDescY, mFont.LEFT);
 		}
 		else
 		{
-			mFont.tahoma_7_green2.drawString(g, "* 2. Bản HD: Nguyên độ phân giải, sắc nét, màu 32-bit.", uiX + 6, bdDescY, mFont.LEFT);
+			mFont.tahoma_7_green2.drawString(g, "* Đồ Hoạ HD: Tài nguyên x2 sắc nét, lọc mượt & font hệ thống.", uiX + 6, bdDescY, mFont.LEFT);
 		}
 
 		// 5. Phần FPS
@@ -126,7 +125,7 @@ public static class ModUIGraphics
 		}
 
 		// 9. Phong Cảnh Nền Game (Git)
-		string bgBtnText = "🌌 HÌNH NỀN PHONG CẢNH (GIT)" + (ModBackground.isCustomBGActive ? " [ĐANG BẬT]" : "");
+		string bgBtnText = "HÌNH NỀN PHONG CẢNH (GIT)" + (ModBackground.isCustomBGActive ? " [ĐANG BẬT]" : "");
 		ModUI.PaintNativeButton(uiX + 6, uiY + 368, uiW - 12, 18, bgBtnText, ModBackground.isCustomBGActive, g);
 	}
 
@@ -168,7 +167,7 @@ public static class ModUIGraphics
 			}
 		}
 
-		// 4. Chọn 2 Chế Độ Render (1 là Java Gốc, 2 là Bản HD PC/Android)
+		// 4. Chọn Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD)
 		int mBtnW = (uiW - 15) / 2;
 		for (int m = 0; m < 2; m++)
 		{
@@ -176,7 +175,7 @@ public static class ModUIGraphics
 			if (px >= mx && px <= mx + mBtnW && py >= uiY + 130 && py <= uiY + 148)
 			{
 				ModGraphics.SetRenderMode(m);
-				GameScr.info1.addInfo("Chế độ render: " + ModGraphics.renderModeNames[m], 0);
+				GameScr.info1.addInfo("Chế độ đồ hoạ: " + ModGraphics.renderModeNames[m], 0);
 				SoundMn.gI().buttonClick();
 				return true;
 			}

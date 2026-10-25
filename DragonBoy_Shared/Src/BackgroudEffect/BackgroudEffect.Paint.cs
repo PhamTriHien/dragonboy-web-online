@@ -11,7 +11,7 @@ public partial class BackgroudEffect
 	/// </summary>
 	public static void paintCloud2(mGraphics g)
 		{
-			if (mSystem.clientType == 1 || GameCanvas.lowGraphic || ModMenu.graphicsQuality >= 1 || nCloud == 0 || imgCloud1 == null)
+			if (mSystem.clientType == 1 || ModGraphics.IsJavaGraphics || GameCanvas.lowGraphic || ModMenu.graphicsQuality >= 1 || nCloud == 0 || imgCloud1 == null)
 			{
 				return;
 			}
@@ -35,7 +35,7 @@ public partial class BackgroudEffect
 	/// </summary>
 	public static void paintFog(mGraphics g)
 		{
-			if (mSystem.clientType == 1 || GameCanvas.lowGraphic || ModMenu.graphicsQuality >= 1 || !isFog || imgFog == null)
+			if (mSystem.clientType == 1 || ModGraphics.IsJavaGraphics || GameCanvas.lowGraphic || ModMenu.graphicsQuality >= 1 || !isFog || imgFog == null)
 			{
 				return;
 			}

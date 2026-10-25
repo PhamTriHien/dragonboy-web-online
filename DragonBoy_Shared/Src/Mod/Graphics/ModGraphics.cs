@@ -29,14 +29,15 @@ public static class ModGraphics
 		SoundMn.gI().buttonClick();
 	}
 
-	// 2 chế độ render: 0: Java Gốc (pixel to + RGB565, lọc Point), 1: Bản HD PC/Android (nguyên độ phân giải, lọc Bilinear)
+	// 2 chế độ đồ hoạ: 0: Đồ Hoạ Java (tài nguyên x1 + font bitmap từ src Java gốc), 1: Đồ Hoạ HD (tài nguyên x2 lọc Bilinear + font hệ thống)
 	public static int renderMode = 0;
-	public static readonly string[] renderModeNames = new string[2] { "Java Gốc", "Bản HD PC/Android" };
+	public static bool IsJavaGraphics => renderMode == 0;
+	public static readonly string[] renderModeNames = new string[2] { "Đồ Hoạ Java", "Đồ Hoạ HD" };
 
 	public static int renderBitDepth
 	{
 		get => renderMode;
-		set => renderMode = (value >= 0 && value < 2) ? value : 0;
+		set => renderMode = (value >= 1) ? 1 : 0;
 	}
 	public static string[] bitDepthNames => renderModeNames;
 
@@ -237,17 +238,86 @@ public static class ModGraphics
 	}
 
 	/// <summary>
-	/// Đổi chế độ render (0: Java Gốc, 1: Bản HD PC/Android) và lưu cấu hình. Gọi được từ menu Mod trên mọi nền tảng.
+	/// Đổi chế độ đồ hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD), lưu cấu hình và nạp lại tài nguyên trực tiếp.
 	/// </summary>
-	public static void SetRenderMode(int mode)
+	public static void SetRenderMode(int mode, bool refreshAssets = true)
 	{
-		if (mode < 0 || mode >= renderModeNames.Length) mode = 0;
-		renderMode = mode;
+		int normalized = (mode >= 1) ? 1 : 0;
+		bool changed = (renderMode != normalized);
+		renderMode = normalized;
 		ApplyRenderMode();
-		ModConfig.SaveConfig();
+		if (refreshAssets)
+		{
+			ModConfig.SaveConfig();
+			if (changed && GameMidlet.gameCanvas != null)
+			{
+				RefreshGraphicsAssets();
+			}
+		}
 	}
 
 	public static void SetBitDepth(int depth) => SetRenderMode(depth);
+
+	public static void RefreshGraphicsAssets()
+	{
+		try
+		{
+			if (GameMidlet.gameCanvas == null)
+			{
+				return;
+			}
+			if (mGraphics.cachedTextures != null)
+			{
+				mGraphics.cachedTextures.Clear();
+			}
+			mSystem.ClearImageCache();
+			mFont.ReloadJavaFontImages();
+			mFont.InvalidateFontMetrics();
+			Paint.loadbg();
+			Paint.imgCheck = GameCanvas.loadImage("/mainImage/myTexture2dcheck.png");
+			for (int i = 0; i < 3; i++)
+			{
+				GameCanvas.imgBorder[i] = GameCanvas.loadImage("/mainImage/myTexture2dbd" + i + ".png");
+			}
+			GameCanvas.borderConnerW = mGraphics.getImageWidth(GameCanvas.imgBorder[0]);
+			GameCanvas.borderConnerH = mGraphics.getImageHeight(GameCanvas.imgBorder[0]);
+			GameCanvas.borderCenterW = mGraphics.getImageWidth(GameCanvas.imgBorder[1]);
+			GameCanvas.borderCenterH = mGraphics.getImageHeight(GameCanvas.imgBorder[1]);
+			GameCanvas.imgShuriken = GameCanvas.loadImage("/mainImage/myTexture2df.png");
+			GameCanvas.imgClear = GameCanvas.loadImage("/mainImage/myTexture2der.png");
+			Command.btn0left = GameCanvas.loadImage("/mainImage/btn0left.png");
+			Command.btn0mid = GameCanvas.loadImage("/mainImage/btn0mid.png");
+			Command.btn0right = GameCanvas.loadImage("/mainImage/btn0right.png");
+			Command.btn1left = GameCanvas.loadImage("/mainImage/btn1left.png");
+			Command.btn1mid = GameCanvas.loadImage("/mainImage/btn1mid.png");
+			Command.btn1right = GameCanvas.loadImage("/mainImage/btn1right.png");
+			if (GameCanvas.instance != null)
+			{
+				GameCanvas.instance.loadDust();
+				GameCanvas.instance.loadWaterSplash();
+			}
+			GameScr.ReloadHudImages();
+			SmallImage.ReloadForGraphicsMode();
+			TileMap.loadBg();
+			if (TileMap.tileID > 0)
+			{
+				TileMap.loadTileImage();
+				TileMap.loadMainTile();
+			}
+			BgItem.ReloadCurrMapItems();
+			BackgroudEffect.initCloud();
+			if (GameCanvas.typeBg >= 0)
+			{
+				int curBg = GameCanvas.typeBg;
+				TileMap.lastBgID = -1;
+				GameCanvas.loadBG(curBg);
+			}
+			mScreen.ITEM_HEIGHT = mFont.tahoma_8b.getHeight() + 8;
+		}
+		catch
+		{
+		}
+	}
 
 	/// <summary>
 	/// Truy xuất hệ số tỷ lệ kích thước font chữ hiện tại.

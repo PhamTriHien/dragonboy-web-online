@@ -77,6 +77,16 @@ public class SmallImage
 		mSystem.gcc();
 	}
 
+	public static void ReloadForGraphicsMode()
+	{
+		imgbig = null;
+		if (imgNew != null)
+		{
+			Array.Clear(imgNew, 0, imgNew.Length);
+		}
+		loadBigRMS();
+	}
+
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho loadBigImage.
 	/// </summary>

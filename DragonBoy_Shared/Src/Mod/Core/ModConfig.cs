@@ -576,7 +576,7 @@ public static class ModConfig
 					case "renderBitDepth":
 						if (int.TryParse(val, out int bd))
 						{
-							ModGraphics.SetRenderMode(bd);
+							ModGraphics.SetRenderMode(bd, false);
 						}
 						break;
 					case "resolutionIndex":

@@ -12,15 +12,28 @@ public partial class GameCanvas : IActionListener
 	/// </summary>
 	public static Image loadImageRMS(string path)
 		{
-			path = Main.res + "/x" + mGraphics.zoomLevel + path;
-			path = cutPng(path);
+			string rawPath = path;
 			Image result = null;
-			try
+			if (ModGraphics.IsJavaGraphics)
 			{
-				result = Image.createImage(path);
+				try
+				{
+					result = Image.createImage(cutPng(Main.res + "/x1" + rawPath));
+				}
+				catch (Exception)
+				{
+				}
 			}
-			catch (Exception)
+			path = cutPng(Main.res + "/x" + mGraphics.zoomLevel + rawPath);
+			if (result == null)
 			{
+				try
+				{
+					result = Image.createImage(path);
+				}
+				catch (Exception)
+				{
+				}
 			}
 			if (result == null)
 			{
@@ -46,15 +59,28 @@ public partial class GameCanvas : IActionListener
 	/// </summary>
 	public static Image loadImage(string path)
 		{
-			path = Main.res + "/x" + mGraphics.zoomLevel + path;
-			path = cutPng(path);
+			string rawPath = path;
 			Image result = null;
-			try
+			if (ModGraphics.IsJavaGraphics)
 			{
-				result = Image.createImage(path);
+				try
+				{
+					result = Image.createImage(cutPng(Main.res + "/x1" + rawPath));
+				}
+				catch (Exception)
+				{
+				}
 			}
-			catch (Exception)
+			if (result == null)
 			{
+				path = cutPng(Main.res + "/x" + mGraphics.zoomLevel + rawPath);
+				try
+				{
+					result = Image.createImage(path);
+				}
+				catch (Exception)
+				{
+				}
 			}
 			return result;
 		}

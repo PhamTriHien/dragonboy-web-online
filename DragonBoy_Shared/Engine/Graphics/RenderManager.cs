@@ -77,55 +77,7 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
             BringToFront();
 
             UpdateVirtualTarget();
-            InitShaders();
             IsInitialized = true;
-        }
-
-        private static Shader _javaRetroShader;
-        private static bool _shaderInitialized = false;
-        private static int _blockSizeLoc = -1;
-
-        private const string JavaRetroFragShader = @"#version 330
-in vec2 fragTexCoord;
-in vec4 fragColor;
-out vec4 finalColor;
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;
-uniform float blockSize;
-
-void main()
-{
-    vec2 res = vec2(textureSize(texture0, 0));
-    vec2 snapped = (floor(fragTexCoord * res / blockSize) * blockSize + 0.5) / res;
-    vec4 tex = texture(texture0, snapped);
-    float r = floor(tex.r * 31.0 + 0.5) / 31.0;
-    float g = floor(tex.g * 63.0 + 0.5) / 63.0;
-    float b = floor(tex.b * 31.0 + 0.5) / 31.0;
-    finalColor = vec4(r, g, b, tex.a) * fragColor;
-}
-";
-
-        /// <summary>
-        /// Nạp shader Java Gốc: gom mỗi khối pixel thành một pixel to rồi lượng tử hóa màu RGB565 (5-6-5 bit).
-        /// </summary>
-        private static void InitShaders()
-        {
-            try
-            {
-                if (Raylib.IsWindowReady())
-                {
-                    _javaRetroShader = Raylib.LoadShaderFromMemory(null, JavaRetroFragShader);
-                    _shaderInitialized = (_javaRetroShader.Id != 0);
-                    if (_shaderInitialized)
-                    {
-                        _blockSizeLoc = Raylib.GetShaderLocation(_javaRetroShader, "blockSize");
-                    }
-                }
-            }
-            catch
-            {
-                _shaderInitialized = false;
-            }
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll", ExactSpelling = true)]
@@ -273,13 +225,11 @@ void main()
         }
 
         /// <summary>
-        /// Kết thúc chu kỳ vẽ và xuất khung hình từ Virtual Target ra màn hình thật theo chế độ render hiện tại:
-        /// Java Gốc đi qua shader pixel to + RGB565, Bản HD hiển thị nguyên độ phân giải.
+        /// Kết thúc chu kỳ vẽ và xuất khung hình từ Virtual Target ra màn hình thật.
         /// </summary>
         public static void EndVirtualRender(int activeRenderState = -1)
         {
             int renderMode = (activeRenderState >= 0) ? (activeRenderState & 0xFF) : ModGraphics.renderMode;
-            int zoomLevel = (activeRenderState >= 0) ? System.Math.Max(1, activeRenderState >> 8) : System.Math.Max(1, mGraphics.zoomLevel);
 
             Raylib.EndTextureMode();
             ApplyTextureFilter(renderMode);
@@ -293,19 +243,7 @@ void main()
             Rectangle src = new Rectangle(0, 0, VirtualWidth, -VirtualHeight);
             Rectangle dst = new Rectangle(0, 0, screenW, screenH);
 
-            bool useJavaShader = (renderMode == 0 && _shaderInitialized);
-            if (useJavaShader)
-            {
-                Raylib.BeginShaderMode(_javaRetroShader);
-                Raylib.SetShaderValue(_javaRetroShader, _blockSizeLoc, (float)zoomLevel, ShaderUniformDataType.Float);
-            }
-
             Raylib.DrawTexturePro(VirtualTarget.Texture, src, dst, Vector2.Zero, 0f, Raylib_cs.Color.White);
-
-            if (useJavaShader)
-            {
-                Raylib.EndShaderMode();
-            }
 
             Raylib.EndDrawing();
 
@@ -328,11 +266,6 @@ void main()
         /// </summary>
         public static void Cleanup()
         {
-            if (_shaderInitialized && _javaRetroShader.Id != 0)
-            {
-                Raylib.UnloadShader(_javaRetroShader);
-                _shaderInitialized = false;
-            }
             if (VirtualTarget.Id != 0)
             {
                 Raylib.UnloadRenderTexture(VirtualTarget);

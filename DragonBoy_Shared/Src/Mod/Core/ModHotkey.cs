@@ -19,13 +19,13 @@ public static class ModHotkey
 				ModGraphics.ToggleFullscreen();
 			}
 
-			// Phím F10: Chuyển đổi chế độ Render (0: Java Gốc / 1: HD PC-Android) ở mọi tab và mọi màn hình
+			// Phím F10: Chuyển đổi chế độ Đồ Hoạ (0: Đồ Hoạ Java / 1: Đồ Hoạ HD) ở mọi tab và mọi màn hình
 			if (Input.GetKeyDown(KeyCode.F10))
 			{
 				ModGraphics.SetRenderMode((ModGraphics.renderMode == 0) ? 1 : 0);
 				string modeStr = (ModGraphics.renderMode == 0)
-					? "Chế độ Render: 1. Java Gốc (16-bit RGB565 + Pixel Sắc Nét)"
-					: "Chế độ Render: 2. Bản HD PC/Android (32-bit + Khử Răng Cưa)";
+					? "Chế độ đồ hoạ: Đồ Hoạ Java (Src Java Gốc)"
+					: "Chế độ đồ hoạ: Đồ Hoạ HD";
 				if (GameScr.info1 != null && ModMenu.IsInGame())
 				{
 					GameScr.info1.addInfo(modeStr, 0);
