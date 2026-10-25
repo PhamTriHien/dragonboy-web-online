@@ -129,6 +129,18 @@ namespace DragonBoy_Web_Host
             tex.height = newHeight;
         }
 
+        public static void QuantizeTextureJava2x2(Texture2D tex)
+        {
+            if (tex == null || tex.width < 2 || tex.height < 2) return;
+            int srcId = tex.WebTextureId;
+            if (srcId > 0)
+            {
+                int dstId = _nextTextureId++;
+                WebInterop.QuantizeTextureJava2x2(dstId, srcId, tex.width, tex.height);
+                tex.WebTextureId = dstId;
+            }
+        }
+
         /// <summary>
         /// Tạo texture mới đã hòa trộn màu (source-atop) trực tiếp trên GPU Canvas2D.
         /// </summary>

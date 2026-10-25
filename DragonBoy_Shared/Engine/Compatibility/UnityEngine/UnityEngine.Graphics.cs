@@ -716,6 +716,186 @@ namespace UnityEngine
         /// <summary>
         /// Thực thi phương thức nghiệp vụ EncodeToPNG.
         /// </summary>
+        private static unsafe void QuantizeRgbaBufferJava2x2(Raylib_cs.Color* p, int w, int h)
+        {
+            for (int y = 0; y + 1 < h; y += 2)
+            {
+                int row0 = y * w;
+                int row1 = (y + 1) * w;
+                for (int x = 0; x + 1 < w; x += 2)
+                {
+                    Raylib_cs.Color c0 = p[row0 + x];
+                    Raylib_cs.Color c1 = p[row0 + x + 1];
+                    Raylib_cs.Color c2 = p[row1 + x];
+                    Raylib_cs.Color c3 = p[row1 + x + 1];
+
+                    int sumA = c0.A + c1.A + c2.A + c3.A;
+                    Raylib_cs.Color outCol;
+                    if (sumA >= 256)
+                    {
+                        int ar = (c0.R * c0.A + c1.R * c1.A + c2.R * c2.A + c3.R * c3.A) / sumA;
+                        int ag = (c0.G * c0.A + c1.G * c1.A + c2.G * c2.A + c3.G * c3.A) / sumA;
+                        int ab = (c0.B * c0.A + c1.B * c1.A + c2.B * c2.A + c3.B * c3.A) / sumA;
+
+                        Raylib_cs.Color best = default;
+                        int bestDist = int.MaxValue;
+                        if (c0.A >= 128) { int d = System.Math.Abs(c0.R - ar) + System.Math.Abs(c0.G - ag) + System.Math.Abs(c0.B - ab); if (d < bestDist) { bestDist = d; best = c0; } }
+                        if (c1.A >= 128) { int d = System.Math.Abs(c1.R - ar) + System.Math.Abs(c1.G - ag) + System.Math.Abs(c1.B - ab); if (d < bestDist) { bestDist = d; best = c1; } }
+                        if (c2.A >= 128) { int d = System.Math.Abs(c2.R - ar) + System.Math.Abs(c2.G - ag) + System.Math.Abs(c2.B - ab); if (d < bestDist) { bestDist = d; best = c2; } }
+                        if (c3.A >= 128) { int d = System.Math.Abs(c3.R - ar) + System.Math.Abs(c3.G - ag) + System.Math.Abs(c3.B - ab); if (d < bestDist) { bestDist = d; best = c3; } }
+                        if (bestDist == int.MaxValue)
+                        {
+                            outCol = new Raylib_cs.Color((byte)ar, (byte)ag, (byte)ab, (byte)255);
+                        }
+                        else
+                        {
+                            outCol = new Raylib_cs.Color(best.R, best.G, best.B, (byte)255);
+                        }
+                    }
+                    else
+                    {
+                        outCol = new Raylib_cs.Color((byte)0, (byte)0, (byte)0, (byte)0);
+                    }
+
+                    p[row0 + x] = outCol;
+                    p[row0 + x + 1] = outCol;
+                    p[row1 + x] = outCol;
+                    p[row1 + x + 1] = outCol;
+                }
+            }
+        }
+
+        public unsafe void QuantizeJava2x2()
+        {
+            if (width < 2 || height < 2) return;
+
+#if BROWSER
+            if (OperatingSystem.IsBrowser())
+            {
+                DragonBoy_Web_Host.WebGraphicsBackend.QuantizeTextureJava2x2(this);
+                return;
+            }
+#endif
+
+            if (!OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
+            {
+                if (_compressedData != null && _compressedData.Length > 0)
+                {
+                    if (_dataHash == 0) _dataHash = ComputeHash(_compressedData);
+                    var pool = GetSharedByteTexturePool();
+                    if (pool.TryGetValue((_dataHash, _compressedData.Length, -2), out var cached) && cached.tex.Id != 0)
+                    {
+                        this.width = cached.w;
+                        this.height = cached.h;
+                        this.RaylibTexture = cached.tex;
+                        this.HasRaylibTexture = true;
+                        this.IsSharedGpuTexture = true;
+                        this.pixelBuffer = null;
+                        return;
+                    }
+
+                    Raylib_cs.Image img = Raylib.LoadImageFromMemory(".png", _compressedData);
+                    if (img.Width >= 2 && img.Height >= 2)
+                    {
+                        if (img.Format != PixelFormat.UncompressedR8G8B8A8)
+                        {
+                            Raylib.ImageFormat(ref img, PixelFormat.UncompressedR8G8B8A8);
+                        }
+                        if (img.Data != null)
+                        {
+                            QuantizeRgbaBufferJava2x2((Raylib_cs.Color*)img.Data, img.Width, img.Height);
+                        }
+                        if (HasRaylibTexture && !IsSharedGpuTexture)
+                        {
+                            Raylib.UnloadTexture(RaylibTexture);
+                            HasRaylibTexture = false;
+                        }
+                        RaylibTexture = Raylib.LoadTextureFromImage(img);
+                        this.width = img.Width;
+                        this.height = img.Height;
+                        Raylib.UnloadImage(img);
+                        this.RaylibImage = default;
+                        Raylib.SetTextureWrap(RaylibTexture, TextureWrap.Clamp);
+                        Raylib.SetTextureFilter(RaylibTexture, TextureFilter.Point);
+                        this.currentRaylibFilter = TextureFilter.Point;
+                        HasRaylibTexture = true;
+                        IsSharedGpuTexture = true;
+                        this.pixelBuffer = null;
+                        pool[(_dataHash, _compressedData.Length, -2)] = (this.RaylibTexture, this.width, this.height);
+                        return;
+                    }
+                    if (img.Width > 0 && img.Height > 0)
+                    {
+                        Raylib.UnloadImage(img);
+                    }
+                }
+                return;
+            }
+
+#if ANDROID || __ANDROID__
+            if (OperatingSystem.IsAndroid() && AndroidBitmap != null && !AndroidBitmap.IsRecycled)
+            {
+                try
+                {
+                    int w = AndroidBitmap.Width;
+                    int h = AndroidBitmap.Height;
+                    if (w < 2 || h < 2) return;
+                    int[] pixels = new int[w * h];
+                    AndroidBitmap.GetPixels(pixels, 0, w, 0, 0, w, h);
+                    for (int y = 0; y + 1 < h; y += 2)
+                    {
+                        int row0 = y * w;
+                        int row1 = (y + 1) * w;
+                        for (int x = 0; x + 1 < w; x += 2)
+                        {
+                            int p0 = pixels[row0 + x];
+                            int p1 = pixels[row0 + x + 1];
+                            int p2 = pixels[row1 + x];
+                            int p3 = pixels[row1 + x + 1];
+
+                            int a0 = (p0 >> 24) & 0xFF, a1 = (p1 >> 24) & 0xFF, a2 = (p2 >> 24) & 0xFF, a3 = (p3 >> 24) & 0xFF;
+                            int sumA = a0 + a1 + a2 + a3;
+                            int outCol = 0;
+                            if (sumA >= 256)
+                            {
+                                int r0 = (p0 >> 16) & 0xFF, g0 = (p0 >> 8) & 0xFF, b0 = p0 & 0xFF;
+                                int r1 = (p1 >> 16) & 0xFF, g1 = (p1 >> 8) & 0xFF, b1 = p1 & 0xFF;
+                                int r2 = (p2 >> 16) & 0xFF, g2 = (p2 >> 8) & 0xFF, b2 = p2 & 0xFF;
+                                int r3 = (p3 >> 16) & 0xFF, g3 = (p3 >> 8) & 0xFF, b3 = p3 & 0xFF;
+
+                                int ar = (r0 * a0 + r1 * a1 + r2 * a2 + r3 * a3) / sumA;
+                                int ag = (g0 * a0 + g1 * a1 + g2 * a2 + g3 * a3) / sumA;
+                                int ab = (b0 * a0 + b1 * a1 + b2 * a2 + b3 * a3) / sumA;
+
+                                int bestDist = int.MaxValue;
+                                int br = ar, bg = ag, bb = ab;
+                                if (a0 >= 128) { int d = System.Math.Abs(r0 - ar) + System.Math.Abs(g0 - ag) + System.Math.Abs(b0 - ab); if (d < bestDist) { bestDist = d; br = r0; bg = g0; bb = b0; } }
+                                if (a1 >= 128) { int d = System.Math.Abs(r1 - ar) + System.Math.Abs(g1 - ag) + System.Math.Abs(b1 - ab); if (d < bestDist) { bestDist = d; br = r1; bg = g1; bb = b1; } }
+                                if (a2 >= 128) { int d = System.Math.Abs(r2 - ar) + System.Math.Abs(g2 - ag) + System.Math.Abs(b2 - ab); if (d < bestDist) { bestDist = d; br = r2; bg = g2; bb = b2; } }
+                                if (a3 >= 128) { int d = System.Math.Abs(r3 - ar) + System.Math.Abs(g3 - ag) + System.Math.Abs(b3 - ab); if (d < bestDist) { bestDist = d; br = r3; bg = g3; bb = b3; } }
+
+                                outCol = unchecked((int)0xFF000000) | (br << 16) | (bg << 8) | bb;
+                            }
+
+                            pixels[row0 + x] = outCol;
+                            pixels[row0 + x + 1] = outCol;
+                            pixels[row1 + x] = outCol;
+                            pixels[row1 + x + 1] = outCol;
+                        }
+                    }
+                    var quantized = Android.Graphics.Bitmap.CreateBitmap(pixels, w, h, Android.Graphics.Bitmap.Config.Argb8888);
+                    if (quantized != null)
+                    {
+                        AndroidBitmap.Recycle();
+                        AndroidBitmap = quantized;
+                        this.pixelBuffer = null;
+                    }
+                }
+                catch { }
+            }
+#endif
+        }
+
         public byte[] EncodeToPNG()
         {
 #if ANDROID || __ANDROID__

@@ -37,6 +37,8 @@ public class Image
 
 	public bool isZoomScaled;
 
+	public byte[] rawServerPngBytes;
+
 	public static int status;
 
 	public Color colorBlend = Color.black;
@@ -123,6 +125,48 @@ public class Image
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ createImage.
 	/// </summary>
+	public static Image createServerZoomImage(sbyte[] imageData, int offset, int length)
+	{
+		if (imageData == null || offset < 0 || length <= 0 || offset + length > imageData.Length)
+		{
+			return null;
+		}
+		byte[] array = new byte[length];
+		for (int i = 0; i < length; i++)
+		{
+			array[i] = convertSbyteToByte(imageData[i + offset]);
+		}
+		return createServerZoomImage(array);
+	}
+
+	public static Image createServerZoomImage(byte[] pngBytes)
+	{
+		if (pngBytes == null || pngBytes.Length == 0)
+		{
+			return null;
+		}
+		Image img = createImage(pngBytes);
+		if (img != null)
+		{
+			img.rawServerPngBytes = pngBytes;
+			img.isZoomScaled = true;
+			if (mGraphics.zoomLevel == 2 && ModGraphics.IsJavaGraphics && img.texture != null)
+			{
+				img.texture.QuantizeJava2x2();
+			}
+		}
+		return img;
+	}
+
+	public static Image refreshServerZoomImage(Image current)
+	{
+		if (current == null || current.rawServerPngBytes == null || current.rawServerPngBytes.Length == 0)
+		{
+			return current;
+		}
+		return createServerZoomImage(current.rawServerPngBytes);
+	}
+
 	public static Image createImage(sbyte[] imageData, int offset, int lenght)
 	{
 		if (offset + lenght > imageData.Length)

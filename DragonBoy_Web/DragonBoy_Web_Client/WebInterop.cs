@@ -40,6 +40,9 @@ namespace DragonBoy_Web_Host
         [JSImport("globalThis.DragonBoyWeb.scaleTextureNN")]
         internal static partial void ScaleTextureNN(int dstTexId, int srcTexId, int srcW, int srcH, int targetW, int targetH);
 
+        [JSImport("globalThis.DragonBoyWeb.quantizeTextureJava2x2")]
+        internal static partial void QuantizeTextureJava2x2(int dstTexId, int srcTexId, int width, int height);
+
         [JSImport("globalThis.DragonBoyWeb.blendTexture")]
         internal static partial void BlendTexture(int dstTexId, int srcTexId, int targetW, int targetH, double level, int r, int g, int b);
 

@@ -849,6 +849,95 @@
             }
         },
 
+        quantizeTextureJava2x2: (dstTexId, srcTexId, targetW, targetH) => {
+            const dstCanvas = document.createElement("canvas");
+            dstCanvas.width = targetW;
+            dstCanvas.height = targetH;
+            const dstCtx = dstCanvas.getContext("2d", { willReadFrequently: true });
+            dstCtx.imageSmoothingEnabled = false;
+
+            const dstEntry = {
+                img: null,
+                canvas: dstCanvas,
+                ctx: dstCtx,
+                width: targetW,
+                height: targetH,
+                loaded: false,
+                pendingScales: []
+            };
+            textures.set(dstTexId, dstEntry);
+
+            const srcEntry = textures.get(srcTexId);
+            if (!srcEntry) return;
+
+            const performQuantize = () => {
+                const srcDrawable = srcEntry.canvas || srcEntry.img;
+                if (!srcDrawable) return;
+                const sw = srcDrawable.naturalWidth || srcDrawable.width || srcEntry.width || targetW;
+                const sh = srcDrawable.naturalHeight || srcDrawable.height || srcEntry.height || targetH;
+                if (dstCanvas.width !== sw || dstCanvas.height !== sh) {
+                    dstCanvas.width = sw;
+                    dstCanvas.height = sh;
+                    dstEntry.width = sw;
+                    dstEntry.height = sh;
+                }
+                dstCtx.clearRect(0, 0, sw, sh);
+                dstCtx.imageSmoothingEnabled = false;
+                dstCtx.drawImage(srcDrawable, 0, 0, sw, sh, 0, 0, sw, sh);
+                if (sw >= 2 && sh >= 2) {
+                    const imgData = dstCtx.getImageData(0, 0, sw, sh);
+                    const d = imgData.data;
+                    const stride = sw * 4;
+                    for (let y = 0; y + 1 < sh; y += 2) {
+                        const row0 = y * stride;
+                        const row1 = (y + 1) * stride;
+                        for (let x = 0; x + 1 < sw; x += 2) {
+                            const i0 = row0 + x * 4;
+                            const i1 = i0 + 4;
+                            const i2 = row1 + x * 4;
+                            const i3 = i2 + 4;
+                            const a0 = d[i0 + 3], a1 = d[i1 + 3], a2 = d[i2 + 3], a3 = d[i3 + 3];
+                            const sumA = a0 + a1 + a2 + a3;
+                            let br = 0, bg = 0, bb = 0, ba = 0;
+                            if (sumA >= 256) {
+                                const r0 = d[i0], g0 = d[i0 + 1], b0 = d[i0 + 2];
+                                const r1 = d[i1], g1 = d[i1 + 1], b1 = d[i1 + 2];
+                                const r2 = d[i2], g2 = d[i2 + 1], b2 = d[i2 + 2];
+                                const r3 = d[i3], g3 = d[i3 + 1], b3 = d[i3 + 2];
+                                const ar = ((r0 * a0 + r1 * a1 + r2 * a2 + r3 * a3) / sumA) | 0;
+                                const ag = ((g0 * a0 + g1 * a1 + g2 * a2 + g3 * a3) / sumA) | 0;
+                                const ab = ((b0 * a0 + b1 * a1 + b2 * a2 + b3 * a3) / sumA) | 0;
+                                br = ar; bg = ag; bb = ab; ba = 255;
+                                let bestDist = 999999;
+                                if (a0 >= 128) { const dist = Math.abs(r0 - ar) + Math.abs(g0 - ag) + Math.abs(b0 - ab); if (dist < bestDist) { bestDist = dist; br = r0; bg = g0; bb = b0; } }
+                                if (a1 >= 128) { const dist = Math.abs(r1 - ar) + Math.abs(g1 - ag) + Math.abs(b1 - ab); if (dist < bestDist) { bestDist = dist; br = r1; bg = g1; bb = b1; } }
+                                if (a2 >= 128) { const dist = Math.abs(r2 - ar) + Math.abs(g2 - ag) + Math.abs(b2 - ab); if (dist < bestDist) { bestDist = dist; br = r2; bg = g2; bb = b2; } }
+                                if (a3 >= 128) { const dist = Math.abs(r3 - ar) + Math.abs(g3 - ag) + Math.abs(b3 - ab); if (dist < bestDist) { bestDist = dist; br = r3; bg = g3; bb = b3; } }
+                            }
+                            d[i0] = br; d[i0 + 1] = bg; d[i0 + 2] = bb; d[i0 + 3] = ba;
+                            d[i1] = br; d[i1 + 1] = bg; d[i1 + 2] = bb; d[i1 + 3] = ba;
+                            d[i2] = br; d[i2 + 1] = bg; d[i2 + 2] = bb; d[i2 + 3] = ba;
+                            d[i3] = br; d[i3 + 1] = bg; d[i3 + 2] = bb; d[i3 + 3] = ba;
+                        }
+                    }
+                    dstCtx.putImageData(imgData, 0, 0);
+                }
+                dstEntry.loaded = true;
+                if (dstEntry.tintCache) dstEntry.tintCache.clear();
+                if (dstEntry.pendingScales.length > 0) {
+                    const tasks = dstEntry.pendingScales.slice();
+                    dstEntry.pendingScales.length = 0;
+                    for (const fn of tasks) fn();
+                }
+            };
+
+            if (srcEntry.loaded) {
+                performQuantize();
+            } else if (srcEntry.pendingScales) {
+                srcEntry.pendingScales.push(performQuantize);
+            }
+        },
+
         blendTexture: (dstTexId, srcTexId, targetW, targetH, level, r, g, b) => {
             const dstCanvas = document.createElement("canvas");
             dstCanvas.width = targetW;
