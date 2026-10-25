@@ -341,7 +341,7 @@ namespace DragonBoy_Web_Host
             {
                 fontSize = Font.GetDefaultFontSize(style?.font);
                 int refSize = Font.GetLayoutReferenceFontSize(style?.font);
-                py += (refSize - fontSize) / 2f;
+                py += (refSize - fontSize) / 2;
             }
 
             Color col = style?.normal?.textColor ?? defaultColor;

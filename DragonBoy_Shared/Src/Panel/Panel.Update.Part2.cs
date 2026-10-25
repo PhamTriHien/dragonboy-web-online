@@ -149,7 +149,8 @@ public partial class Panel : IActionListener, IChatable
 					if (pointerDownTime > 5 && pointerDownFirstX == GameCanvas.py && !isDownWhenRunning)
 					{
 						pointerDownFirstX = -1000;
-						selected = (cmtoY + GameCanvas.py - yScroll) / ITEM_HEIGHT;
+						int offsetY = cmtoY + GameCanvas.py - yScroll;
+						selected = (offsetY >= 0 && ITEM_HEIGHT > 0) ? (offsetY / ITEM_HEIGHT) : (-1);
 						if (selected >= currentListLength)
 						{
 							selected = -1;
@@ -171,16 +172,17 @@ public partial class Panel : IActionListener, IChatable
 						pointerDownLastX[num2] = pointerDownLastX[num2 - 1];
 					}
 					pointerDownLastX[0] = GameCanvas.py;
+					int maxCmy = (cmyLim > 0) ? cmyLim : 0;
 					cmtoY -= num;
+					if (cmtoY > maxCmy)
+					{
+						cmtoY = maxCmy;
+					}
 					if (cmtoY < 0)
 					{
 						cmtoY = 0;
 					}
-					if (cmtoY > cmyLim)
-					{
-						cmtoY = cmyLim;
-					}
-					if (cmy < 0 || cmy > cmyLim)
+					if (cmy < 0 || cmy > maxCmy)
 					{
 						num /= 2;
 					}
@@ -213,7 +215,8 @@ public partial class Panel : IActionListener, IChatable
 				cmRun = 0;
 				cmtoY = cmy;
 				pointerDownFirstX = -1000;
-				selected = (cmtoY + GameCanvas.py - yScroll) / ITEM_HEIGHT;
+				int offsetY = cmtoY + GameCanvas.py - yScroll;
+				selected = (offsetY >= 0 && ITEM_HEIGHT > 0) ? (offsetY / ITEM_HEIGHT) : (-1);
 				if (selected >= currentListLength)
 				{
 					selected = -1;
@@ -234,13 +237,14 @@ public partial class Panel : IActionListener, IChatable
 			}
 			else if (selected == -1 && !isDownWhenRunning)
 			{
+				int maxCmy = (cmyLim > 0) ? cmyLim : 0;
 				if (cmy < 0)
 				{
 					cmtoY = 0;
 				}
-				else if (cmy > cmyLim)
+				else if (cmy > maxCmy)
 				{
-					cmtoY = cmyLim;
+					cmtoY = maxCmy;
 				}
 				else
 				{

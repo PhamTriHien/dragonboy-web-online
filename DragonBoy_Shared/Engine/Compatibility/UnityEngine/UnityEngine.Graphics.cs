@@ -1136,15 +1136,14 @@ namespace UnityEngine
                 return DragonBoy_Android_Host.AndroidGraphicsBackend.MeasureText(content.text, this);
             }
 #endif
-            Raylib_cs.Font rayFont = Font.GetRaylibFont(this.font);
+            int fs = (fontSize > 0) ? (fontSize * mGraphics.zoomLevel) : Font.GetDefaultFontSize(this.font);
+            Raylib_cs.Font rayFont = Font.GetRaylibFont(this.font, fs);
             if (rayFont.Texture.Id != 0)
             {
-                int fs = (fontSize > 0) ? (fontSize * mGraphics.zoomLevel) : Font.GetDefaultFontSize(this.font);
-                System.Numerics.Vector2 size = Raylib.MeasureTextEx(rayFont, content.text, fs, 1f);
+                System.Numerics.Vector2 size = Raylib.MeasureTextEx(rayFont, content.text, fs, 0f);
                 return new Vector2(size.X, size.Y);
             }
-            int fallbackFs = Font.GetDefaultFontSize(this.font);
-            return new Vector2(content.text.Length * (fallbackFs / 2), fallbackFs);
+            return new Vector2(content.text.Length * (fs / 2), fs);
         }
     }
 
@@ -1175,33 +1174,25 @@ namespace UnityEngine
     {
         public string name { get; set; } = "DefaultFont";
 
-        private struct ThemeFontSet
-        {
-            public bool Loaded;
-            public Raylib_cs.Font Barmeneb;
-            public Raylib_cs.Font Chelthm;
-            public Raylib_cs.Font Staccato;
-            public Raylib_cs.Font Default;
-        }
-
-        private static readonly ThemeFontSet[] _themeFonts = new ThemeFontSet[4];
+        private static readonly string[,] _resolvedPaths = new string[4, 3];
+        private static bool _fontPathsResolved = false;
         private static int[] _cachedCodepoints;
         private static readonly object _lock = new object();
-        private const string SharedFontSlot = "DragonBoy.SharedThemeFonts.v1";
+        private const string SharedFontSlot = "DragonBoy.SharedExactFonts.v2";
 
-        private static System.Collections.Concurrent.ConcurrentDictionary<int, (Raylib_cs.Font barmeneb, Raylib_cs.Font chelthm, Raylib_cs.Font staccato, Raylib_cs.Font def)> GetSharedFontPool()
+        private static System.Collections.Concurrent.ConcurrentDictionary<int, Raylib_cs.Font> GetSharedFontPool()
         {
-            if (AppDomain.CurrentDomain.GetData(SharedFontSlot) is System.Collections.Concurrent.ConcurrentDictionary<int, (Raylib_cs.Font barmeneb, Raylib_cs.Font chelthm, Raylib_cs.Font staccato, Raylib_cs.Font def)> dict)
+            if (AppDomain.CurrentDomain.GetData(SharedFontSlot) is System.Collections.Concurrent.ConcurrentDictionary<int, Raylib_cs.Font> dict)
             {
                 return dict;
             }
             lock (typeof(AppDomain))
             {
-                if (AppDomain.CurrentDomain.GetData(SharedFontSlot) is System.Collections.Concurrent.ConcurrentDictionary<int, (Raylib_cs.Font barmeneb, Raylib_cs.Font chelthm, Raylib_cs.Font staccato, Raylib_cs.Font def)> existing)
+                if (AppDomain.CurrentDomain.GetData(SharedFontSlot) is System.Collections.Concurrent.ConcurrentDictionary<int, Raylib_cs.Font> existing)
                 {
                     return existing;
                 }
-                var created = new System.Collections.Concurrent.ConcurrentDictionary<int, (Raylib_cs.Font barmeneb, Raylib_cs.Font chelthm, Raylib_cs.Font staccato, Raylib_cs.Font def)>();
+                var created = new System.Collections.Concurrent.ConcurrentDictionary<int, Raylib_cs.Font>();
                 AppDomain.CurrentDomain.SetData(SharedFontSlot, created);
                 return created;
             }
@@ -1282,8 +1273,8 @@ namespace UnityEngine
                 Raylib_cs.Font f = Raylib.LoadFontEx(path, size, codepoints, codepoints.Length);
                 if (f.Texture.Id != 0)
                 {
-                    Raylib.SetTextureFilter(f.Texture, TextureFilter.Bilinear);
-                    Raylib.GenTextureMipmaps(ref f.Texture);
+                    Raylib.SetTextureWrap(f.Texture, TextureWrap.Clamp);
+                    Raylib.SetTextureFilter(f.Texture, TextureFilter.Point);
                     return f;
                 }
             }
@@ -1334,76 +1325,44 @@ namespace UnityEngine
         }
 #endif
 
-        private static void EnsureThemeLoaded(int theme)
+        private static int ResolveFontKind(Font font)
         {
-            theme = System.Math.Clamp(theme, 0, 3);
-            if (_themeFonts[theme].Loaded || OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser()) return;
-            lock (_lock)
+            if (font != null && !string.IsNullOrEmpty(font.name))
             {
-                if (_themeFonts[theme].Loaded) return;
-                _themeFonts[theme].Loaded = true;
-                try
-                {
-                    var pool = GetSharedFontPool();
-                    if (pool.TryGetValue(theme, out var cached))
-                    {
-                        _themeFonts[theme] = new ThemeFontSet
-                        {
-                            Loaded = true,
-                            Barmeneb = cached.barmeneb,
-                            Chelthm = cached.chelthm,
-                            Staccato = cached.staccato,
-                            Default = cached.def
-                        };
-                        return;
-                    }
-
-                    _cachedCodepoints ??= BuildCodepoints();
-
-                    string defaultBarmeneb = ResolveFontPath("barmeneb.ttf", @"C:\Windows\Fonts\tahomabd.ttf", @"C:\Windows\Fonts\tahoma.ttf", @"C:\Windows\Fonts\arialbd.ttf");
-                    string defaultChelthm = ResolveFontPath("chelthm.ttf", @"C:\Windows\Fonts\tahoma.ttf", @"C:\Windows\Fonts\arial.ttf");
-                    string defaultStaccato = ResolveFontPath("staccato.ttf", defaultBarmeneb);
-
-                    string barmenebPath = defaultBarmeneb;
-                    string chelthmPath = defaultChelthm;
-                    string staccatoPath = defaultStaccato;
-
-                    if (theme == 1)
-                    {
-                        barmenebPath = ResolveFontPath(null, @"C:\Windows\Fonts\tahomabd.ttf", @"C:\Windows\Fonts\tahoma.ttf", defaultBarmeneb);
-                        chelthmPath = ResolveFontPath(null, @"C:\Windows\Fonts\tahoma.ttf", defaultChelthm);
-                        staccatoPath = barmenebPath;
-                    }
-                    else if (theme == 2)
-                    {
-                        barmenebPath = ResolveFontPath(null, @"C:\Windows\Fonts\segoeuib.ttf", @"C:\Windows\Fonts\segoeui.ttf", @"C:\Windows\Fonts\arialbd.ttf", defaultBarmeneb);
-                        chelthmPath = ResolveFontPath(null, @"C:\Windows\Fonts\segoeui.ttf", @"C:\Windows\Fonts\arial.ttf", defaultChelthm);
-                        staccatoPath = barmenebPath;
-                    }
-                    else if (theme == 3)
-                    {
-                        barmenebPath = ResolveFontPath(null, @"C:\Windows\Fonts\consolab.ttf", @"C:\Windows\Fonts\consola.ttf", defaultBarmeneb);
-                        chelthmPath = ResolveFontPath(null, @"C:\Windows\Fonts\consola.ttf", defaultChelthm);
-                        staccatoPath = barmenebPath;
-                    }
-
-                    ThemeFontSet set = default;
-                    set.Loaded = true;
-                    set.Barmeneb = LoadCustomFont(barmenebPath, 36, _cachedCodepoints);
-                    set.Chelthm = LoadCustomFont(chelthmPath, 32, _cachedCodepoints);
-                    set.Staccato = LoadCustomFont(staccatoPath, 34, _cachedCodepoints);
-
-                    if (set.Barmeneb.Texture.Id != 0) set.Default = set.Barmeneb;
-                    else if (set.Chelthm.Texture.Id != 0) set.Default = set.Chelthm;
-
-                    _themeFonts[theme] = set;
-                    if (set.Default.Texture.Id != 0)
-                    {
-                        pool[theme] = (set.Barmeneb, set.Chelthm, set.Staccato, set.Default);
-                    }
-                }
-                catch { }
+                string fn = font.name.ToLowerInvariant();
+                if (fn.Contains("chelthm")) return 1;
+                if (fn.Contains("staccato")) return 2;
             }
+            return 0;
+        }
+
+        private static void EnsurePathsResolved()
+        {
+            if (_fontPathsResolved) return;
+            string defaultBarmeneb = ResolveFontPath("barmeneb.ttf", @"C:\Windows\Fonts\tahomabd.ttf", @"C:\Windows\Fonts\tahoma.ttf", @"C:\Windows\Fonts\arialbd.ttf");
+            string defaultChelthm = ResolveFontPath("chelthm.ttf", @"C:\Windows\Fonts\tahoma.ttf", @"C:\Windows\Fonts\arial.ttf");
+            string defaultStaccato = ResolveFontPath("staccato.ttf", defaultBarmeneb);
+
+            _resolvedPaths[0, 0] = defaultBarmeneb;
+            _resolvedPaths[0, 1] = defaultChelthm;
+            _resolvedPaths[0, 2] = defaultStaccato;
+
+            string tahomaBold = ResolveFontPath(null, @"C:\Windows\Fonts\tahomabd.ttf", @"C:\Windows\Fonts\tahoma.ttf", defaultBarmeneb);
+            _resolvedPaths[1, 0] = tahomaBold;
+            _resolvedPaths[1, 1] = ResolveFontPath(null, @"C:\Windows\Fonts\tahoma.ttf", defaultChelthm);
+            _resolvedPaths[1, 2] = tahomaBold;
+
+            string segoeBold = ResolveFontPath(null, @"C:\Windows\Fonts\segoeuib.ttf", @"C:\Windows\Fonts\segoeui.ttf", @"C:\Windows\Fonts\arialbd.ttf", defaultBarmeneb);
+            _resolvedPaths[2, 0] = segoeBold;
+            _resolvedPaths[2, 1] = ResolveFontPath(null, @"C:\Windows\Fonts\segoeui.ttf", @"C:\Windows\Fonts\arial.ttf", defaultChelthm);
+            _resolvedPaths[2, 2] = segoeBold;
+
+            string consolaBold = ResolveFontPath(null, @"C:\Windows\Fonts\consolab.ttf", @"C:\Windows\Fonts\consola.ttf", defaultBarmeneb);
+            _resolvedPaths[3, 0] = consolaBold;
+            _resolvedPaths[3, 1] = ResolveFontPath(null, @"C:\Windows\Fonts\consola.ttf", defaultChelthm);
+            _resolvedPaths[3, 2] = consolaBold;
+
+            _fontPathsResolved = true;
         }
 
         /// <summary>
@@ -1446,7 +1405,12 @@ namespace UnityEngine
                 return;
             }
 #endif
-            EnsureThemeLoaded(global::ModGraphics.fontTheme);
+            if (OperatingSystem.IsIOS()) return;
+            lock (_lock)
+            {
+                EnsurePathsResolved();
+                _cachedCodepoints ??= BuildCodepoints();
+            }
         }
 
         /// <summary>
@@ -1482,30 +1446,51 @@ namespace UnityEngine
             }
             int zoom = (mGraphics.zoomLevel > 0) ? mGraphics.zoomLevel : 2;
             float scale = global::ModGraphics.GetFontSizeScale();
-            return System.Math.Max(8, (int)MathF.Round(baseSize * zoom * scale));
+            return System.Math.Max(7, (int)MathF.Round(baseSize * zoom * scale));
         }
 
         /// <summary>
         /// Truy xuất và trả về dữ liệu của GetRaylibFont.
         /// </summary>
-        public static Raylib_cs.Font GetRaylibFont(Font font = null)
+        public static Raylib_cs.Font GetRaylibFont(Font font, int targetPixelSize)
         {
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser()) return default;
             int theme = System.Math.Clamp(global::ModGraphics.fontTheme, 0, 3);
-            EnsureThemeLoaded(theme);
-            ThemeFontSet set = _themeFonts[theme];
-            if (font != null && !string.IsNullOrEmpty(font.name))
+            int kind = ResolveFontKind(font);
+            int pxSize = (targetPixelSize > 0) ? System.Math.Clamp(targetPixelSize, 7, 72) : GetDefaultFontSize(font);
+            int key = (theme << 16) | (kind << 8) | pxSize;
+
+            var pool = GetSharedFontPool();
+            if (pool.TryGetValue(key, out Raylib_cs.Font existing) && existing.Texture.Id != 0)
             {
-                string fn = font.name.ToLowerInvariant();
-                if (fn.Contains("barmeneb") && set.Barmeneb.Texture.Id != 0) return set.Barmeneb;
-                if (fn.Contains("chelthm") && set.Chelthm.Texture.Id != 0) return set.Chelthm;
-                if (fn.Contains("staccato") && set.Staccato.Texture.Id != 0) return set.Staccato;
+                return existing;
             }
-            if (set.Barmeneb.Texture.Id != 0) return set.Barmeneb;
-            if (set.Chelthm.Texture.Id != 0) return set.Chelthm;
-            return set.Default;
+
+            lock (_lock)
+            {
+                if (pool.TryGetValue(key, out existing) && existing.Texture.Id != 0)
+                {
+                    return existing;
+                }
+                EnsurePathsResolved();
+                _cachedCodepoints ??= BuildCodepoints();
+                string path = _resolvedPaths[theme, kind] ?? _resolvedPaths[theme, 0] ?? _resolvedPaths[0, 0];
+                Raylib_cs.Font loaded = LoadCustomFont(path, pxSize, _cachedCodepoints);
+                if (loaded.Texture.Id == 0 && path != _resolvedPaths[0, 0])
+                {
+                    loaded = LoadCustomFont(_resolvedPaths[0, 0], pxSize, _cachedCodepoints);
+                }
+                if (loaded.Texture.Id != 0)
+                {
+                    pool[key] = loaded;
+                }
+                return loaded;
+            }
         }
 
-        public static Raylib_cs.Font GetRaylibFont() => GetRaylibFont(null);
+        public static Raylib_cs.Font GetRaylibFont(Font font) => GetRaylibFont(font, 0);
+
+        public static Raylib_cs.Font GetRaylibFont() => GetRaylibFont(null, 0);
     }
 
     /// <summary>

@@ -311,10 +311,6 @@ public partial class Controller : IMessageHandler
 						if (num182 != -1)
 						{
 							char16.isHaveMount = true;
-							char16.isMount = true;
-							char16.genderMount = char16.cgender;
-							char16.xMount = char16.cx;
-							char16.yMount = char16.cy;
 							switch (num182)
 							{
 							case 346:
@@ -344,7 +340,6 @@ public partial class Controller : IMessageHandler
 						else
 						{
 							char16.isHaveMount = false;
-							char16.isMount = false;
 						}
 					}
 					sbyte b74 = msg.reader().readByte();

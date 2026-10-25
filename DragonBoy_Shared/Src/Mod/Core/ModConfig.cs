@@ -128,7 +128,7 @@ public static class ModConfig
 			sb.AppendLine("resolutionIndex=" + ModGraphics.resolutionIndex);
 			sb.AppendLine("isFullscreen=" + ModGraphics.isFullscreen);
 			sb.AppendLine("fontTheme=" + ModGraphics.fontTheme);
-			sb.AppendLine("fontSizeIndex=" + ModGraphics.fontSizeIndex);
+			sb.AppendLine("fontSizePreset=" + ModGraphics.fontSizeIndex);
 			sb.AppendLine("targetFps=" + ModFps.targetFps);
 			sb.AppendLine("isAutoFps=" + ModFps.isAutoFps);
 			sb.AppendLine("isAfkLowCpu=" + ModGraphics.isAfkLowCpu);
@@ -592,7 +592,7 @@ public static class ModConfig
 							mFont.InvalidateFontMetrics();
 						}
 						break;
-					case "fontSizeIndex":
+					case "fontSizePreset":
 						if (int.TryParse(val, out int fsi) && fsi >= 0 && fsi < ModGraphics.fontSizeNames.Length)
 						{
 							ModGraphics.fontSizeIndex = fsi;

@@ -56,10 +56,10 @@ public static class ModGraphics
 	public static int fontTheme = 0;
 	public static readonly string[] fontThemeNames = new string[4] { "NRO Gốc", "Tahoma", "Segoe UI", "Consolas" };
 
-	// Kích thước Font chữ: 0: Nhỏ 85%, 1: Chuẩn 100%, 2: Lớn 110%, 3: To 120%
-	public static int fontSizeIndex = 1;
-	public static readonly string[] fontSizeNames = new string[4] { "Nhỏ 85%", "Chuẩn", "Lớn 110%", "To 120%" };
-	public static readonly float[] fontSizeScales = new float[4] { 0.85f, 1.0f, 1.10f, 1.20f };
+	// Kích thước Font chữ: 0: Chuẩn 60%, 1: Vừa 75%, 2: Lớn 90%, 3: Gốc 100%
+	public static int fontSizeIndex = 0;
+	public static readonly string[] fontSizeNames = new string[4] { "Chuẩn 60%", "Vừa 75%", "Lớn 90%", "Gốc 100%" };
+	public static readonly float[] fontSizeScales = new float[4] { 0.60f, 0.75f, 0.90f, 1.0f };
 
 	private static int lastScreenWidth = 0;
 	private static int lastScreenHeight = 0;
@@ -258,7 +258,7 @@ public static class ModGraphics
 		{
 			return fontSizeScales[fontSizeIndex];
 		}
-		return 1.0f;
+		return 0.60f;
 	}
 
 	/// <summary>
@@ -277,7 +277,7 @@ public static class ModGraphics
 	/// </summary>
 	public static void SetFontSize(int index)
 	{
-		if (index < 0 || index >= fontSizeNames.Length) index = 1;
+		if (index < 0 || index >= fontSizeNames.Length) index = 0;
 		fontSizeIndex = index;
 		mFont.InvalidateFontMetrics();
 		ModConfig.SaveConfig();

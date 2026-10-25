@@ -454,7 +454,7 @@ public partial class Char : IMapObject
 			}
 			else if (isMount)
 			{
-				if (statusMe == 14 || (me && ySd - cy < 24))
+				if (statusMe == 14 || ySd - cy < 24)
 				{
 					setMountIsEnd();
 				}

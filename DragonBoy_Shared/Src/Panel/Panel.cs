@@ -427,6 +427,53 @@ public partial class Panel : IActionListener, IChatable
 			cmtoX = screenW - W;
 			cmx = cmtoX;
 		}
+		else
+		{
+			xScroll = 2;
+			X = 0;
+			if (!isClose)
+			{
+				cmtoX = 0;
+				cmx = 0;
+			}
+		}
+		if (currentTabName != null && currentTabName.Length > 0)
+		{
+			TAB_W = W / 5 - 1;
+			if (currentTabName.Length < 5)
+			{
+				TAB_W += 5;
+			}
+			startTabPos = xScroll + wScroll / 2 - currentTabName.Length * TAB_W / 2;
+		}
+		if (type == 0)
+		{
+			EnsurePetTabLayout();
+		}
+		if (ITEM_HEIGHT > 0 && currentListLength > 0 && !IsInventorySplit() && type != 4 && typeShop != 2)
+		{
+			cmyLim = currentListLength * ITEM_HEIGHT - hScroll;
+			if (cmyLim < 0)
+			{
+				cmyLim = 0;
+			}
+			if (cmtoY > cmyLim)
+			{
+				cmtoY = cmyLim;
+			}
+			if (cmtoY < 0)
+			{
+				cmtoY = 0;
+			}
+			if (cmy > cmyLim)
+			{
+				cmy = cmyLim;
+			}
+			if (cmy < 0)
+			{
+				cmy = 0;
+			}
+		}
 		if (cmdClose != null)
 		{
 			cmdClose.x = X + W - 26;

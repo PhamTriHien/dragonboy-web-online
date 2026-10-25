@@ -1052,7 +1052,7 @@
             } else {
                 ctx.textAlign = "left";
             }
-            ctx.fillText(text, drawX, y + 1);
+            ctx.fillText(text, Math.round(drawX), Math.round(y + 1));
         },
 
         pushClipRect: (x, y, w, h) => {

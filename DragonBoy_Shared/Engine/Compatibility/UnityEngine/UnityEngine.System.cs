@@ -817,7 +817,6 @@ namespace UnityEngine
                 int px = (int)(position.x + groupOffsetX);
                 int py = (int)(position.y + groupOffsetY);
 
-                Raylib_cs.Font font = Font.GetRaylibFont(style?.font);
                 int fontSize;
                 if (style != null && style.fontSize > 0)
                 {
@@ -830,11 +829,12 @@ namespace UnityEngine
                     py += (refSize - fontSize) / 2;
                 }
 
+                Raylib_cs.Font font = Font.GetRaylibFont(style?.font, fontSize);
                 Raylib_cs.Color col = style?.normal?.textColor ?? color;
 
                 if (font.Texture.Id != 0)
                 {
-                    System.Numerics.Vector2 textSize = Raylib.MeasureTextEx(font, text, fontSize, 1f);
+                    System.Numerics.Vector2 textSize = Raylib.MeasureTextEx(font, text, fontSize, 0f);
                     if (style != null)
                     {
                         if (style.alignment == TextAnchor.UpperCenter || style.alignment == TextAnchor.MiddleCenter || style.alignment == TextAnchor.LowerCenter)
@@ -846,7 +846,7 @@ namespace UnityEngine
                             px += (int)(position.width - textSize.X);
                         }
                     }
-                    Raylib.DrawTextEx(font, text, new System.Numerics.Vector2(px, py), fontSize, 1f, col);
+                    Raylib.DrawTextEx(font, text, new System.Numerics.Vector2(px, py), fontSize, 0f, col);
                 }
                 else
                 {

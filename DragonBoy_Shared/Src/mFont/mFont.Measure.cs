@@ -281,20 +281,20 @@ public partial class mFont
 			}
 			if (height > 0)
 			{
-				return height / mGraphics.zoomLevel;
+				return System.Math.Max(9, height / mGraphics.zoomLevel);
 			}
 			GUIStyle gUIStyle = new GUIStyle();
 			gUIStyle.font = myFont;
 			try
 			{
-				height = (int)gUIStyle.CalcSize(new GUIContent("Adg")).y + 2;
+				height = (int)gUIStyle.CalcSize(new GUIContent("Adg")).y + 4;
 			}
 			catch (Exception ex)
 			{
 				Cout.LogError("FAIL GET HEIGHT " + ex.StackTrace);
 				height = 20;
 			}
-			return height / mGraphics.zoomLevel;
+			return System.Math.Max(9, height / mGraphics.zoomLevel);
 		}
 
 	/// <summary>
