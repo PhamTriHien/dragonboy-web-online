@@ -13,7 +13,23 @@ public partial class Controller : IMessageHandler
 
 	protected static Controller me2;
 
+	public struct PendingMapTemplateRequest
+	{
+		public int mapId;
+		public long requestTime;
+	}
+
 	public Message messWait;
+
+	public readonly System.Collections.Generic.Queue<PendingMapTemplateRequest> pendingMapTemplates = new System.Collections.Generic.Queue<PendingMapTemplateRequest>();
+
+	public static long lastServerPacketTime = 0;
+
+	public void ClearPendingMapTemplates()
+	{
+		pendingMapTemplates.Clear();
+		messWait = null;
+	}
 
 	public static bool isLoadingData = false;
 
@@ -81,6 +97,7 @@ public partial class Controller : IMessageHandler
 	public void onConnectOK(bool isMain1)
 		{
 			isMain = isMain1;
+			ClearPendingMapTemplates();
 			mSystem.onConnectOK();
 		}
 
@@ -90,6 +107,7 @@ public partial class Controller : IMessageHandler
 	public void onConnectionFail(bool isMain1)
 		{
 			isMain = isMain1;
+			ClearPendingMapTemplates();
 			mSystem.onConnectionFail();
 		}
 
@@ -99,6 +117,7 @@ public partial class Controller : IMessageHandler
 	public void onDisconnected(bool isMain1)
 		{
 			isMain = isMain1;
+			ClearPendingMapTemplates();
 			mSystem.onDisconnected();
 		}
 
@@ -107,6 +126,7 @@ public partial class Controller : IMessageHandler
 	/// </summary>
 	public void onMessage(Message msg)
 		{
+			lastServerPacketTime = mSystem.currentTimeMillis();
 			GameCanvas.debugSession.removeAllElements();
 			GameCanvas.debug("SA1", 2);
 			try
