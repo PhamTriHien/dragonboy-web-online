@@ -146,7 +146,7 @@ namespace UnityEngine
     /// </summary>
     public static class Resources
     {
-        private const string SharedTexSlot = "DragonBoy.SharedFileTextures.v1";
+        private const string SharedTexSlot = "DragonBoy.SharedFileTextures.v2";
         private const string SharedTextAssetSlot = "DragonBoy.SharedTextAssets.v1";
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Texture2D> _tabTextureCache =
@@ -155,19 +155,19 @@ namespace UnityEngine
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, TextAsset> _tabTextAssetCache =
             new System.Collections.Concurrent.ConcurrentDictionary<string, TextAsset>(StringComparer.OrdinalIgnoreCase);
 
-        private static System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path)> GetSharedTexturePool()
+        private static System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path, bool isFallbackFromX1)> GetSharedTexturePool()
         {
-            if (AppDomain.CurrentDomain.GetData(SharedTexSlot) is System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path)> dict)
+            if (AppDomain.CurrentDomain.GetData(SharedTexSlot) is System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path, bool isFallbackFromX1)> dict)
             {
                 return dict;
             }
             lock (typeof(AppDomain))
             {
-                if (AppDomain.CurrentDomain.GetData(SharedTexSlot) is System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path)> existing)
+                if (AppDomain.CurrentDomain.GetData(SharedTexSlot) is System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path, bool isFallbackFromX1)> existing)
                 {
                     return existing;
                 }
-                var created = new System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path)>(StringComparer.OrdinalIgnoreCase);
+                var created = new System.Collections.Concurrent.ConcurrentDictionary<string, (Raylib_cs.Texture2D tex, int w, int h, string path, bool isFallbackFromX1)>(StringComparer.OrdinalIgnoreCase);
                 AppDomain.CurrentDomain.SetData(SharedTexSlot, created);
                 return created;
             }
@@ -271,6 +271,7 @@ namespace UnityEngine
                         RaylibTexture = sharedEntry.tex,
                         HasRaylibTexture = true,
                         IsSharedGpuTexture = true,
+                        IsFallbackFromX1 = sharedEntry.isFallbackFromX1,
                         _sourceFilePath = sharedEntry.path
                     };
                     _tabTextureCache[cacheKey] = t2d;
@@ -289,6 +290,12 @@ namespace UnityEngine
                 System.IO.Path.Combine(baseDir, "Assets", "x1"),
                 baseDir,
                 System.IO.Path.Combine(baseDir, "res"),
+                @"C:\ModNRO\DragonBoy_Shared\Assets",
+                @"C:\ModNRO\DragonBoy_Shared\Assets\x2",
+                @"C:\ModNRO\DragonBoy_Shared\Assets\data",
+                @"C:\ModNRO\DragonBoy_Shared\Assets\x4",
+                @"C:\ModNRO\DragonBoy_Shared\Assets\x3",
+                @"C:\ModNRO\DragonBoy_Shared\Assets\x1",
                 @"C:\ModNRO\DragonBoy_Net8_Native\Assets",
                 @"C:\ModNRO\DragonBoy_Net8_Native\Assets\x2",
                 @"C:\ModNRO\DragonBoy_Net8_Native\Assets\data",
@@ -387,13 +394,13 @@ namespace UnityEngine
 
                         if (matchedPath != null)
                         {
-                            var t = LoadTextureFromFile(matchedPath);
+                            var t = LoadTextureFromFile(matchedPath, isJavaMode);
                             if (t != null)
                             {
                                 _tabTextureCache[cacheKey] = t;
                                 if (t.HasRaylibTexture && t.RaylibTexture.Id != 0)
                                 {
-                                    GetSharedTexturePool()[cacheKey] = (t.RaylibTexture, t.width, t.height, matchedPath);
+                                    GetSharedTexturePool()[cacheKey] = (t.RaylibTexture, t.width, t.height, matchedPath, t.IsFallbackFromX1);
                                 }
                                 return t;
                             }
@@ -408,7 +415,7 @@ namespace UnityEngine
         /// <summary>
         /// Khởi tạo và nạp dữ liệu cấu hình cho LoadTextureFromFile.
         /// </summary>
-        private static Texture2D LoadTextureFromFile(string fullPath)
+        private static Texture2D LoadTextureFromFile(string fullPath, bool isJavaMode)
         {
             try
             {
@@ -416,17 +423,20 @@ namespace UnityEngine
                 if (img.Width > 0 && img.Height > 0)
                 {
                     string norm = fullPath.Replace('\\', '/');
+                    bool isFontAsset = norm.IndexOf("/myfont/", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool isFallbackFromX1 = false;
                     if (mGraphics.zoomLevel == 2)
                     {
                         if (norm.Contains("/x1/") || norm.StartsWith("x1/"))
                         {
-                            if (ModGraphics.IsJavaGraphics || norm.Contains("/myfont/"))
+                            if (isJavaMode || isFontAsset)
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, img.Width * 2, img.Height * 2);
                             }
                             else
                             {
                                 UpscaleSmart2x(ref img);
+                                isFallbackFromX1 = true;
                             }
                         }
                         else if (norm.Contains("/x3/") || norm.StartsWith("x3/"))
@@ -437,6 +447,10 @@ namespace UnityEngine
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, tw, th);
                             }
+                            if (isJavaMode && !isFontAsset)
+                            {
+                                Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                            }
                         }
                         else if (norm.Contains("/x4/") || norm.StartsWith("x4/"))
                         {
@@ -446,6 +460,14 @@ namespace UnityEngine
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, tw, th);
                             }
+                            if (isJavaMode && !isFontAsset)
+                            {
+                                Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                            }
+                        }
+                        else if (isJavaMode && !isFontAsset)
+                        {
+                            Texture2D.QuantizeRaylibImageJava2x2(ref img);
                         }
                     }
                     Texture2D t2d = new Texture2D(img.Width, img.Height, allocatePixelBuffer: false);
@@ -456,6 +478,7 @@ namespace UnityEngine
                     t2d.currentRaylibFilter = desiredFilter;
                     t2d.HasRaylibTexture = true;
                     t2d.IsSharedGpuTexture = true;
+                    t2d.IsFallbackFromX1 = isFallbackFromX1;
                     t2d._sourceFilePath = fullPath;
                     Raylib_cs.Raylib.UnloadImage(img);
                     return t2d;
@@ -473,7 +496,7 @@ namespace UnityEngine
         private static unsafe void UpscaleSmart2x(ref Raylib_cs.Image img)
         {
             if (img.Width <= 0 || img.Height <= 0) return;
-            if (img.Width > 256 || img.Height > 256)
+            if (img.Width > 512 || img.Height > 512)
             {
                 Raylib_cs.Raylib.ImageResizeNN(ref img, img.Width * 2, img.Height * 2);
                 return;

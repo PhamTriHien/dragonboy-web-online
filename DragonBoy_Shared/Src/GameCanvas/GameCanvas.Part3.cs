@@ -121,6 +121,8 @@ public partial class GameCanvas : IActionListener
 					System.IO.Path.Combine(currentDir, "Assets", fname),
 					System.IO.Path.Combine(currentDir, "Assets", "x2", fname),
 					fname,
+					@"C:\ModNRO\DragonBoy_Shared\Assets\" + fname,
+					@"C:\ModNRO\DragonBoy_Shared\Assets\x2\" + fname,
 					@"C:\ModNRO\DragonBoy_Net8_Native\Assets\" + fname,
 					@"C:\ModNRO\DragonBoy_Net8_Native\Assets\x2\" + fname,
 					@"C:\ModNRO\DragonBoy_Net8_Native\" + fname,

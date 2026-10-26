@@ -48,6 +48,11 @@ public static class ModUI
 
 	private static Image imgBtX;
 
+	public static void ReloadForGraphicsMode()
+	{
+		imgBtX = null;
+	}
+
 	/// <summary>
 	/// Truy xuất và trả về dữ liệu của GetUniqueMobTemplateIds.
 	/// </summary>

@@ -171,6 +171,7 @@ namespace UnityEngine
         public Raylib_cs.Image RaylibImage;
         public bool HasRaylibTexture = false;
         public bool IsSharedGpuTexture = false;
+        public bool IsFallbackFromX1 = false;
         public Color[] pixelBuffer;
         public TextureFilter currentRaylibFilter = TextureFilter.Point;
         internal byte[] _compressedData;
@@ -762,6 +763,19 @@ namespace UnityEngine
                     p[row1 + x] = outCol;
                     p[row1 + x + 1] = outCol;
                 }
+            }
+        }
+
+        public static unsafe void QuantizeRaylibImageJava2x2(ref Raylib_cs.Image img)
+        {
+            if (img.Width < 2 || img.Height < 2) return;
+            if (img.Format != PixelFormat.UncompressedR8G8B8A8)
+            {
+                Raylib.ImageFormat(ref img, PixelFormat.UncompressedR8G8B8A8);
+            }
+            if (img.Data != null)
+            {
+                QuantizeRgbaBufferJava2x2((Raylib_cs.Color*)img.Data, img.Width, img.Height);
             }
         }
 

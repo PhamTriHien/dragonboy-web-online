@@ -589,7 +589,6 @@ public class mSystem
 	public static void ClearImageCache()
 	{
 		hashFraImage.clear();
-		ImgByName.hashImagePath?.clear();
 	}
 
 	/// <summary>

@@ -162,22 +162,24 @@ namespace DragonBoy_Web_Host
                     baseClean + ".png",
                     "res/" + baseNoRes + ".png",
                     "x2/" + withoutZoom + ".png",
-                    "x1/" + withoutZoom + ".png",
-                    "x3/" + withoutZoom + ".png",
                     "x4/" + withoutZoom + ".png",
+                    "x3/" + withoutZoom + ".png",
+                    "x1/" + withoutZoom + ".png",
                     withoutZoom + ".png"
                 };
 
+            bool isFontAsset = withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
             for (int i = 0; i < candidates.Length; i++)
             {
                 string key = candidates[i];
                 if (_imageDimensions.TryGetValue(key, out var dims))
                 {
+                    bool fromX1 = key.StartsWith("x1/", StringComparison.OrdinalIgnoreCase);
                     int targetW = dims.width;
                     int targetH = dims.height;
                     if (mGraphics.zoomLevel == 2)
                     {
-                        if (key.StartsWith("x1/", StringComparison.OrdinalIgnoreCase))
+                        if (fromX1)
                         {
                             targetW = dims.width * 2;
                             targetH = dims.height * 2;
@@ -197,8 +199,13 @@ namespace DragonBoy_Web_Host
                     int texId = WebGraphicsBackend.RegisterLazyTexture("/game-assets/" + key, targetW, targetH);
                     var tex = new Texture2D(targetW, targetH, allocatePixelBuffer: false)
                     {
-                        WebTextureId = texId
+                        WebTextureId = texId,
+                        IsFallbackFromX1 = (!isJavaMode && fromX1)
                     };
+                    if (isJavaMode && !fromX1 && !isFontAsset && mGraphics.zoomLevel == 2)
+                    {
+                        WebGraphicsBackend.QuantizeTextureJava2x2(tex);
+                    }
                     _textureCache[cacheKey] = tex;
                     return tex;
                 }

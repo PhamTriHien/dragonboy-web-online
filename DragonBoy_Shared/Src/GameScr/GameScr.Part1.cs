@@ -93,6 +93,10 @@ public partial class GameScr : mScreen, IChatable
 				instance.cmdMenu.h = mGraphics.getImageHeight(imgMenu) + 12;
 			}
 			imgFocus = GameCanvas.loadImage("/mainImage/myTexture2dfocus.png");
+			if (imgFocus != null && instance != null && instance.cmdFocus != null)
+			{
+				instance.cmdFocus.img = imgFocus;
+			}
 			imgHP_tm_do = GameCanvas.loadImage("/mainImage/tm-do.png");
 			imgHP_tm_vang = GameCanvas.loadImage("/mainImage/tm-vang.png");
 			imgHP_tm_xam = GameCanvas.loadImage("/mainImage/tm-xam.png");
@@ -171,6 +175,13 @@ public partial class GameScr : mScreen, IChatable
 			frBarPow20 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor00.png");
 			frBarPow21 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor01.png");
 			frBarPow22 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor02.png");
+			if (imgSplash != null)
+			{
+				for (int i = 0; i < imgSplash.Length; i++)
+				{
+					imgSplash[i] = GameCanvas.loadImage("/e/sp" + i + ".png");
+				}
+			}
 		}
 	public static void ReloadHudImages()
 		{
@@ -201,6 +212,10 @@ public partial class GameScr : mScreen, IChatable
 				instance.cmdMenu.h = mGraphics.getImageHeight(imgMenu) + 12;
 			}
 			imgFocus = GameCanvas.loadImage("/mainImage/myTexture2dfocus.png");
+			if (imgFocus != null && instance != null && instance.cmdFocus != null)
+			{
+				instance.cmdFocus.img = imgFocus;
+			}
 			imgHP_tm_do = GameCanvas.loadImage("/mainImage/tm-do.png");
 			imgHP_tm_vang = GameCanvas.loadImage("/mainImage/tm-vang.png");
 			imgHP_tm_xam = GameCanvas.loadImage("/mainImage/tm-xam.png");
@@ -235,6 +250,13 @@ public partial class GameScr : mScreen, IChatable
 			frBarPow20 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor00.png");
 			frBarPow21 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor01.png");
 			frBarPow22 = GameCanvas.loadImage("/mainImage/myTexture2dlineColor02.png");
+			if (imgSplash != null)
+			{
+				for (int i = 0; i < imgSplash.Length; i++)
+				{
+					imgSplash[i] = GameCanvas.loadImage("/e/sp" + i + ".png");
+				}
+			}
 		}
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho initSelectChar.
