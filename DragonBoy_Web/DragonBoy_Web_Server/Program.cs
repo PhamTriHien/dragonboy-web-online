@@ -107,7 +107,8 @@ app.UseStaticFiles(new StaticFileOptions
     {
         string name = ctx.File.Name;
         if (name.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
-            name.Equals("blazor.boot.json", StringComparison.OrdinalIgnoreCase))
+            name.Equals("blazor.boot.json", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("dragonboy.js", StringComparison.OrdinalIgnoreCase))
         {
             ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
         }

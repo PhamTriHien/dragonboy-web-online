@@ -174,7 +174,13 @@ public partial class Session_ME
 					}
 					lastSendTime = 0;
 				}
-				messageHandler.onMessage(message);
+				try
+				{
+					messageHandler.onMessage(message);
+				}
+				catch (Exception)
+				{
+				}
 			}
 		}
 

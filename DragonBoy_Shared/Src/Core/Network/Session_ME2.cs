@@ -625,7 +625,13 @@ public class Session_ME2 : ISession
 			{
 				break;
 			}
-			messageHandler.onMessage(message);
+			try
+			{
+				messageHandler.onMessage(message);
+			}
+			catch (Exception)
+			{
+			}
 		}
 	}
 

@@ -378,6 +378,8 @@ public class Main : MonoBehaviour
 			up++;
 			setsizeChange();
 			updateCount++;
+			Session_ME.update();
+			Session_ME2.update();
 			ipKeyboard.update();
 			GameMidlet.gameCanvas.update();
 			ModMenu.Update();

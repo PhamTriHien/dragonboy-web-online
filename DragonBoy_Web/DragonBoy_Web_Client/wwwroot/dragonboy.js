@@ -607,6 +607,12 @@
             }
         });
 
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden && wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnBlurReset();
+            }
+        });
+
         canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
         canvas.addEventListener("wheel", (e) => {
@@ -1348,6 +1354,9 @@
         },
 
         showSoftKeyboard: (initialText) => {
+            if (wasmExports) {
+                wasmExports.DragonBoy_Web_Host.WebInputBridge.OnBlurReset();
+            }
             kbInput.value = initialText || "";
             kbModal.classList.add("visible");
             try {
