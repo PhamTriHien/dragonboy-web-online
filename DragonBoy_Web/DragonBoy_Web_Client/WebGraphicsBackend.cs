@@ -302,15 +302,16 @@ namespace DragonBoy_Web_Host
 
         private static int ResolveEffectiveFontCode(GUIStyle style)
         {
-            int theme = ModGraphics.fontTheme;
-            if (theme == 1) return 1;
-            if (theme == 2) return 2;
-            if (theme == 3) return 3;
             string fname = style?.font?.name;
+            bool isRegular = !string.IsNullOrEmpty(fname) && fname.IndexOf("chelthm", StringComparison.OrdinalIgnoreCase) >= 0;
+            int theme = ModGraphics.fontTheme;
+            if (theme == 1) return isRegular ? 11 : 1;
+            if (theme == 2) return isRegular ? 12 : 2;
+            if (theme == 3) return isRegular ? 13 : 3;
             if (!string.IsNullOrEmpty(fname))
             {
                 if (fname.IndexOf("staccato", StringComparison.OrdinalIgnoreCase) >= 0) return 20;
-                if (fname.IndexOf("chelthm", StringComparison.OrdinalIgnoreCase) >= 0) return 10;
+                if (isRegular) return 10;
             }
             return 0;
         }
@@ -353,7 +354,7 @@ namespace DragonBoy_Web_Host
             {
                 fontSize = Font.GetDefaultFontSize(style?.font);
                 int refSize = Font.GetLayoutReferenceFontSize(style?.font);
-                py += (refSize - fontSize) / 2;
+                py += (refSize - fontSize) * 0.5f;
             }
 
             Color col = style?.normal?.textColor ?? defaultColor;

@@ -175,34 +175,43 @@ namespace DragonBoy_Web_Host
                 if (_imageDimensions.TryGetValue(key, out var dims))
                 {
                     bool fromX1 = key.StartsWith("x1/", StringComparison.OrdinalIgnoreCase);
-                    int targetW = dims.width;
-                    int targetH = dims.height;
+                    int rawW = dims.width;
+                    int rawH = dims.height;
+                    int targetW = rawW;
+                    int targetH = rawH;
                     if (mGraphics.zoomLevel == 2)
                     {
                         if (fromX1)
                         {
-                            targetW = dims.width * 2;
-                            targetH = dims.height * 2;
+                            targetW = rawW * 2;
+                            targetH = rawH * 2;
                         }
                         else if (key.StartsWith("x3/", StringComparison.OrdinalIgnoreCase))
                         {
-                            targetW = System.Math.Max(1, (dims.width * 2 + 1) / 3);
-                            targetH = System.Math.Max(1, (dims.height * 2 + 1) / 3);
+                            targetW = System.Math.Max(1, (rawW * 2 + 1) / 3);
+                            targetH = System.Math.Max(1, (rawH * 2 + 1) / 3);
                         }
                         else if (key.StartsWith("x4/", StringComparison.OrdinalIgnoreCase))
                         {
-                            targetW = System.Math.Max(1, (dims.width + 1) / 2);
-                            targetH = System.Math.Max(1, (dims.height + 1) / 2);
+                            targetW = System.Math.Max(1, (rawW + 1) / 2);
+                            targetH = System.Math.Max(1, (rawH + 1) / 2);
                         }
                     }
 
-                    int texId = WebGraphicsBackend.RegisterLazyTexture("/game-assets/" + key, targetW, targetH);
-                    var tex = new Texture2D(targetW, targetH, allocatePixelBuffer: false)
+                    bool preScaleNearest = fromX1 && (isJavaMode || isFontAsset) && mGraphics.zoomLevel == 2;
+                    int initW = preScaleNearest ? rawW : targetW;
+                    int initH = preScaleNearest ? rawH : targetH;
+                    int texId = WebGraphicsBackend.RegisterLazyTexture("/game-assets/" + key, initW, initH);
+                    var tex = new Texture2D(initW, initH, allocatePixelBuffer: false)
                     {
                         WebTextureId = texId,
-                        IsFallbackFromX1 = (!isJavaMode && fromX1)
+                        IsFallbackFromX1 = (!isJavaMode && !isFontAsset && fromX1)
                     };
-                    if (isJavaMode && !fromX1 && !isFontAsset && mGraphics.zoomLevel == 2)
+                    if (preScaleNearest)
+                    {
+                        WebGraphicsBackend.ScaleTextureNN(tex, targetW, targetH);
+                    }
+                    else if (isJavaMode && !fromX1 && !isFontAsset && mGraphics.zoomLevel == 2)
                     {
                         WebGraphicsBackend.QuantizeTextureJava2x2(tex);
                     }

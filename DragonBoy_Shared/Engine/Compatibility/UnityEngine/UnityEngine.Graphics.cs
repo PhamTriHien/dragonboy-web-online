@@ -1213,7 +1213,8 @@ namespace UnityEngine
 
                 if (texture is Texture2D t2d && t2d.HasRaylibTexture)
                 {
-                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
+                    bool isFontTex = !string.IsNullOrEmpty(t2d._sourceFilePath) && t2d._sourceFilePath.IndexOf("myfont", StringComparison.OrdinalIgnoreCase) >= 0;
+                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontTex) ? TextureFilter.Point : TextureFilter.Bilinear;
                     if (t2d.currentRaylibFilter != desiredFilter)
                     {
                         Raylib.SetTextureFilter(t2d.RaylibTexture, desiredFilter);
@@ -1372,7 +1373,22 @@ namespace UnityEngine
         private static bool _fontPathsResolved = false;
         private static int[] _cachedCodepoints;
         private static readonly object _lock = new object();
-        private const string SharedFontSlot = "DragonBoy.SharedExactFonts.v2";
+        private const string SharedFontSlot = "DragonBoy.SharedExactFonts.v3";
+        private const string EmbeddedPrefix = "embedded:";
+        private static readonly byte[] s_FontGammaLut = BuildFontGammaLut();
+
+        private static byte[] BuildFontGammaLut()
+        {
+            byte[] lut = new byte[256];
+            lut[0] = 0;
+            lut[255] = 255;
+            for (int i = 1; i < 255; i++)
+            {
+                float corrected = MathF.Pow(i / 255f, 0.68f) * 255f;
+                lut[i] = (byte)System.Math.Clamp((int)MathF.Round(corrected), 0, 255);
+            }
+            return lut;
+        }
 
         private static System.Collections.Concurrent.ConcurrentDictionary<int, Raylib_cs.Font> GetSharedFontPool()
         {
@@ -1404,6 +1420,7 @@ namespace UnityEngine
                 {
                     System.IO.Path.Combine(baseDir, "Assets", "myfont", fileName),
                     System.IO.Path.Combine(baseDir, "myfont", fileName),
+                    System.IO.Path.Combine(@"C:\ModNRO\DragonBoy_Shared\Assets\myfont", fileName),
                     System.IO.Path.Combine(@"C:\ModNRO\DragonBoy_Net8_Native\Assets\myfont", fileName),
                     System.IO.Path.Combine(@"C:\ModNRO\ModNRO_Tools\Decompiled\APK_apktool\assets\myfont", fileName),
                     System.IO.Path.Combine(baseDir, fileName)
@@ -1413,13 +1430,29 @@ namespace UnityEngine
                 {
                     if (System.IO.File.Exists(path)) return path;
                 }
+
+                string resourceName = "myfont/" + fileName;
+                var entryAsm = System.Reflection.Assembly.GetEntryAssembly();
+                if (entryAsm != null && entryAsm.GetManifestResourceInfo(resourceName) != null)
+                {
+                    return EmbeddedPrefix + resourceName;
+                }
+                var selfAsm = typeof(Font).Assembly;
+                if (selfAsm.GetManifestResourceInfo(resourceName) != null)
+                {
+                    return EmbeddedPrefix + resourceName;
+                }
             }
 
             if (windowsFallbacks != null)
             {
                 foreach (var fb in windowsFallbacks)
                 {
-                    if (!string.IsNullOrEmpty(fb) && System.IO.File.Exists(fb)) return fb;
+                    if (string.IsNullOrEmpty(fb)) continue;
+                    if (fb.StartsWith(EmbeddedPrefix, StringComparison.Ordinal) || System.IO.File.Exists(fb))
+                    {
+                        return fb;
+                    }
                 }
             }
             return null;
@@ -1456,19 +1489,88 @@ namespace UnityEngine
             return cpArray;
         }
 
+        private static unsafe void SharpenFontAtlasAlpha(ref Raylib_cs.Font f)
+        {
+            if (f.Texture.Id == 0) return;
+            try
+            {
+                Raylib_cs.Image atlas = Raylib.LoadImageFromTexture(f.Texture);
+                if (atlas.Width > 0 && atlas.Height > 0 && atlas.Data != null)
+                {
+                    if (atlas.Format != PixelFormat.UncompressedR8G8B8A8)
+                    {
+                        Raylib.ImageFormat(ref atlas, PixelFormat.UncompressedR8G8B8A8);
+                    }
+                    Raylib_cs.Color* pixels = (Raylib_cs.Color*)atlas.Data;
+                    if (pixels != null)
+                    {
+                        int total = atlas.Width * atlas.Height;
+                        for (int i = 0; i < total; i++)
+                        {
+                            byte a = pixels[i].A;
+                            pixels[i] = new Raylib_cs.Color((byte)255, (byte)255, (byte)255, s_FontGammaLut[a]);
+                        }
+                        Raylib_cs.Texture2D crispTex = Raylib.LoadTextureFromImage(atlas);
+                        if (crispTex.Id != 0)
+                        {
+                            Raylib.UnloadTexture(f.Texture);
+                            f.Texture = crispTex;
+                        }
+                    }
+                    Raylib.UnloadImage(atlas);
+                }
+            }
+            catch { }
+            Raylib.SetTextureWrap(f.Texture, TextureWrap.Clamp);
+            Raylib.SetTextureFilter(f.Texture, TextureFilter.Point);
+        }
+
+        private static byte[] ReadEmbeddedResourceBytes(string resourceName)
+        {
+            var entryAsm = System.Reflection.Assembly.GetEntryAssembly();
+            using var s1 = entryAsm?.GetManifestResourceStream(resourceName);
+            if (s1 != null)
+            {
+                using var ms = new System.IO.MemoryStream((int)s1.Length);
+                s1.CopyTo(ms);
+                return ms.ToArray();
+            }
+            using var s2 = typeof(Font).Assembly.GetManifestResourceStream(resourceName);
+            if (s2 != null)
+            {
+                using var ms = new System.IO.MemoryStream((int)s2.Length);
+                s2.CopyTo(ms);
+                return ms.ToArray();
+            }
+            return null;
+        }
+
         /// <summary>
         /// Khởi tạo và nạp dữ liệu cấu hình cho LoadCustomFont.
         /// </summary>
         private static Raylib_cs.Font LoadCustomFont(string path, int size, int[] codepoints)
         {
-            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return default;
+            if (string.IsNullOrEmpty(path)) return default;
             try
             {
-                Raylib_cs.Font f = Raylib.LoadFontEx(path, size, codepoints, codepoints.Length);
+                Raylib_cs.Font f = default;
+                if (path.StartsWith(EmbeddedPrefix, StringComparison.Ordinal))
+                {
+                    string resName = path.Substring(EmbeddedPrefix.Length);
+                    byte[] fontBytes = ReadEmbeddedResourceBytes(resName);
+                    if (fontBytes != null && fontBytes.Length > 0)
+                    {
+                        f = Raylib.LoadFontFromMemory(".ttf", fontBytes, size, codepoints, codepoints.Length);
+                    }
+                }
+                else if (System.IO.File.Exists(path))
+                {
+                    f = Raylib.LoadFontEx(path, size, codepoints, codepoints.Length);
+                }
+
                 if (f.Texture.Id != 0)
                 {
-                    Raylib.SetTextureWrap(f.Texture, TextureWrap.Clamp);
-                    Raylib.SetTextureFilter(f.Texture, TextureFilter.Point);
+                    SharpenFontAtlasAlpha(ref f);
                     return f;
                 }
             }

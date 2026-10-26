@@ -14,6 +14,8 @@
     const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     const measureCanvas = document.createElement("canvas");
     const measureCtx = measureCanvas.getContext("2d");
+    if (ctx && "textRendering" in ctx) ctx.textRendering = "optimizeLegibility";
+    if (measureCtx && "textRendering" in measureCtx) measureCtx.textRendering = "optimizeLegibility";
 
     const loadingOverlay = document.getElementById("loading-overlay");
     const loadingBar = document.getElementById("loading-bar");
@@ -293,8 +295,10 @@
         const vv = window.visualViewport;
         const fallbackW = (vv && vv.width > 0) ? vv.width : (window.innerWidth || document.documentElement.clientWidth || 1024);
         const fallbackH = (vv && vv.height > 0) ? vv.height : (window.innerHeight || document.documentElement.clientHeight || 600);
-        const cssW = Math.max(240, Math.round((rect && rect.width > 0) ? rect.width : fallbackW));
-        const cssH = Math.max(240, Math.round((rect && rect.height > 0) ? rect.height : fallbackH));
+        const rawCssW = Math.max(240, (rect && rect.width > 0) ? rect.width : fallbackW);
+        const rawCssH = Math.max(240, (rect && rect.height > 0) ? rect.height : fallbackH);
+        const cssW = Math.round(rawCssW);
+        const cssH = Math.round(rawCssH);
 
         isPortraitRotated = isMobileOrTablet && (cssW < cssH);
         const landscapeW = isPortraitRotated ? cssH : cssW;
@@ -331,9 +335,9 @@
         virtualW = vw;
         virtualH = vh;
 
-        const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2.5);
-        const backingW = Math.max(320, Math.round(cssW * dpr));
-        const backingH = Math.max(240, Math.round(cssH * dpr));
+        const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 4);
+        const backingW = Math.max(320, Math.round(rawCssW * dpr));
+        const backingH = Math.max(240, Math.round(rawCssH * dpr));
         if (canvas.width !== backingW || canvas.height !== backingH) {
             canvas.width = backingW;
             canvas.height = backingH;
@@ -493,13 +497,18 @@
     }
     updateCanvasViewportSize();
 
-    function getFontFamily(fontTheme) {
-        if (fontTheme === 1) return "Tahoma, Verdana, sans-serif";
-        if (fontTheme === 2) return "'Segoe UI', system-ui, sans-serif";
-        if (fontTheme === 3) return "Consolas, 'Courier New', monospace";
-        if (fontTheme === 10) return "'DragonBoyFont1', sans-serif";
-        if (fontTheme === 20) return "'DragonBoyFont2', sans-serif";
-        return "'DragonBoyFont0', sans-serif";
+    function buildFontSpec(fontSize, fontCode) {
+        switch (fontCode) {
+            case 1: return `bold ${fontSize}px Tahoma, Verdana, sans-serif`;
+            case 11: return `normal ${fontSize}px Tahoma, Verdana, sans-serif`;
+            case 2: return `600 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+            case 12: return `normal ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+            case 3: return `bold ${fontSize}px Consolas, 'Courier New', monospace`;
+            case 13: return `normal ${fontSize}px Consolas, 'Courier New', monospace`;
+            case 10: return `normal ${fontSize}px 'DragonBoyFont1', Tahoma, sans-serif`;
+            case 20: return `bold ${fontSize}px 'DragonBoyFont2', Tahoma, sans-serif`;
+            default: return `bold ${fontSize}px 'DragonBoyFont0', Tahoma, sans-serif`;
+        }
     }
 
     function ensureTextureCanvas(entry) {
@@ -880,6 +889,7 @@
                 height: height || 1,
                 loaded: false,
                 url: url,
+                isPixelArt: typeof url === "string" && url.toLowerCase().indexOf("/myfont/") >= 0,
                 pendingScales: []
             };
             const img = new Image();
@@ -948,6 +958,7 @@
 
             const srcEntry = textures.get(srcTexId);
             if (!srcEntry) return;
+            dstEntry.isPixelArt = Boolean(srcEntry.isPixelArt);
 
             const performScale = () => {
                 const srcDrawable = srcEntry.canvas || srcEntry.img;
@@ -1083,6 +1094,7 @@
 
             const srcEntry = textures.get(srcTexId);
             if (!srcEntry) return;
+            dstEntry.isPixelArt = Boolean(srcEntry.isPixelArt);
 
             const performBlend = () => {
                 const srcDrawable = srcEntry.canvas || srcEntry.img;
@@ -1213,7 +1225,11 @@
             if (sw <= 0 || sh <= 0 || dstW <= 0 || dstH <= 0) return;
 
             const prevAlpha = ctx.globalAlpha;
+            const prevSmooth = ctx.imageSmoothingEnabled;
             ctx.globalAlpha = a;
+            if (entry.isPixelArt && prevSmooth) {
+                ctx.imageSmoothingEnabled = false;
+            }
 
             if (flipX || flipY) {
                 ctx.save();
@@ -1225,6 +1241,9 @@
                 ctx.drawImage(drawable, sx, sy, sw, sh, dstX, dstY, dstW, dstH);
             }
 
+            if (entry.isPixelArt && prevSmooth) {
+                ctx.imageSmoothingEnabled = true;
+            }
             ctx.globalAlpha = prevAlpha;
         },
 
@@ -1247,13 +1266,12 @@
             }
         },
 
-        measureTextWidth: (text, fontSize, fontTheme) => {
-            measureCtx.font = `bold ${fontSize}px ${getFontFamily(fontTheme)}`;
+        measureTextWidth: (text, fontSize, fontCode) => {
+            measureCtx.font = buildFontSpec(fontSize, fontCode);
             return measureCtx.measureText(text).width;
         },
 
-        drawText: (text, x, y, w, h, fontSize, fontTheme, r, g, b, a, align) => {
-            ctx.font = `bold ${fontSize}px ${getFontFamily(fontTheme)}`;
+        drawText: (text, x, y, w, h, fontSize, fontCode, r, g, b, a, align) => {
             ctx.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
             ctx.textBaseline = "top";
             let drawX = x;
@@ -1266,7 +1284,33 @@
             } else {
                 ctx.textAlign = "left";
             }
-            ctx.fillText(text, Math.round(drawX), Math.round(y + 1));
+
+            const drawY = y + 1;
+            if (matrixDepth === 0) {
+                if (isPortraitRotated) {
+                    const scaleX = canvas.height / Math.max(1, virtualW);
+                    const scaleY = canvas.width / Math.max(1, virtualH);
+                    const physSize = Math.max(8, Math.round(fontSize * scaleY));
+                    const physX = Math.round(drawX * scaleX);
+                    const physY = Math.round(drawY * scaleY);
+                    ctx.setTransform(0, 1, -1, 0, canvas.width, 0);
+                    ctx.font = buildFontSpec(physSize, fontCode);
+                    ctx.fillText(text, physX, physY);
+                } else {
+                    const scaleX = canvas.width / Math.max(1, virtualW);
+                    const scaleY = canvas.height / Math.max(1, virtualH);
+                    const physSize = Math.max(8, Math.round(fontSize * scaleY));
+                    const physX = Math.round(drawX * scaleX);
+                    const physY = Math.round(drawY * scaleY);
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.font = buildFontSpec(physSize, fontCode);
+                    ctx.fillText(text, physX, physY);
+                }
+                applyBaseTransform();
+            } else {
+                ctx.font = buildFontSpec(fontSize, fontCode);
+                ctx.fillText(text, Math.round(drawX), Math.round(drawY));
+            }
         },
 
         pushClipRect: (x, y, w, h) => {

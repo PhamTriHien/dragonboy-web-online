@@ -76,7 +76,13 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
             CenterWindow();
             BringToFront();
 
-            UpdateVirtualTarget();
+            int initW = Raylib.GetScreenWidth();
+            int initH = Raylib.GetScreenHeight();
+            if (initW > 0 && initH > 0)
+            {
+                VirtualWidth = initW;
+                VirtualHeight = initH;
+            }
             IsInitialized = true;
         }
 
@@ -205,7 +211,7 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
         }
 
         /// <summary>
-        /// Bắt đầu chu kỳ vẽ vào Virtual Render Target ảo.
+        /// Bắt đầu chu kỳ vẽ khung hình trực tiếp 1:1 lên backbuffer phần cứng.
         /// </summary>
         public static void BeginVirtualRender()
         {
@@ -213,40 +219,22 @@ namespace DragonBoy_Net8_Native.Engine.Graphics
 
             int screenW = Raylib.GetScreenWidth();
             int screenH = Raylib.GetScreenHeight();
-            if (screenW > 0 && screenH > 0 && (screenW != VirtualWidth || screenH != VirtualHeight || VirtualTarget.Id == 0))
+            if (screenW > 0 && screenH > 0)
             {
                 VirtualWidth = screenW;
                 VirtualHeight = screenH;
-                UpdateVirtualTarget();
             }
 
-            Raylib.BeginTextureMode(VirtualTarget);
+            Raylib.BeginDrawing();
             Raylib.ClearBackground(Raylib_cs.Color.Black);
         }
 
         /// <summary>
-        /// Kết thúc chu kỳ vẽ và xuất khung hình từ Virtual Target ra màn hình thật.
+        /// Kết thúc chu kỳ vẽ khung hình trực tiếp ra màn hình thật.
         /// </summary>
         public static void EndVirtualRender(int activeRenderState = -1)
         {
-            int renderMode = (activeRenderState >= 0) ? (activeRenderState & 0xFF) : ModGraphics.renderMode;
-
-            Raylib.EndTextureMode();
-            ApplyTextureFilter(renderMode);
-
-            Raylib.BeginDrawing();
-            Raylib.ClearBackground(Raylib_cs.Color.Black);
-
-            int screenW = Raylib.GetScreenWidth();
-            int screenH = Raylib.GetScreenHeight();
-
-            Rectangle src = new Rectangle(0, 0, VirtualWidth, -VirtualHeight);
-            Rectangle dst = new Rectangle(0, 0, screenW, screenH);
-
-            Raylib.DrawTexturePro(VirtualTarget.Texture, src, dst, Vector2.Zero, 0f, Raylib_cs.Color.White);
-
             Raylib.EndDrawing();
-
             _frameCounter++;
         }
 

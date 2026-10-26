@@ -79,10 +79,10 @@ public static class ModGraphics
 	public static int fontTheme = 0;
 	public static readonly string[] fontThemeNames = new string[4] { "NRO Gốc", "Tahoma", "Segoe UI", "Consolas" };
 
-	// Kích thước Font chữ: 0: Chuẩn 60%, 1: Vừa 75%, 2: Lớn 90%, 3: Gốc 100%
-	public static int fontSizeIndex = 0;
-	public static readonly string[] fontSizeNames = new string[4] { "Chuẩn 60%", "Vừa 75%", "Lớn 90%", "Gốc 100%" };
-	public static readonly float[] fontSizeScales = new float[4] { 0.60f, 0.75f, 0.90f, 1.0f };
+	// Kích thước Font chữ: 0: Nhỏ 65%, 1: Chuẩn 75%, 2: Lớn 90%, 3: Gốc 100%
+	public static int fontSizeIndex = 1;
+	public static readonly string[] fontSizeNames = new string[4] { "Nhỏ 65%", "Chuẩn 75%", "Lớn 90%", "Gốc 100%" };
+	public static readonly float[] fontSizeScales = new float[4] { 0.65f, 0.75f, 0.90f, 1.0f };
 
 	// Tốc độ hoạt ảnh game (nhân hệ số chu kỳ mô phỏng 50Hz gốc): 0: x1.0 Gốc .. 7: x5.0
 	public static int animSpeedIndex = 0;
@@ -450,7 +450,7 @@ public static class ModGraphics
 		{
 			return fontSizeScales[fontSizeIndex];
 		}
-		return 0.60f;
+		return 0.75f;
 	}
 
 	/// <summary>
@@ -469,7 +469,7 @@ public static class ModGraphics
 	/// </summary>
 	public static void SetFontSize(int index)
 	{
-		if (index < 0 || index >= fontSizeNames.Length) index = 0;
+		if (index < 0 || index >= fontSizeNames.Length) index = 1;
 		fontSizeIndex = index;
 		mFont.InvalidateFontMetrics();
 		ModConfig.SaveConfig();

@@ -815,8 +815,8 @@ namespace UnityEngine
             if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) return;
             try
             {
-                int px = (int)(position.x + groupOffsetX);
-                int py = (int)(position.y + groupOffsetY);
+                float fx = position.x + groupOffsetX;
+                float fy = position.y + groupOffsetY;
 
                 int fontSize;
                 if (style != null && style.fontSize > 0)
@@ -827,7 +827,7 @@ namespace UnityEngine
                 {
                     fontSize = Font.GetDefaultFontSize(style?.font);
                     int refSize = Font.GetLayoutReferenceFontSize(style?.font);
-                    py += (refSize - fontSize) / 2;
+                    fy += (refSize - fontSize) * 0.5f;
                 }
 
                 Raylib_cs.Font font = Font.GetRaylibFont(style?.font, fontSize);
@@ -840,13 +840,15 @@ namespace UnityEngine
                     {
                         if (style.alignment == TextAnchor.UpperCenter || style.alignment == TextAnchor.MiddleCenter || style.alignment == TextAnchor.LowerCenter)
                         {
-                            px += (int)((position.width - textSize.X) / 2);
+                            fx += (position.width - textSize.X) * 0.5f;
                         }
                         else if (style.alignment == TextAnchor.UpperRight || style.alignment == TextAnchor.MiddleRight || style.alignment == TextAnchor.LowerRight)
                         {
-                            px += (int)(position.width - textSize.X);
+                            fx += (position.width - textSize.X);
                         }
                     }
+                    int px = (int)MathF.Round(fx);
+                    int py = (int)MathF.Round(fy);
                     Raylib.DrawTextEx(font, text, new System.Numerics.Vector2(px, py), fontSize, 0f, col);
                 }
                 else
@@ -856,13 +858,15 @@ namespace UnityEngine
                         int textWidth = Raylib.MeasureText(text, fontSize);
                         if (style.alignment == TextAnchor.UpperCenter || style.alignment == TextAnchor.MiddleCenter || style.alignment == TextAnchor.LowerCenter)
                         {
-                            px += (int)((position.width - textWidth) / 2);
+                            fx += (position.width - textWidth) * 0.5f;
                         }
                         else if (style.alignment == TextAnchor.UpperRight || style.alignment == TextAnchor.MiddleRight || style.alignment == TextAnchor.LowerRight)
                         {
-                            px += (int)(position.width - textWidth);
+                            fx += (position.width - textWidth);
                         }
                     }
+                    int px = (int)MathF.Round(fx);
+                    int py = (int)MathF.Round(fy);
                     Raylib.DrawText(text, px, py, fontSize, col);
                 }
             }
@@ -902,7 +906,8 @@ namespace UnityEngine
                 }
                 else if (image is Texture2D t2d && t2d.HasRaylibTexture)
                 {
-                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0) ? TextureFilter.Point : TextureFilter.Bilinear;
+                    bool isFontTex = !string.IsNullOrEmpty(t2d._sourceFilePath) && t2d._sourceFilePath.IndexOf("myfont", StringComparison.OrdinalIgnoreCase) >= 0;
+                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontTex) ? TextureFilter.Point : TextureFilter.Bilinear;
                     if (t2d.currentRaylibFilter != desiredFilter)
                     {
                         Raylib.SetTextureFilter(t2d.RaylibTexture, desiredFilter);
