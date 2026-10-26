@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
@@ -229,6 +230,91 @@ app.MapGet("/api/proxy", async (HttpContext context) =>
     }
 });
 
+app.MapPost("/api/proxy", async (HttpContext context) =>
+{
+    string rawUrl = context.Request.Query["url"].ToString();
+    if (string.IsNullOrWhiteSpace(rawUrl) || !Uri.TryCreate(rawUrl, UriKind.Absolute, out Uri targetUri))
+    {
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsync("Invalid url parameter.");
+        return;
+    }
+    if (targetUri.Scheme != Uri.UriSchemeHttp && targetUri.Scheme != Uri.UriSchemeHttps)
+    {
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsync("Unsupported scheme.");
+        return;
+    }
+    if (context.Request.ContentLength.HasValue && context.Request.ContentLength.Value > 2 * 1024 * 1024)
+    {
+        context.Response.StatusCode = 413;
+        await context.Response.WriteAsync("Payload too large.");
+        return;
+    }
+
+    try
+    {
+        IPAddress[] hostIps = await ResolveHostCachedAsync(targetUri.DnsSafeHost, context.RequestAborted);
+        if (hostIps.Length == 0 || hostIps.Any(IsBlockedInternalIp))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Forbidden target host.");
+            return;
+        }
+
+        using var bodyStream = new MemoryStream();
+        byte[] readBuf = ArrayPool<byte>.Shared.Rent(16384);
+        try
+        {
+            int totalBytes = 0;
+            while (true)
+            {
+                int n = await context.Request.Body.ReadAsync(readBuf.AsMemory(0, readBuf.Length), context.RequestAborted);
+                if (n <= 0) break;
+                totalBytes += n;
+                if (totalBytes > 2 * 1024 * 1024)
+                {
+                    context.Response.StatusCode = 413;
+                    await context.Response.WriteAsync("Payload too large.");
+                    return;
+                }
+                bodyStream.Write(readBuf, 0, n);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(readBuf);
+        }
+
+        using var upstreamReq = new HttpRequestMessage(HttpMethod.Post, targetUri)
+        {
+            Content = new ByteArrayContent(bodyStream.ToArray())
+        };
+        if (!string.IsNullOrEmpty(context.Request.ContentType) &&
+            System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(context.Request.ContentType, out var parsedMediaType))
+        {
+            upstreamReq.Content.Headers.ContentType = parsedMediaType;
+        }
+
+        using var resp = await proxyHttp.SendAsync(upstreamReq, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
+        context.Response.StatusCode = (int)resp.StatusCode;
+        if (resp.Content.Headers.ContentType != null)
+        {
+            context.Response.ContentType = resp.Content.Headers.ContentType.ToString();
+        }
+        if (resp.Content.Headers.ContentLength.HasValue)
+        {
+            context.Response.ContentLength = resp.Content.Headers.ContentLength.Value;
+        }
+        await resp.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 502;
+        await context.Response.WriteAsync("Proxy error: " + ex.Message);
+    }
+});
+
 app.Map("/ws/tcp", async (HttpContext context) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
@@ -240,6 +326,7 @@ app.Map("/ws/tcp", async (HttpContext context) =>
 
     string host = context.Request.Query["host"].ToString().Trim();
     string portStr = context.Request.Query["port"].ToString().Trim();
+    string proxyRaw = context.Request.Query["proxy"].ToString().Trim();
     if (string.IsNullOrEmpty(host) || !int.TryParse(portStr, out int port) || port <= 0 || port > 65535)
     {
         context.Response.StatusCode = 400;
@@ -248,42 +335,116 @@ app.Map("/ws/tcp", async (HttpContext context) =>
     }
 
     using WebSocket ws = await context.WebSockets.AcceptWebSocketAsync();
-    using TcpClient tcp = new TcpClient();
-    tcp.NoDelay = true;
-    tcp.SendBufferSize = 65536;
-    tcp.ReceiveBufferSize = 131072;
+    TcpClient tcp = null;
 
     try
     {
         IPAddress targetIp = null;
-        if (!IPAddress.TryParse(host, out targetIp))
+        if (IPAddress.TryParse(host, out IPAddress literalTargetIp))
+        {
+            targetIp = literalTargetIp;
+            if (IsBlockedInternalIp(targetIp))
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Target address not allowed", CancellationToken.None);
+                return;
+            }
+        }
+        else
         {
             IPAddress[] addresses = await ResolveHostCachedAsync(host, context.RequestAborted);
+            if (addresses.Any(IsBlockedInternalIp))
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Target address not allowed", CancellationToken.None);
+                return;
+            }
             targetIp = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
                        ?? addresses.FirstOrDefault();
         }
 
-        if (targetIp == null || IsBlockedInternalIp(targetIp))
+        NetworkStream netStream;
+        if (!string.IsNullOrEmpty(proxyRaw))
         {
-            await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Target address not allowed", CancellationToken.None);
-            return;
+            if (!TryParseProxySpec(proxyRaw, out bool isHttpProxy, out string proxyHost, out int proxyPort, out string proxyUser, out string proxyPass))
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Invalid proxy format", CancellationToken.None);
+                return;
+            }
+
+            IPAddress proxyIp = null;
+            if (!IPAddress.TryParse(proxyHost, out proxyIp))
+            {
+                IPAddress[] proxyAddresses = await ResolveHostCachedAsync(proxyHost, context.RequestAborted);
+                if (proxyAddresses.Any(IsBlockedInternalIp))
+                {
+                    await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Proxy address not allowed", CancellationToken.None);
+                    return;
+                }
+                proxyIp = proxyAddresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
+                          ?? proxyAddresses.FirstOrDefault();
+            }
+
+            if (proxyIp == null || IsBlockedInternalIp(proxyIp))
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Proxy address not allowed", CancellationToken.None);
+                return;
+            }
+
+            tcp = new TcpClient(proxyIp.AddressFamily);
+            ConfigureLowLatencyTcpSocket(tcp);
+            using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted))
+            {
+                connectCts.CancelAfter(TimeSpan.FromSeconds(10));
+                await tcp.ConnectAsync(proxyIp, proxyPort, connectCts.Token);
+            }
+            ConfigureLowLatencyTcpSocket(tcp);
+            netStream = tcp.GetStream();
+
+            using (var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted))
+            {
+                handshakeCts.CancelAfter(TimeSpan.FromSeconds(12));
+                string tunnelHost = (targetIp != null) ? targetIp.ToString() : host;
+                if (isHttpProxy)
+                {
+                    await HandshakeHttpConnectAsync(netStream, tunnelHost, port, proxyUser, proxyPass, handshakeCts.Token);
+                }
+                else
+                {
+                    await HandshakeSocks5Async(netStream, tunnelHost, port, proxyUser, proxyPass, handshakeCts.Token);
+                }
+            }
+
+            Console.WriteLine($"[WS->TCP Proxy] Connected {context.Connection.RemoteIpAddress} via {proxyHost}:{proxyPort} -> {host}:{port}");
+        }
+        else
+        {
+            if (targetIp == null || IsBlockedInternalIp(targetIp))
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Target address not allowed", CancellationToken.None);
+                return;
+            }
+
+            tcp = new TcpClient(targetIp.AddressFamily);
+            ConfigureLowLatencyTcpSocket(tcp);
+            using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted))
+            {
+                connectCts.CancelAfter(TimeSpan.FromSeconds(10));
+                await tcp.ConnectAsync(targetIp, port, connectCts.Token);
+            }
+            ConfigureLowLatencyTcpSocket(tcp);
+            netStream = tcp.GetStream();
+
+            Console.WriteLine($"[WS->TCP] Connected {context.Connection.RemoteIpAddress} -> {host} ({targetIp}):{port}");
         }
 
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
-        connectCts.CancelAfter(TimeSpan.FromSeconds(10));
-        await tcp.ConnectAsync(targetIp, port, connectCts.Token);
-        ConfigureLowLatencyTcpSocket(tcp);
+        using (netStream)
+        {
+            using var relayCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+            System.Threading.Tasks.Task wsToTcp = PumpWebSocketToTcpAsync(ws, netStream, relayCts.Token);
+            System.Threading.Tasks.Task tcpToWs = PumpTcpToWebSocketAsync(netStream, ws, relayCts.Token);
 
-        Console.WriteLine($"[WS->TCP] Connected {context.Connection.RemoteIpAddress} -> {host} ({targetIp}):{port}");
-
-        using NetworkStream netStream = tcp.GetStream();
-        using var relayCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
-
-        System.Threading.Tasks.Task wsToTcp = PumpWebSocketToTcpAsync(ws, netStream, relayCts.Token);
-        System.Threading.Tasks.Task tcpToWs = PumpTcpToWebSocketAsync(netStream, ws, relayCts.Token);
-
-        await System.Threading.Tasks.Task.WhenAny(wsToTcp, tcpToWs);
-        relayCts.Cancel();
+            await System.Threading.Tasks.Task.WhenAny(wsToTcp, tcpToWs);
+            relayCts.Cancel();
+        }
     }
     catch (Exception ex)
     {
@@ -291,6 +452,10 @@ app.Map("/ws/tcp", async (HttpContext context) =>
     }
     finally
     {
+        if (tcp != null)
+        {
+            try { tcp.Dispose(); } catch { }
+        }
         if (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseReceived)
         {
             try
@@ -550,4 +715,253 @@ static bool TryReadPngDimensions(string filePath, out int width, out int height)
     }
     catch { }
     return false;
+}
+
+static bool TryParseProxySpec(string raw, out bool isHttp, out string host, out int port, out string user, out string pass)
+{
+    isHttp = false;
+    host = string.Empty;
+    port = 0;
+    user = string.Empty;
+    pass = string.Empty;
+
+    if (string.IsNullOrEmpty(raw)) return false;
+    string s = raw.Trim();
+    if (s.Length == 0) return false;
+
+    if (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+    {
+        isHttp = true;
+        s = s.Substring(7);
+    }
+    else if (s.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+    {
+        isHttp = true;
+        s = s.Substring(8);
+    }
+    else if (s.StartsWith("socks5://", StringComparison.OrdinalIgnoreCase))
+    {
+        s = s.Substring(9);
+    }
+    else if (s.StartsWith("socks://", StringComparison.OrdinalIgnoreCase))
+    {
+        s = s.Substring(8);
+    }
+
+    if (s.Contains('@'))
+    {
+        int atIdx = s.LastIndexOf('@');
+        string authPart = s.Substring(0, atIdx);
+        string hostPart = s.Substring(atIdx + 1);
+        int colonAuth = authPart.IndexOf(':');
+        if (colonAuth >= 0)
+        {
+            user = authPart.Substring(0, colonAuth);
+            pass = authPart.Substring(colonAuth + 1);
+        }
+        else
+        {
+            user = authPart;
+        }
+        int colonHost = hostPart.LastIndexOf(':');
+        if (colonHost <= 0) return false;
+        host = hostPart.Substring(0, colonHost).Trim();
+        if (!int.TryParse(hostPart.Substring(colonHost + 1).Trim(), out port) || port <= 0 || port > 65535) return false;
+        return host.Length > 0;
+    }
+
+    string[] parts = s.Split(':');
+    if (parts.Length < 2) return false;
+    host = parts[0].Trim();
+    if (host.Length == 0) return false;
+    if (!int.TryParse(parts[1].Trim(), out port) || port <= 0 || port > 65535) return false;
+
+    if (parts.Length >= 4)
+    {
+        user = parts[2];
+        pass = string.Join(":", parts, 3, parts.Length - 3);
+    }
+    else if (parts.Length == 3)
+    {
+        user = parts[2];
+    }
+    return true;
+}
+
+static async System.Threading.Tasks.Task ReadExactStreamAsync(Stream stream, byte[] buf, int offset, int count, CancellationToken ct)
+{
+    int total = 0;
+    while (total < count)
+    {
+        int n = await stream.ReadAsync(buf.AsMemory(offset + total, count - total), ct);
+        if (n <= 0)
+        {
+            throw new EndOfStreamException("Proxy closed connection during handshake.");
+        }
+        total += n;
+    }
+}
+
+static async System.Threading.Tasks.Task HandshakeHttpConnectAsync(NetworkStream stream, string targetHost, int targetPort, string user, string pass, CancellationToken ct)
+{
+    StringBuilder sb = new StringBuilder();
+    sb.Append("CONNECT ").Append(targetHost).Append(':').Append(targetPort).Append(" HTTP/1.1\r\n");
+    sb.Append("Host: ").Append(targetHost).Append(':').Append(targetPort).Append("\r\n");
+    if (!string.IsNullOrEmpty(user))
+    {
+        string token = Convert.ToBase64String(Encoding.UTF8.GetBytes(user + ":" + (pass ?? string.Empty)));
+        sb.Append("Proxy-Authorization: Basic ").Append(token).Append("\r\n");
+    }
+    sb.Append("Proxy-Connection: Keep-Alive\r\n\r\n");
+
+    byte[] reqBytes = Encoding.ASCII.GetBytes(sb.ToString());
+    await stream.WriteAsync(reqBytes.AsMemory(0, reqBytes.Length), ct);
+    await stream.FlushAsync(ct);
+
+    StringBuilder headerSb = new StringBuilder();
+    byte[] oneByte = new byte[1];
+    int matched = 0;
+    int readCount = 0;
+    while (readCount < 8192)
+    {
+        int n = await stream.ReadAsync(oneByte.AsMemory(0, 1), ct);
+        if (n <= 0)
+        {
+            throw new EndOfStreamException("HTTP proxy closed connection before response.");
+        }
+        readCount++;
+        char ch = (char)oneByte[0];
+        headerSb.Append(ch);
+        if ((matched == 0 && ch == '\r') ||
+            (matched == 1 && ch == '\n') ||
+            (matched == 2 && ch == '\r') ||
+            (matched == 3 && ch == '\n'))
+        {
+            matched++;
+            if (matched == 4) break;
+        }
+        else
+        {
+            matched = (ch == '\r') ? 1 : 0;
+        }
+    }
+
+    string resp = headerSb.ToString();
+    int firstLineEnd = resp.IndexOf('\r');
+    string statusLine = (firstLineEnd > 0) ? resp.Substring(0, firstLineEnd) : resp;
+    if (!statusLine.Contains(" 200", StringComparison.Ordinal))
+    {
+        throw new IOException("HTTP proxy rejected CONNECT: " + statusLine);
+    }
+}
+
+static async System.Threading.Tasks.Task HandshakeSocks5Async(NetworkStream stream, string targetHost, int targetPort, string user, string pass, CancellationToken ct)
+{
+    bool hasAuth = !string.IsNullOrEmpty(user);
+    byte[] greeting = hasAuth
+        ? new byte[] { 0x05, 0x02, 0x00, 0x02 }
+        : new byte[] { 0x05, 0x01, 0x00 };
+    await stream.WriteAsync(greeting.AsMemory(0, greeting.Length), ct);
+    await stream.FlushAsync(ct);
+
+    byte[] methodResp = new byte[2];
+    await ReadExactStreamAsync(stream, methodResp, 0, 2, ct);
+    if (methodResp[0] != 0x05 || methodResp[1] == 0xFF)
+    {
+        throw new IOException("SOCKS5 proxy rejected authentication methods.");
+    }
+
+    if (methodResp[1] == 0x02)
+    {
+        byte[] uBytes = Encoding.UTF8.GetBytes(user ?? string.Empty);
+        byte[] pBytes = Encoding.UTF8.GetBytes(pass ?? string.Empty);
+        if (uBytes.Length > 255 || pBytes.Length > 255)
+        {
+            throw new IOException("SOCKS5 credentials exceed 255 bytes.");
+        }
+        byte[] authPacket = new byte[3 + uBytes.Length + pBytes.Length];
+        authPacket[0] = 0x01;
+        authPacket[1] = (byte)uBytes.Length;
+        Buffer.BlockCopy(uBytes, 0, authPacket, 2, uBytes.Length);
+        authPacket[2 + uBytes.Length] = (byte)pBytes.Length;
+        Buffer.BlockCopy(pBytes, 0, authPacket, 3 + uBytes.Length, pBytes.Length);
+        await stream.WriteAsync(authPacket.AsMemory(0, authPacket.Length), ct);
+        await stream.FlushAsync(ct);
+
+        byte[] authResp = new byte[2];
+        await ReadExactStreamAsync(stream, authResp, 0, 2, ct);
+        if (authResp[1] != 0x00)
+        {
+            throw new IOException("SOCKS5 authentication failed.");
+        }
+    }
+    else if (methodResp[1] != 0x00)
+    {
+        throw new IOException("SOCKS5 unsupported auth method: " + methodResp[1]);
+    }
+
+    byte[] connectReq;
+    if (IPAddress.TryParse(targetHost, out IPAddress parsedTargetIp))
+    {
+        byte[] addrBytes = parsedTargetIp.GetAddressBytes();
+        byte atyp = (parsedTargetIp.AddressFamily == AddressFamily.InterNetworkV6) ? (byte)0x04 : (byte)0x01;
+        connectReq = new byte[4 + addrBytes.Length + 2];
+        connectReq[0] = 0x05;
+        connectReq[1] = 0x01;
+        connectReq[2] = 0x00;
+        connectReq[3] = atyp;
+        Buffer.BlockCopy(addrBytes, 0, connectReq, 4, addrBytes.Length);
+        connectReq[4 + addrBytes.Length] = (byte)((targetPort >> 8) & 0xFF);
+        connectReq[5 + addrBytes.Length] = (byte)(targetPort & 0xFF);
+    }
+    else
+    {
+        byte[] domainBytes = Encoding.ASCII.GetBytes(targetHost);
+        if (domainBytes.Length > 255)
+        {
+            throw new IOException("Target domain exceeds SOCKS5 limit.");
+        }
+        connectReq = new byte[5 + domainBytes.Length + 2];
+        connectReq[0] = 0x05;
+        connectReq[1] = 0x01;
+        connectReq[2] = 0x00;
+        connectReq[3] = 0x03;
+        connectReq[4] = (byte)domainBytes.Length;
+        Buffer.BlockCopy(domainBytes, 0, connectReq, 5, domainBytes.Length);
+        connectReq[5 + domainBytes.Length] = (byte)((targetPort >> 8) & 0xFF);
+        connectReq[6 + domainBytes.Length] = (byte)(targetPort & 0xFF);
+    }
+
+    await stream.WriteAsync(connectReq.AsMemory(0, connectReq.Length), ct);
+    await stream.FlushAsync(ct);
+
+    byte[] repHead = new byte[4];
+    await ReadExactStreamAsync(stream, repHead, 0, 4, ct);
+    if (repHead[0] != 0x05 || repHead[1] != 0x00)
+    {
+        throw new IOException("SOCKS5 connect failed with code " + repHead[1]);
+    }
+
+    int remBytes;
+    if (repHead[3] == 0x01)
+    {
+        remBytes = 6;
+    }
+    else if (repHead[3] == 0x04)
+    {
+        remBytes = 18;
+    }
+    else if (repHead[3] == 0x03)
+    {
+        byte[] dLen = new byte[1];
+        await ReadExactStreamAsync(stream, dLen, 0, 1, ct);
+        remBytes = dLen[0] + 2;
+    }
+    else
+    {
+        remBytes = 6;
+    }
+
+    byte[] discard = new byte[remBytes];
+    await ReadExactStreamAsync(stream, discard, 0, remBytes, ct);
 }
