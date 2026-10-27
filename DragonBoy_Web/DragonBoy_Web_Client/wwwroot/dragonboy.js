@@ -539,11 +539,13 @@
         let tc = entry.tintCache.get(key);
         if (tc) return tc;
 
-        if (entry.tintCache.size > 8) entry.tintCache.clear();
+        const maxTints = entry.isIosFont ? 32 : 8;
+        if (entry.tintCache.size >= maxTints) entry.tintCache.clear();
         tc = document.createElement("canvas");
         tc.width = entry.width;
         tc.height = entry.height;
         const tctx = tc.getContext("2d");
+        if (!tctx) return source;
         tctx.imageSmoothingEnabled = false;
         tctx.drawImage(source, 0, 0, entry.width, entry.height);
         tctx.globalCompositeOperation = "multiply";

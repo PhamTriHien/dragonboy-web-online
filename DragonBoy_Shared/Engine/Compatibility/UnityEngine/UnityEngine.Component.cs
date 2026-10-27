@@ -260,7 +260,10 @@ namespace UnityEngine
             else
             {
                 string cacheKey = cleanPath + modeSuffix;
-                if (_tabTextureCache.TryGetValue(cacheKey, out var cachedTex) && cachedTex != null)
+                if (_tabTextureCache.TryGetValue(cacheKey, out var cachedTex) &&
+                    cachedTex != null &&
+                    cachedTex.HasRaylibTexture &&
+                    cachedTex.RaylibTexture.Id != 0)
                 {
                     return cachedTex;
                 }
@@ -530,12 +533,17 @@ namespace UnityEngine
             {
                 {
                     string norm = fullPath.Replace('\\', '/');
-                    bool isFontAsset = norm.IndexOf("/myfont/", StringComparison.OrdinalIgnoreCase) >= 0;
-                    bool isIosFontAsset = norm.IndexOf("/ios_fonts/", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool isFontAsset = norm.IndexOf("myfont/", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool isIosFontAsset = norm.IndexOf("ios_fonts/", StringComparison.OrdinalIgnoreCase) >= 0;
                     bool isFallbackFromX1 = false;
                     int logicalW = img.Width;
                     int logicalH = img.Height;
                     bool needsMipmaps = isIosFontAsset;
+
+                    if (isIosFontAsset)
+                    {
+                        NormalizeWhiteAlphaMaskImage(ref img);
+                    }
 
                     if (mGraphics.zoomLevel == 2 && !isIosFontAsset)
                     {
@@ -607,7 +615,12 @@ namespace UnityEngine
 
                     Texture2D t2d = new Texture2D(logicalW, logicalH, allocatePixelBuffer: false);
                     Raylib_cs.Texture2D gpuTex = Raylib_cs.Raylib.LoadTextureFromImage(img);
-                    if (needsMipmaps && gpuTex.Id != 0 && gpuTex.Width >= 4 && gpuTex.Height >= 4)
+                    Raylib_cs.Raylib.UnloadImage(img);
+                    if (gpuTex.Id == 0)
+                    {
+                        return null;
+                    }
+                    if (needsMipmaps && gpuTex.Width >= 4 && gpuTex.Height >= 4)
                     {
                         Raylib_cs.Raylib.GenTextureMipmaps(ref gpuTex);
                     }
@@ -622,7 +635,6 @@ namespace UnityEngine
                     t2d.IsSharedGpuTexture = true;
                     t2d.IsFallbackFromX1 = isFallbackFromX1;
                     t2d._sourceFilePath = fullPath;
-                    Raylib_cs.Raylib.UnloadImage(img);
                     return t2d;
                 }
             }
@@ -630,6 +642,29 @@ namespace UnityEngine
             {
             }
             return null;
+        }
+
+        private static unsafe void NormalizeWhiteAlphaMaskImage(ref Raylib_cs.Image img)
+        {
+            if (img.Width <= 0 || img.Height <= 0 || img.Data == null)
+            {
+                return;
+            }
+            if (img.Format != Raylib_cs.PixelFormat.UncompressedR8G8B8A8)
+            {
+                Raylib_cs.Raylib.ImageFormat(ref img, Raylib_cs.PixelFormat.UncompressedR8G8B8A8);
+            }
+            Raylib_cs.Color* pixels = (Raylib_cs.Color*)img.Data;
+            if (pixels == null)
+            {
+                return;
+            }
+            int count = img.Width * img.Height;
+            for (int i = 0; i < count; i++)
+            {
+                byte a = pixels[i].A;
+                pixels[i] = new Raylib_cs.Color((byte)255, (byte)255, (byte)255, a);
+            }
         }
 
         /// <summary>

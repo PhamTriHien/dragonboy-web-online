@@ -187,6 +187,17 @@ public partial class mGraphics
 	/// </summary>
 	public void setClip(int x, int y, int w, int h)
 		{
+			if (x <= 0 && y <= 0 && w >= GameCanvas.w && h >= GameCanvas.h)
+			{
+				isClip = false;
+				clipTX = 0;
+				clipTY = 0;
+				clipX = 0;
+				clipY = 0;
+				clipW = GameCanvas.w * zoomLevel;
+				clipH = GameCanvas.h * zoomLevel;
+				return;
+			}
 			x *= zoomLevel;
 			y *= zoomLevel;
 			w *= zoomLevel;
@@ -199,8 +210,8 @@ public partial class mGraphics
 			clipH = h;
 			isClip = true;
 
-			int screenClipX = clipX + (isTranslate ? clipTX : 0);
-			int screenClipY = clipY + (isTranslate ? clipTY : 0);
+			int screenClipX = clipX + clipTX;
+			int screenClipY = clipY + clipTY;
 			if (screenClipX <= 0 && screenClipY <= 0 &&
 				screenClipX + clipW >= GameCanvas.w * zoomLevel &&
 				screenClipY + clipH >= GameCanvas.h * zoomLevel)
