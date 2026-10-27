@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public static class ModUIGraphics
 {
-	public const int ContentHeight = 500;
+	public const int ContentHeight = 524;
 	private static readonly int[] fpsOptions = new int[8] { 30, 60, 90, 120, 144, 165, 185, 240 };
 
 	/// <summary>
@@ -29,12 +29,14 @@ public static class ModUIGraphics
 			ModUI.PaintNativeButton(rx, uiY + 43, rBtnW, 16, ModGraphics.resolutionNames[r], isSelRes, g);
 		}
 
-		// 3. Chế độ đồ họa & Khử răng cưa GPU
+		// 3. Chế độ đồ họa & Khử răng cưa GPU (5 mức)
 		mFont.tahoma_7_grey.drawString(g, "Chất lượng đồ họa (GPU Khử răng cưa):", uiX + 6, uiY + 66, mFont.LEFT);
-		for (int q = 0; q < 4; q++)
+		int qCount = ModGraphics.graphicsNames.Length;
+		int qBtnW = (uiW - 10 - (qCount - 1) * 3) / qCount;
+		for (int q = 0; q < qCount; q++)
 		{
-			int qx = uiX + 5 + q * (rBtnW + 3);
-			ModUI.PaintNativeButton(qx, uiY + 81, rBtnW, 16, ModGraphics.graphicsNames[q], ModGraphics.graphicsQuality == q, g);
+			int qx = uiX + 5 + q * (qBtnW + 3);
+			ModUI.PaintNativeButton(qx, uiY + 81, qBtnW, 16, ModGraphics.graphicsNames[q], ModGraphics.graphicsQuality == q, g);
 		}
 
 		// Mô tả chi tiết mức đồ họa
@@ -54,6 +56,10 @@ public static class ModUIGraphics
 		else if (ModGraphics.graphicsQuality == 3)
 		{
 			mFont.tahoma_7_green2.drawString(g, "* Super Low: Xóa cây cỏ trang trí, chỉ giữ base map.", uiX + 6, descY, mFont.LEFT);
+		}
+		else if (ModGraphics.graphicsQuality == 4)
+		{
+			mFont.tahoma_7_green2.drawString(g, "* Hình Học: Khung lưới địa hình & hitbox quái siêu nhẹ.", uiX + 6, descY, mFont.LEFT);
 		}
 
 		// 4. 2 Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD)
@@ -149,6 +155,8 @@ public static class ModUIGraphics
 
 		ModUI.PaintNativeButton(uiX + 6, uiY + 472, halfBtnW, 18, "Nút Nhanh: " + (ModArrowButton.showExtraQuickButtons ? "BẬT" : "TẮT"), ModArrowButton.showExtraQuickButtons, g);
 		ModUI.PaintNativeButton(uiX + 10 + halfBtnW, uiY + 472, halfBtnW, 18, "Phím Tắt PC: " + (ModHotkey.enableQuickPcHotkeys ? "BẬT" : "TẮT"), ModHotkey.enableQuickPcHotkeys, g);
+
+		ModUI.PaintNativeButton(uiX + 6, uiY + 494, uiW - 12, 18, "TREO MÀN ĐEN TIẾT KIỆM GPU (F9): " + (ModGraphics.isAfkBlackScreen ? "BẬT" : "TẮT"), ModGraphics.isAfkBlackScreen, g);
 	}
 
 	/// <summary>
@@ -178,10 +186,12 @@ public static class ModUIGraphics
 		}
 
 		// 3. Chọn Chất Lượng Đồ Họa
-		for (int q = 0; q < 4; q++)
+		int qCount = ModGraphics.graphicsNames.Length;
+		int qBtnW = (uiW - 10 - (qCount - 1) * 3) / qCount;
+		for (int q = 0; q < qCount; q++)
 		{
-			int qx = uiX + 5 + q * (rBtnW + 3);
-			if (px >= qx && px <= qx + rBtnW && py >= uiY + 80 && py <= uiY + 98)
+			int qx = uiX + 5 + q * (qBtnW + 3);
+			if (px >= qx && px <= qx + qBtnW && py >= uiY + 80 && py <= uiY + 98)
 			{
 				ModGraphics.SetQuality(q);
 				SoundMn.gI().buttonClick();
@@ -368,6 +378,15 @@ public static class ModUIGraphics
 			ModConfig.SaveConfig();
 			GameScr.info1.addInfo("Phím tắt nhanh PC: " + (ModHotkey.enableQuickPcHotkeys ? "BẬT" : "TẮT"), 0);
 			SoundMn.gI().buttonClick();
+			return true;
+		}
+		if (px >= uiX + 6 && px <= uiX + uiW - 6 && py >= uiY + 493 && py <= uiY + 513)
+		{
+			ModGraphics.ToggleAfkBlackScreen();
+			if (ModGraphics.isAfkBlackScreen)
+			{
+				ModMenu.CloseMenu();
+			}
 			return true;
 		}
 

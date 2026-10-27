@@ -119,6 +119,7 @@ namespace UnityEngine
         F1 = 282,
         F2 = 283,
         F3 = 284,
+        F9 = 290,
         F10 = 291,
         F11 = 292,
         LeftAlt = 308,
@@ -319,6 +320,7 @@ namespace UnityEngine
                 case KeyCode.F1: return KeyboardKey.F1;
                 case KeyCode.F2: return KeyboardKey.F2;
                 case KeyCode.F3: return KeyboardKey.F3;
+                case KeyCode.F9: return KeyboardKey.F9;
                 case KeyCode.F10: return KeyboardKey.F10;
                 case KeyCode.F11: return KeyboardKey.F11;
                 case KeyCode.LeftAlt: return KeyboardKey.LeftAlt;

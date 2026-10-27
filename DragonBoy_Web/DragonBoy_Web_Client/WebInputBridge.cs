@@ -388,6 +388,7 @@ namespace DragonBoy_Web_Host
                 case "F1": return KeyCode.F1;
                 case "F2": return KeyCode.F2;
                 case "F3": return KeyCode.F3;
+                case "F9": return KeyCode.F9;
                 case "F10": return KeyCode.F10;
                 case "F11": return KeyCode.F11;
                 case "Digit0": return KeyCode.Alpha0;

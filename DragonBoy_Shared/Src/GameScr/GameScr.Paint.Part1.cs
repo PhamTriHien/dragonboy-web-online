@@ -57,7 +57,7 @@ public partial class GameScr : mScreen, IChatable
 	/// </summary>
 	public void paintBgItem(mGraphics g, int layer)
 			{
-				if (ModMenu.graphicsQuality == 3)
+				if (ModMenu.graphicsQuality >= 3)
 				{
 					return;
 				}

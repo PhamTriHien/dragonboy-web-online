@@ -170,6 +170,11 @@ public class ItemMap : IMapObject
 	/// </summary>
 	public void paint(mGraphics g)
 	{
+		if (ModMenu.graphicsQuality == 4)
+		{
+			ModGraphics.PaintItemMapWireframe(this, g);
+			return;
+		}
 		if (isAuraItem())
 		{
 			g.drawImage(TileMap.bong, x + 3, y, mGraphics.VCENTER | mGraphics.HCENTER);
