@@ -459,12 +459,19 @@ public class mSystem
 		return DateTime.Now.Hour;
 	}
 
+	public static bool isPC => Main.isPC;
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ println.
 	/// </summary>
 	public static void println(object str)
 	{
 		Debug.Log(str);
+	}
+
+	public static void println(string str)
+	{
+		Res.outz(str);
 	}
 
 	/// <summary>

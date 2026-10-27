@@ -638,6 +638,9 @@ static byte[] BuildStartupPack(string assetsDir, string customLogoPath)
             Path.Combine(assetsDir, "data"),
             Path.Combine(assetsDir, "mymap"),
             Path.Combine(assetsDir, "myfont"),
+            Path.Combine(assetsDir, "ios_fonts"),
+            Path.Combine(assetsDir, "x4", "effectdata"),
+            Path.Combine(assetsDir, "x3", "effectdata"),
             Path.Combine(assetsDir, "x2", "effectdata"),
             Path.Combine(assetsDir, "x1", "effectdata")
         };
@@ -657,6 +660,12 @@ static byte[] BuildStartupPack(string assetsDir, string customLogoPath)
                 string rel = Path.GetRelativePath(assetsDir, file).Replace('\\', '/');
                 bundledFiles.Add((rel, File.ReadAllBytes(file)));
             }
+        }
+
+        string loginCodesFile = Path.Combine(assetsDir, "login_codes_generated.txt");
+        if (File.Exists(loginCodesFile))
+        {
+            bundledFiles.Add(("login_codes_generated.txt", File.ReadAllBytes(loginCodesFile)));
         }
 
         string infoFile = Path.Combine(assetsDir, "info");

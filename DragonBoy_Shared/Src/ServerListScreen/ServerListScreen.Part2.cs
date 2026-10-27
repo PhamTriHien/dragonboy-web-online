@@ -5,6 +5,126 @@ using UnityEngine;
 /// </summary>
 public partial class ServerListScreen : mScreen, IActionListener
 {
+	public static void ResetSecondaryConnection()
+	{
+		Session_ME2.gI().clearSendingMessage();
+		Session_ME2.gI().close();
+		Controller.clearClientTypeConnect(isMainSession: false);
+		Service.resetClientTypeSendState(isMainSession: false);
+		GameMidlet.IP2 = null;
+		GameMidlet.PORT2 = 0;
+		GameMidlet.isConnect2 = false;
+	}
+
+	public static void ApplySecondaryEndpointFromHandshake(string requestedHost, int requestedPort, bool serverRequestedSecondary, bool isMainSession)
+	{
+		if (isMainSession)
+		{
+			ResetSecondaryConnection();
+			Debug.Log(string.Format("[SECONDARY] serverIndex={0} main={1}:{2} handshakeEndpoint={3}:{4} serverFlag={5} secondaryEnabled=false reason=forced_disabled", ipSelect, GameMidlet.IP, GameMidlet.PORT, requestedHost, requestedPort, serverRequestedSecondary));
+		}
+		else
+		{
+			Debug.Log(string.Format("[SECONDARY] serverIndex={0} main={1}:{2} handshakeEndpoint={3}:{4} serverFlag={5} secondaryEnabled=false reason=non_main_handshake_ignored", ipSelect, GameMidlet.IP, GameMidlet.PORT, requestedHost, requestedPort, serverRequestedSecondary));
+		}
+	}
+
+	public static void clearPendingLoginActionAfterImageSource()
+	{
+		pendingLoginActionAfterImageSource = 0;
+		loginActionPending = 0;
+	}
+
+	public static bool performPendingLoginActionAfterImageSource(bool allowLoginAction = true)
+	{
+		if (pendingLoginActionAfterImageSource == 0 || !Service.isLoginReadyForCurrentConnection())
+		{
+			return false;
+		}
+		int action = pendingLoginActionAfterImageSource;
+		clearPendingLoginActionAfterImageSource();
+		if (allowLoginAction)
+		{
+			if (GameCanvas.serverScreen == null)
+			{
+				GameCanvas.serverScreen = new ServerListScreen();
+			}
+			GameCanvas.serverScreen.performLoginAction(action);
+		}
+		return true;
+	}
+
+	private void connectBeforeLogin(int action)
+	{
+		if (address == null || address.Length == 0 || ipSelect < 0 || ipSelect >= address.Length)
+		{
+			int idx = (serverPriority >= 0 && address != null && serverPriority < address.Length) ? serverPriority : 0;
+			SetIpSelect(idx, issave: true);
+		}
+		loginActionPending = 0;
+		if (Service.isLoginReadyForCurrentConnection())
+		{
+			clearPendingLoginActionAfterImageSource();
+			performLoginAction(action);
+			return;
+		}
+		pendingLoginActionAfterImageSource = action;
+		loginActionPending = action;
+		if (Session_ME.connecting || Session_ME.gI().isConnected())
+		{
+			GameCanvas.startWaitDlg(mResources.CONNECTING);
+			return;
+		}
+		flagServer = 1;
+		countConnectServer = 1;
+		timeNextConnectServer = mSystem.currentTimeMillis() + 1000L;
+		GameCanvas.startWaitDlg(mResources.CONNECTING);
+		Session_ME.gI().close();
+		testConnect = 0;
+		ConnectIP();
+	}
+
+	private void performLoginAction(int action)
+	{
+		if (action == 3)
+		{
+			Login_New();
+		}
+		else if (action == 10100)
+		{
+			actPlayNew();
+		}
+	}
+
+	private void actPlayNew()
+	{
+		GameScr.resetItemUpdateFlags();
+		try
+		{
+			Rms.deleteRecord(Rms.RMS_userAo + ipSelect);
+			Rms.deleteRecord("passAo" + ipSelect);
+			Rms.saveRMSString(Rms.RMS_userAo + ipSelect, string.Empty);
+			Rms.saveRMSString("passAo" + ipSelect, string.Empty);
+		}
+		catch (Exception)
+		{
+		}
+		if (GameCanvas.loginScr == null)
+		{
+			GameCanvas.loginScr = new LoginScr();
+		}
+		GameCanvas.loginScr.isLogin2 = true;
+		GameCanvas.loginScr.switchToMe();
+		DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
+		Service.gI().login2(string.Empty);
+		Res.outz("tao user ao");
+		GameCanvas.startWaitDlg(mResources.PLEASEWAIT);
+		if (nameServer != null && ipSelect >= 0 && ipSelect < nameServer.Length)
+		{
+			LoginScr.serverName = nameServer[ipSelect];
+		}
+	}
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ saveIP.
 	/// </summary>
@@ -128,6 +248,8 @@ public partial class ServerListScreen : mScreen, IActionListener
 	public override void switchToMe()
 		{
 			Res.outz(">>>>switchToMe  ServerListScreen:\n" + Environment.StackTrace);
+			loginActionPending = 0;
+			GameCanvas.clearTransientPopupState();
 			GameCanvas.clearAllPointerEvent();
 			GameCanvas.clearKeyPressed();
 			GameCanvas.endDlg();
@@ -175,6 +297,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 	/// </summary>
 	public void switchToMe2()
 		{
+			loginActionPending = 0;
 			GameCanvas.endDlg();
 			GameScr.cmy = 0;
 			GameScr.cmx = 0;
@@ -228,7 +351,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			isGetData = false;
 			loadScreen = true;
 			bigOk = true;
-			GameCanvas.serverScreen.switchToMe();
+			GameCanvas.serverScreen.show2();
 		}
 	/// <summary>
 	/// Khởi tạo và nạp dữ liệu cấu hình cho init.
@@ -317,12 +440,17 @@ public partial class ServerListScreen : mScreen, IActionListener
 	public void show2()
 		{
 			Debug.LogError(">>>>ServerListScreen show2: ");
+			loginActionPending = 0;
+			flagServer = 0;
+			countConnectServer = 0;
+			timeNextConnectServer = 0L;
+			GameCanvas.endDlg();
 			GameScr.cmx = 0;
 			GameScr.cmy = 0;
 			initCommand();
-			loadScreen = true;
+			loadScreen = false;
 			percent = 0;
-			bigOk = true;
+			bigOk = false;
 			isGetData = false;
 			p = 0;
 			demPercent = 0;
@@ -405,6 +533,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 	public void Login_New()
 		{
 			ModNextMap.StopNextMap();
+			GameScr.resetItemUpdateFlags();
 			bool flag = false;
 			bool flag2 = false;
 			string text = Rms.loadRMSString(Rms.RMS_userAo + ipSelect);
@@ -441,11 +570,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 					return;
 				}
 				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
-				if (!Session_ME.gI().isConnected())
-				{
-					GameCanvas.connect();
-				}
-				Service.gI().setClientType();
+				GameCanvas.connect();
 				if (text == null || text.Equals(string.Empty))
 				{
 					Debug.LogError(">>>>Login_New: login2: ");
@@ -475,11 +600,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 				}
 				GameCanvas.loginScr.switchToMe();
 				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
-				if (!Session_ME.gI().isConnected())
-				{
-					GameCanvas.connect();
-				}
-				Service.gI().setClientType();
+				GameCanvas.connect();
 				GameCanvas.loginScr.isLogin2 = true;
 				Service.gI().login(text, string.Empty, GameMidlet.VERSION, 1);
 				Rms.saveRMSInt(RMS_svselect, ipSelect);

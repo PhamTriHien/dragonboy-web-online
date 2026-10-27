@@ -39,6 +39,25 @@ public class Small
 		}
 	}
 
+	public void clean()
+	{
+		if (img != null && img != SmallImage.imgEmpty)
+		{
+			if (img.texture != null)
+			{
+#if !ANDROID && !__ANDROID__ && !BROWSER
+				if (img.texture.HasRaylibTexture && !img.texture.IsSharedGpuTexture)
+				{
+					try { Raylib_cs.Raylib.UnloadTexture(img.texture.RaylibTexture); } catch { }
+					img.texture.HasRaylibTexture = false;
+				}
+#endif
+				img.texture = null;
+			}
+		}
+		img = null;
+	}
+
 	/// <summary>
 	/// Thực hiện vẽ toàn bộ đối tượng và các lớp hiển thị lên canvas mGraphics.
 	/// </summary>
@@ -99,6 +118,7 @@ public class Small
 		timeUpdate++;
 		if (timeUpdate - timePaint > 300 && !isUsedInMap(id))
 		{
+			clean();
 			SmallImage.setSmall(id, null);
 		}
 	}

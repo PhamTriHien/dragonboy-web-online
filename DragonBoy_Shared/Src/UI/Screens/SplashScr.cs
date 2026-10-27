@@ -9,6 +9,8 @@ public class SplashScr : mScreen
 
 	private bool isSwitchToLogin;
 
+	public bool isDoneSplash;
+
 	public static int nData = -1;
 
 	public static int maxData = -1;
@@ -35,6 +37,10 @@ public class SplashScr : mScreen
 	public static void loadSplashScr()
 	{
 		splashScrStat = 0;
+		if (instance != null)
+		{
+			instance.isDoneSplash = false;
+		}
 	}
 
 	/// <summary>
@@ -68,6 +74,7 @@ public class SplashScr : mScreen
 		if (splashScrStat >= 25 && !isSwitchToLogin)
 		{
 			isSwitchToLogin = true;
+			isDoneSplash = true;
 			if (GameCanvas.serverScreen == null)
 			{
 				GameCanvas.serverScreen = new ServerListScreen();

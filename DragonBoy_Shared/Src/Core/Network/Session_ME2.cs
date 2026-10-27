@@ -187,14 +187,13 @@ public class Session_ME2 : ISession
 					ref sbyte reference = ref key[j + 1];
 					reference ^= key[j];
 				}
+				curR = 0;
+				curW = 0;
 				getKeyComplete = true;
-				GameMidlet.IP2 = message.reader().readUTF();
-				GameMidlet.PORT2 = message.reader().readInt();
-				GameMidlet.isConnect2 = ((message.reader().readByte() != 0) ? true : false);
-				if (isMainSession && GameMidlet.isConnect2)
-				{
-					GameCanvas.connect2();
-				}
+				string requestedHost = message.reader().readUTF();
+				int requestedPort = message.reader().readInt();
+				bool serverRequestedSecondary = message.reader().readByte() != 0;
+				ServerListScreen.ApplySecondaryEndpointFromHandshake(requestedHost, requestedPort, serverRequestedSecondary, isMainSession);
 			}
 			catch (Exception)
 			{
@@ -212,7 +211,6 @@ public class Session_ME2 : ISession
 			int num4 = (num3 * 256 + num2) * 256 + num;
 			Cout.LogError("SIZE = " + num4);
 			sbyte[] array = new sbyte[num4];
-			int num5 = 0;
 			byte[] src = dis.ReadBytes(num4);
 			Buffer.BlockCopy(src, 0, array, 0, num4);
 			recvByteCount += 5 + num4;
@@ -258,8 +256,6 @@ public class Session_ME2 : ISession
 					num = ((b4 & 0xFF) << 8) | (b5 & 0xFF);
 				}
 				sbyte[] array = new sbyte[num];
-				int num2 = 0;
-				int num3 = 0;
 				byte[] src = dis.ReadBytes(num);
 				Buffer.BlockCopy(src, 0, array, 0, num);
 				recvByteCount += 5 + num;
@@ -284,6 +280,12 @@ public class Session_ME2 : ISession
 
 	protected static Session_ME2 instance = new Session_ME2();
 
+	private static readonly object connectLock = new object();
+
+	private static long connectionGeneration;
+
+	public static long ConnectionGeneration => Interlocked.Read(ref connectionGeneration);
+
 	private static NetworkStream dataStream;
 
 	private static BinaryReader dis;
@@ -292,7 +294,7 @@ public class Session_ME2 : ISession
 
 	public static IMessageHandler messageHandler;
 
-	public static bool isMainSession = true;
+	public static bool isMainSession = false;
 
 	private static TcpClient sc;
 
@@ -400,19 +402,28 @@ public class Session_ME2 : ISession
 	/// </summary>
 	public void connect(string host, int port)
 	{
-		if (!connected && !connecting && mSystem.currentTimeMillis() >= timeWaitConnect)
+		lock (connectLock)
 		{
+			if (connected || connecting || mSystem.currentTimeMillis() < timeWaitConnect)
+			{
+				return;
+			}
 			timeWaitConnect = mSystem.currentTimeMillis() + 50;
 			this.host = host;
 			this.port = port;
 			getKeyComplete = false;
+			Interlocked.Increment(ref connectionGeneration);
 			close();
+			Service.resetClientTypeSendState(isMainSession);
+			Controller.clearClientTypeConnect(isMainSession);
+			connecting = true;
 			Debug.Log("connecting...!");
 			Debug.Log("host: " + host);
 			Debug.Log("port: " + port);
 #if BROWSER
 			if (OperatingSystem.IsBrowser())
 			{
+				initThread = null;
 				_ = ConnectWebSocketAsync(host, port);
 				return;
 			}
@@ -459,6 +470,7 @@ public class Session_ME2 : ISession
 		dos = new BinaryWriter(dataStream, new UTF8Encoding());
 		sendThread = new Thread(sender.run);
 		sendThread.Start();
+		key = null;
 		MessageCollector @object = new MessageCollector();
 		Cout.LogError("new -----");
 		collectorThread = new Thread(@object.run);
@@ -651,6 +663,7 @@ public class Session_ME2 : ISession
 		key = null;
 		curR = 0;
 		curW = 0;
+		getKeyComplete = false;
 		try
 		{
 			connected = false;
@@ -694,7 +707,10 @@ public class Session_ME2 : ISession
 			}
 			sendThread = null;
 			collectorThread = null;
-			instance.timeWaitConnect = 0;
+			if (instance != null)
+			{
+				instance.timeWaitConnect = 0;
+			}
 		}
 		catch (Exception)
 		{
@@ -787,6 +803,7 @@ public class Session_ME2 : ISession
 			{
 				return;
 			}
+			key = null;
 			timeConnected = currentTimeMillis();
 			connecting = false;
 			await WsSendRawMessageAsync(ws, new Message(-27), cts.Token);
@@ -959,13 +976,10 @@ public class Session_ME2 : ISession
 			curW = 0;
 			getKeyComplete = true;
 			NotifyWsSendReady();
-			GameMidlet.IP2 = message.reader().readUTF();
-			GameMidlet.PORT2 = message.reader().readInt();
-			GameMidlet.isConnect2 = message.reader().readByte() != 0;
-			if (isMainSession && GameMidlet.isConnect2)
-			{
-				GameCanvas.connect2();
-			}
+			string requestedHost = message.reader().readUTF();
+			int requestedPort = message.reader().readInt();
+			bool serverRequestedSecondary = message.reader().readByte() != 0;
+			ServerListScreen.ApplySecondaryEndpointFromHandshake(requestedHost, requestedPort, serverRequestedSecondary, isMainSession);
 		}
 		catch (Exception)
 		{

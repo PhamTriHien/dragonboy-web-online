@@ -19,7 +19,11 @@ public partial class ServerListScreen : mScreen, IActionListener
 			{
 				ipSelect = (serverPriority >= 0 && serverPriority < address.Length) ? serverPriority : 0;
 			}
-			flagServer = 30;
+			loginActionPending = 0;
+			pendingLoginActionAfterImageSource = 0;
+			flagServer = 1;
+			countConnectServer = 1;
+			timeNextConnectServer = mSystem.currentTimeMillis() + 1000L;
 			GameCanvas.startWaitDlg(mResources.PLEASEWAIT);
 			Session_ME.gI().close();
 			GameMidlet.IP = address[ipSelect];
@@ -45,6 +49,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			Controller.isConnectOK = false;
 			testConnect = -1;
 			isAutoConect = true;
+			ConnectIP();
 		}
 
 	/// <summary>
@@ -83,9 +88,6 @@ public partial class ServerListScreen : mScreen, IActionListener
 				else
 				{
 					int num = cmd.Length;
-					if (mGraphics.zoomLevel > 1)
-					{
-					}
 					for (int j = 0; j < num; j++)
 					{
 						if (cmd[j] != null && (cmd[j].isPointerPressInside() ||
@@ -171,7 +173,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 				stopDownload = false;
 				cmdDownload = new Command(mResources.huy, this, 4, null);
 				cmdDownload.x = GameCanvas.w / 2 - mScreen.cmdW / 2;
-				cmdDownload.y = GameCanvas.hh + 56;
+				cmdDownload.y = GameCanvas.hh + 65;
 				right = null;
 				if (!GameCanvas.isTouch)
 				{
@@ -198,39 +200,11 @@ public partial class ServerListScreen : mScreen, IActionListener
 			if (idAction == 3)
 			{
 				Res.outz("toi day");
-				Login_New();
+				connectBeforeLogin(3);
 			}
 			if (idAction == 10100)
 			{
-				try
-				{
-					Rms.deleteRecord(Rms.RMS_userAo + ipSelect);
-					Rms.deleteRecord("passAo" + ipSelect);
-					Rms.saveRMSString(Rms.RMS_userAo + ipSelect, string.Empty);
-					Rms.saveRMSString("passAo" + ipSelect, string.Empty);
-				}
-				catch (Exception)
-				{
-				}
-				if (GameCanvas.loginScr == null)
-				{
-					GameCanvas.loginScr = new LoginScr();
-				}
-				GameCanvas.loginScr.isLogin2 = true;
-				SmallImage.loadBigRMS();
-				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
-				if (!Session_ME.gI().isConnected())
-				{
-					GameCanvas.connect();
-				}
-				Service.gI().setClientType();
-				Service.gI().login2(string.Empty);
-				Res.outz("tao user ao");
-				GameCanvas.startWaitDlg(mResources.PLEASEWAIT);
-				if (nameServer != null && ipSelect >= 0 && ipSelect < nameServer.Length)
-				{
-					LoginScr.serverName = nameServer[ipSelect];
-				}
+				connectBeforeLogin(10100);
 			}
 			if (idAction == 5)
 			{
@@ -257,6 +231,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			}
 			if (idAction == 7)
 			{
+				loginActionPending = 0;
 				Res.outz(">>>> idAction == 7 TRIGGERED");
 				try
 				{
@@ -276,29 +251,15 @@ public partial class ServerListScreen : mScreen, IActionListener
 			}
 			if (idAction == 8)
 			{
-				bool flag = Rms.loadRMSInt("lowGraphic") == 1;
-				MyVector myVector2 = new MyVector("cau hinh");
-				myVector2.addElement(new Command(mResources.cauhinhthap, this, 9, null));
-				myVector2.addElement(new Command(mResources.cauhinhcao, this, 10, null));
-				GameCanvas.menu.startAt(myVector2, 0);
-				if (flag)
-				{
-					GameCanvas.menu.menuSelectedItem = 0;
-				}
-				else
-				{
-					GameCanvas.menu.menuSelectedItem = 1;
-				}
+				SoundMn.gI().CaseSizeScr();
 			}
 			if (idAction == 9)
 			{
-				Rms.saveRMSInt("lowGraphic", 1);
-				GameCanvas.startOK(mResources.plsRestartGame, 8885, null);
+				SoundMn.gI().applyGraphic(1);
 			}
 			if (idAction == 10)
 			{
-				Rms.saveRMSInt("lowGraphic", 0);
-				GameCanvas.startOK(mResources.plsRestartGame, 8885, null);
+				SoundMn.gI().applyGraphic(0);
 			}
 			if (idAction == 11)
 			{
@@ -309,11 +270,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 				GameCanvas.loginScr.switchToMe();
 				string text = Rms.loadRMSString(Rms.RMS_userAo + ipSelect);
 				DragonBoy_Net8_Native.Src.Mod.Security.ModCredentialSecurity.OnLoginStarted();
-				if (!Session_ME.gI().isConnected())
-				{
-					GameCanvas.connect();
-				}
-				Service.gI().setClientType();
+				GameCanvas.connect();
 				if (text == null || text.Equals(string.Empty))
 				{
 					Service.gI().login2(string.Empty);
@@ -368,6 +325,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			}
 			if (idAction == 17)
 			{
+				loginActionPending = 0;
 				if (GameCanvas.serverScr == null)
 				{
 					GameCanvas.serverScr = new ServerScr();
@@ -398,6 +356,27 @@ public partial class ServerListScreen : mScreen, IActionListener
 					isAutoConect = true;
 				}
 			}
+			if (idAction == 20)
+			{
+				if (loginActionPending > 0)
+				{
+					connectBeforeLogin(loginActionPending);
+				}
+				else
+				{
+					selectServer();
+				}
+			}
+			if (idAction == 21)
+			{
+				flagServer = 0;
+				countConnectServer = 0;
+				timeNextConnectServer = 0L;
+				loginActionPending = 0;
+				clearPendingLoginActionAfterImageSource();
+				isAutoConect = false;
+				GameCanvas.endDlg();
+			}
 		}
 
 	/// <summary>
@@ -424,6 +403,13 @@ public partial class ServerListScreen : mScreen, IActionListener
 				index = 0;
 			}
 			Debug.LogError(">>>>SetIpSelect: " + index + "  save:" + issave);
+			if (ipSelect != index)
+			{
+				ResetSecondaryConnection();
+				Service.resetClientTypeSendState();
+				Controller.clearClientTypeConnects();
+				clearPendingLoginActionAfterImageSource();
+			}
 			ipSelect = index;
 			if (address != null && ipSelect >= 0 && ipSelect < address.Length)
 			{
@@ -432,7 +418,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			if (port != null && ipSelect >= 0 && ipSelect < port.Length)
 			{
 				GameMidlet.PORT = port[ipSelect];
-			ModProxyServer.ResolveSelectedServerEndpoint(ref GameMidlet.IP, ref GameMidlet.PORT);
+				ModProxyServer.ResolveSelectedServerEndpoint(ref GameMidlet.IP, ref GameMidlet.PORT);
 			}
 			if (language != null && ipSelect >= 0 && ipSelect < language.Length)
 			{
@@ -449,5 +435,4 @@ public partial class ServerListScreen : mScreen, IActionListener
 				Res.err("2>>>saveRMSInt:  RMS_svselect == " + ipSelect);
 			}
 		}
-
 }

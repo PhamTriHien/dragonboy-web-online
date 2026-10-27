@@ -504,6 +504,11 @@ public class SmallImage
 		}
 	}
 
+	public static Small getSmallImage(int id)
+	{
+		return getSmall(id);
+	}
+
 	/// <summary>
 	/// Cập nhật trạng thái logic của đối tượng theo từng chu kỳ khung hình.
 	/// </summary>
@@ -525,7 +530,15 @@ public class SmallImage
 		}
 		if (num > 200 && GameCanvas.lowGraphic)
 		{
-			imgNew = new Small[System.Math.Max((int)maxSmall, 10000)];
+			for (int j = 0; j < imgNew.Length; j++)
+			{
+				Small small = imgNew[j];
+				if (small != null)
+				{
+					small.clean();
+					imgNew[j] = null;
+				}
+			}
 		}
 	}
 }

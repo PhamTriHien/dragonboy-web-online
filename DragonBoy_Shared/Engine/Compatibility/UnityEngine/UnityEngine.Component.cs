@@ -239,6 +239,8 @@ namespace UnityEngine
                 withoutZoom = withoutZoom.Substring(3);
             }
             bool isJavaMode = ModGraphics.IsJavaGraphics || withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
+            bool isIosMode = !isJavaMode && ModGraphics.IsIosGraphics;
+            string modeSuffix = isJavaMode ? "@java1" : (isIosMode ? "@ios4" : ("@" + mGraphics.zoomLevel));
 
             if (type == typeof(TextAsset))
             {
@@ -257,7 +259,7 @@ namespace UnityEngine
             }
             else
             {
-                string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
+                string cacheKey = cleanPath + modeSuffix;
                 if (_tabTextureCache.TryGetValue(cacheKey, out var cachedTex) && cachedTex != null)
                 {
                     return cachedTex;
@@ -331,6 +333,28 @@ namespace UnityEngine
                     "x3/" + cleanPath,
                     "x4/" + cleanPath
                 }
+                : (isIosMode
+                ? new string[]
+                {
+                    "x4/" + withoutZoom,
+                    "x3/" + withoutZoom,
+                    "x2/" + withoutZoom,
+                    cleanPath,
+                    withoutRes,
+                    "x4/" + withoutRes,
+                    "x3/" + withoutRes,
+                    "x2/" + withoutRes,
+                    "x4/" + cleanPath,
+                    "x3/" + cleanPath,
+                    "x2/" + cleanPath,
+                    withoutZoom,
+                    "data/" + cleanPath,
+                    "data/" + withoutRes,
+                    "data/" + withoutZoom,
+                    "x1/" + withoutZoom,
+                    "x1/" + withoutRes,
+                    "x1/" + cleanPath
+                }
                 : new string[]
                 {
                     "x2/" + withoutZoom,
@@ -351,7 +375,7 @@ namespace UnityEngine
                     "x4/" + withoutZoom,
                     "x3/" + withoutZoom,
                     "x1/" + withoutZoom
-                };
+                });
 
             if (type == typeof(TextAsset))
             {
@@ -365,6 +389,7 @@ namespace UnityEngine
                         if (System.IO.File.Exists(full)) matchedPath = full;
                         else if (System.IO.File.Exists(full + ".bytes")) matchedPath = full + ".bytes";
                         else if (System.IO.File.Exists(full + ".txt")) matchedPath = full + ".txt";
+                        else if (System.IO.File.Exists(full + ".fnt")) matchedPath = full + ".fnt";
 
                         if (matchedPath != null)
                         {
@@ -376,11 +401,25 @@ namespace UnityEngine
                         }
                     }
                 }
+                foreach (var sub in subPaths)
+                {
+                    byte[] embBytes = TryReadEmbeddedResource(sub)
+                        ?? TryReadEmbeddedResource(sub + ".txt")
+                        ?? TryReadEmbeddedResource(sub + ".fnt")
+                        ?? TryReadEmbeddedResource(sub + ".bytes");
+                    if (embBytes != null)
+                    {
+                        GetSharedTextAssetPool()[cleanPath] = embBytes;
+                        var ta = new TextAsset(embBytes);
+                        _tabTextAssetCache[cleanPath] = ta;
+                        return ta;
+                    }
+                }
                 return null;
             }
             else
             {
-                string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
+                string cacheKey = cleanPath + modeSuffix;
                 foreach (var root in searchRoots)
                 {
                     if (!System.IO.Directory.Exists(root)) continue;
@@ -407,8 +446,64 @@ namespace UnityEngine
                         }
                     }
                 }
+                foreach (var sub in subPaths)
+                {
+                    string resName = sub.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? sub : (sub + ".png");
+                    byte[] embPng = TryReadEmbeddedResource(resName);
+                    if (embPng != null && embPng.Length > 0)
+                    {
+                        var t = LoadTextureFromMemory(".png", embPng, "/" + resName, isJavaMode);
+                        if (t != null)
+                        {
+                            _tabTextureCache[cacheKey] = t;
+                            if (t.HasRaylibTexture && t.RaylibTexture.Id != 0)
+                            {
+                                GetSharedTexturePool()[cacheKey] = (t.RaylibTexture, t.width, t.height, "/" + resName, t.IsFallbackFromX1);
+                            }
+                            return t;
+                        }
+                    }
+                }
             }
 
+            return null;
+        }
+
+        private static byte[] TryReadEmbeddedResource(string logicalName)
+        {
+            if (string.IsNullOrEmpty(logicalName)) return null;
+            try
+            {
+                var asm = typeof(Resources).Assembly;
+                using (var s = asm.GetManifestResourceStream(logicalName))
+                {
+                    if (s == null) return null;
+                    using (var ms = new System.IO.MemoryStream())
+                    {
+                        s.CopyTo(ms);
+                        return ms.ToArray();
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Texture2D LoadTextureFromMemory(string fileType, byte[] data, string virtualPath, bool isJavaMode)
+        {
+#if !ANDROID && !__ANDROID__ && !BROWSER
+            try
+            {
+                Raylib_cs.Image img = Raylib_cs.Raylib.LoadImageFromMemory(fileType, data);
+                if (img.Width > 0 && img.Height > 0)
+                {
+                    return BuildTextureFromRaylibImage(img, virtualPath, isJavaMode);
+                }
+            }
+            catch { }
+#endif
             return null;
         }
 
@@ -422,59 +517,106 @@ namespace UnityEngine
                 Raylib_cs.Image img = Raylib_cs.Raylib.LoadImage(fullPath);
                 if (img.Width > 0 && img.Height > 0)
                 {
+                    return BuildTextureFromRaylibImage(img, fullPath, isJavaMode);
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static Texture2D BuildTextureFromRaylibImage(Raylib_cs.Image img, string fullPath, bool isJavaMode)
+        {
+            try
+            {
+                {
                     string norm = fullPath.Replace('\\', '/');
                     bool isFontAsset = norm.IndexOf("/myfont/", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool isIosFontAsset = norm.IndexOf("/ios_fonts/", StringComparison.OrdinalIgnoreCase) >= 0;
                     bool isFallbackFromX1 = false;
-                    if (mGraphics.zoomLevel == 2)
+                    int logicalW = img.Width;
+                    int logicalH = img.Height;
+                    bool needsMipmaps = isIosFontAsset;
+
+                    if (mGraphics.zoomLevel == 2 && !isIosFontAsset)
                     {
                         if (norm.Contains("/x1/") || norm.StartsWith("x1/"))
                         {
                             if (isJavaMode || isFontAsset)
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, img.Width * 2, img.Height * 2);
+                                logicalW = img.Width;
+                                logicalH = img.Height;
                             }
                             else
                             {
                                 UpscaleSmart2x(ref img);
+                                logicalW = img.Width;
+                                logicalH = img.Height;
                                 isFallbackFromX1 = true;
                             }
                         }
                         else if (norm.Contains("/x3/") || norm.StartsWith("x3/"))
                         {
-                            int tw = (img.Width * 2 + 1) / 3;
-                            int th = (img.Height * 2 + 1) / 3;
-                            if (tw > 0 && th > 0)
+                            int tw = System.Math.Max(1, (img.Width * 2 + 1) / 3);
+                            int th = System.Math.Max(1, (img.Height * 2 + 1) / 3);
+                            if (isJavaMode)
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, tw, th);
+                                if (!isFontAsset)
+                                {
+                                    Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                                }
+                                logicalW = img.Width;
+                                logicalH = img.Height;
                             }
-                            if (isJavaMode && !isFontAsset)
+                            else
                             {
-                                Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                                logicalW = tw;
+                                logicalH = th;
+                                needsMipmaps = true;
                             }
                         }
                         else if (norm.Contains("/x4/") || norm.StartsWith("x4/"))
                         {
-                            int tw = (img.Width + 1) / 2;
-                            int th = (img.Height + 1) / 2;
-                            if (tw > 0 && th > 0)
+                            int tw = System.Math.Max(1, (img.Width + 1) / 2);
+                            int th = System.Math.Max(1, (img.Height + 1) / 2);
+                            if (isJavaMode)
                             {
                                 Raylib_cs.Raylib.ImageResizeNN(ref img, tw, th);
+                                if (!isFontAsset)
+                                {
+                                    Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                                }
+                                logicalW = img.Width;
+                                logicalH = img.Height;
                             }
-                            if (isJavaMode && !isFontAsset)
+                            else
                             {
-                                Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                                logicalW = tw;
+                                logicalH = th;
+                                needsMipmaps = true;
                             }
                         }
                         else if (isJavaMode && !isFontAsset)
                         {
                             Texture2D.QuantizeRaylibImageJava2x2(ref img);
+                            logicalW = img.Width;
+                            logicalH = img.Height;
                         }
                     }
-                    Texture2D t2d = new Texture2D(img.Width, img.Height, allocatePixelBuffer: false);
-                    t2d.RaylibTexture = Raylib_cs.Raylib.LoadTextureFromImage(img);
-                    Raylib_cs.Raylib.SetTextureWrap(t2d.RaylibTexture, Raylib_cs.TextureWrap.Clamp);
-                    Raylib_cs.TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontAsset) ? Raylib_cs.TextureFilter.Point : Raylib_cs.TextureFilter.Bilinear;
-                    Raylib_cs.Raylib.SetTextureFilter(t2d.RaylibTexture, desiredFilter);
+
+                    Texture2D t2d = new Texture2D(logicalW, logicalH, allocatePixelBuffer: false);
+                    Raylib_cs.Texture2D gpuTex = Raylib_cs.Raylib.LoadTextureFromImage(img);
+                    if (needsMipmaps && gpuTex.Id != 0 && gpuTex.Width >= 4 && gpuTex.Height >= 4)
+                    {
+                        Raylib_cs.Raylib.GenTextureMipmaps(ref gpuTex);
+                    }
+                    Raylib_cs.Raylib.SetTextureWrap(gpuTex, Raylib_cs.TextureWrap.Clamp);
+                    Raylib_cs.TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontAsset)
+                        ? Raylib_cs.TextureFilter.Point
+                        : ((gpuTex.Mipmaps > 1) ? Raylib_cs.TextureFilter.Trilinear : Raylib_cs.TextureFilter.Bilinear);
+                    Raylib_cs.Raylib.SetTextureFilter(gpuTex, desiredFilter);
+                    t2d.RaylibTexture = gpuTex;
                     t2d.currentRaylibFilter = desiredFilter;
                     t2d.HasRaylibTexture = true;
                     t2d.IsSharedGpuTexture = true;

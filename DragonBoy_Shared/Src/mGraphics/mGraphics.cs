@@ -36,13 +36,13 @@ public partial class mGraphics
 
 	public int clipH;
 
-	private bool isClip;
+	public bool isClip;
 
-	private bool isTranslate = true;
+	public bool isTranslate = true;
 
-	private int translateX;
+	public int translateX;
 
-	private int translateY;
+	public int translateY;
 
 	private float translateXf;
 
@@ -76,9 +76,9 @@ public partial class mGraphics
 
 	public static int addYWhenOpenKeyBoard;
 
-	private int clipTX;
+	public int clipTX;
 
-	private int clipTY;
+	public int clipTY;
 
 	private int currentBGColor;
 
@@ -100,6 +100,27 @@ public partial class mGraphics
 
 	private Material lineMaterial;
 
+	public static void clearCached()
+		{
+			try
+			{
+				foreach (System.Collections.DictionaryEntry item in cachedTextures)
+				{
+#if !ANDROID && !__ANDROID__ && !BROWSER
+					if (item.Value is Texture2D tex2D && tex2D.HasRaylibTexture && !tex2D.IsSharedGpuTexture)
+					{
+						try { Raylib_cs.Raylib.UnloadTexture(tex2D.RaylibTexture); } catch { }
+						tex2D.HasRaylibTexture = false;
+					}
+#endif
+				}
+			}
+			catch (Exception)
+			{
+			}
+			cachedTextures.Clear();
+		}
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ cache.
 	/// </summary>
@@ -107,7 +128,7 @@ public partial class mGraphics
 		{
 			if (cachedTextures.Count > 400)
 			{
-				cachedTextures.Clear();
+				clearCached();
 			}
 			if (value.width * value.height < GameCanvas.w * GameCanvas.h)
 			{

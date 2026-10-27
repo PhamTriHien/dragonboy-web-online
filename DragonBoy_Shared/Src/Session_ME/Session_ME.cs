@@ -204,17 +204,18 @@ public partial class Session_ME : ISession
 					curR = 0;
 					curW = 0;
 					getKeyComplete = true;
+					if (isMainSession)
+					{
+						ServerListScreen.testConnect = 2;
+					}
 					sender.sendEvent.Set();
 					Console.WriteLine($"[NET] Key exchange completed! Key length: {b}");
 					try
 					{
-						GameMidlet.IP2 = message.reader().readUTF();
-						GameMidlet.PORT2 = message.reader().readInt();
-						GameMidlet.isConnect2 = ((message.reader().readByte() != 0) ? true : false);
-						if (isMainSession && GameMidlet.isConnect2)
-						{
-							GameCanvas.connect2();
-						}
+						string requestedHost = message.reader().readUTF();
+						int requestedPort = message.reader().readInt();
+						bool serverRequestedSecondary = message.reader().readByte() != 0;
+						ServerListScreen.ApplySecondaryEndpointFromHandshake(requestedHost, requestedPort, serverRequestedSecondary, isMainSession);
 					}
 					catch { }
 				}
@@ -303,6 +304,12 @@ public partial class Session_ME : ISession
 		}
 
 	protected static Session_ME instance = new Session_ME();
+
+	private static readonly object connectLock = new object();
+
+	private static long connectionGeneration;
+
+	public static long ConnectionGeneration => Interlocked.Read(ref connectionGeneration);
 
 	private static NetworkStream dataStream;
 
@@ -490,36 +497,47 @@ public partial class Session_ME : ISession
 	/// </summary>
 	public void connect(string host, int port)
 	{
-		if (connected || connecting)
+		lock (connectLock)
 		{
-			if (this.host == host && this.port == port)
+			if (connected || connecting)
+			{
+				if (this.host == host && this.port == port)
+				{
+					return;
+				}
+				close();
+			}
+			if (mSystem.currentTimeMillis() < timeWaitConnect)
 			{
 				return;
 			}
+			timeWaitConnect = mSystem.currentTimeMillis() + 50;
+			if (isMainSession)
+			{
+				ServerListScreen.testConnect = -1;
+			}
+			this.host = host;
+			this.port = port;
+			getKeyComplete = false;
+			Interlocked.Increment(ref connectionGeneration);
 			close();
-		}
-		timeWaitConnect = mSystem.currentTimeMillis() + 300;
-		if (isMainSession)
-		{
-			ServerListScreen.testConnect = -1;
-		}
-		this.host = host;
-		this.port = port;
-		getKeyComplete = false;
-		close();
-		connecting = true;
-		Debug.Log("connecting...!");
-		Debug.Log("host: " + host);
-		Debug.Log("port: " + port);
+			Service.resetClientTypeSendState(isMainSession);
+			Controller.clearClientTypeConnect(isMainSession);
+			connecting = true;
+			Debug.Log("connecting...!");
+			Debug.Log("host: " + host);
+			Debug.Log("port: " + port);
 #if BROWSER
-		if (OperatingSystem.IsBrowser())
-		{
-			_ = ConnectWebSocketAsync(host, port);
-			return;
-		}
+			if (OperatingSystem.IsBrowser())
+			{
+				initThread = null;
+				_ = ConnectWebSocketAsync(host, port);
+				return;
+			}
 #endif
-		initThread = new Thread(NetworkInit);
-		initThread.Start();
+			initThread = new Thread(NetworkInit);
+			initThread.Start();
+		}
 	}
 
 	/// <summary>

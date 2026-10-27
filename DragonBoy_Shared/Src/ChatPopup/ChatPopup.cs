@@ -101,6 +101,39 @@ public partial class ChatPopup : Effect2, IActionListener
 
 	private int pyy;
 
+	public static void clearTransientPopups()
+	{
+		currChatPopup = null;
+		serverChatPopUp = null;
+		Char.chatPopup = null;
+		Char.isLockKey = false;
+		nextMultiChatPopUp = null;
+		nextChar = null;
+		scr = null;
+		isHavePetNpc = false;
+		if (GameScr.info1 != null)
+		{
+			GameScr.info1.isUpdate = true;
+		}
+		removeFromEffectList(Effect2.vEffect2);
+		removeFromEffectList(Effect2.vEffect2Outside);
+	}
+
+	private static void removeFromEffectList(MyVector effects)
+	{
+		if (effects == null)
+		{
+			return;
+		}
+		for (int i = effects.size() - 1; i >= 0; i--)
+		{
+			if (i < effects.size() && effects.elementAt(i) is ChatPopup)
+			{
+				effects.removeElementAt(i);
+			}
+		}
+	}
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ addNextPopUpMultiLine.
 	/// </summary>

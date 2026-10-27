@@ -154,7 +154,7 @@ public partial class ServerListScreen : mScreen, IActionListener
 			}
 			Controller.isEXTRA_LINK = false;
 			GameCanvas.serverScreen.switchToMe();
-			GameCanvas.serverScreen.Login_New();
+			GameCanvas.serverScreen.connectBeforeLogin(3);
 		}
 
 }

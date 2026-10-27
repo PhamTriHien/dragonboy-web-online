@@ -62,12 +62,13 @@ public static class ModUIGraphics
 			mFont.tahoma_7_green2.drawString(g, "* Hình Học: Khung lưới địa hình & hitbox quái siêu nhẹ.", uiX + 6, descY, mFont.LEFT);
 		}
 
-		// 4. 2 Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD)
+		// 4. 3 Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD, 2: Đồ Hoạ iOS)
 		mFont.tahoma_7_grey.drawString(g, "Chế Độ Đồ Hoạ (F10):", uiX + 6, uiY + 116, mFont.LEFT);
-		int mBtnW = (uiW - 15) / 2;
-		for (int m = 0; m < 2; m++)
+		int mCount = ModGraphics.renderModeNames.Length;
+		int mBtnW = (uiW - 10 - (mCount - 1) * 4) / mCount;
+		for (int m = 0; m < mCount; m++)
 		{
-			int mx = uiX + 5 + m * (mBtnW + 5);
+			int mx = uiX + 5 + m * (mBtnW + 4);
 			ModUI.PaintNativeButton(mx, uiY + 131, mBtnW, 16, ModGraphics.renderModeNames[m], ModGraphics.renderMode == m, g);
 		}
 
@@ -75,6 +76,10 @@ public static class ModUIGraphics
 		if (ModGraphics.renderMode == 0)
 		{
 			mFont.tahoma_7_green2.drawString(g, "* Đồ Hoạ Java: Tài nguyên x1 & font bitmap từ src Java gốc.", uiX + 6, bdDescY, mFont.LEFT);
+		}
+		else if (ModGraphics.renderMode == 2)
+		{
+			mFont.tahoma_7_green2.drawString(g, "* Đồ Hoạ iOS: Tài nguyên Retina x4/x3 & BMFont gốc từ IPA iOS.", uiX + 6, bdDescY, mFont.LEFT);
 		}
 		else
 		{
@@ -199,11 +204,12 @@ public static class ModUIGraphics
 			}
 		}
 
-		// 4. Chọn Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD)
-		int mBtnW = (uiW - 15) / 2;
-		for (int m = 0; m < 2; m++)
+		// 4. Chọn Chế Độ Đồ Hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD, 2: Đồ Hoạ iOS)
+		int mCount = ModGraphics.renderModeNames.Length;
+		int mBtnW = (uiW - 10 - (mCount - 1) * 4) / mCount;
+		for (int m = 0; m < mCount; m++)
 		{
-			int mx = uiX + 5 + m * (mBtnW + 5);
+			int mx = uiX + 5 + m * (mBtnW + 4);
 			if (px >= mx && px <= mx + mBtnW && py >= uiY + 130 && py <= uiY + 148)
 			{
 				ModGraphics.SetRenderMode(m);

@@ -420,6 +420,18 @@ namespace UnityEngine
         public static Action<string> InstallApkHandler;
         public static Action<string> OpenURLHandler;
 
+        public delegate void LogCallback(string condition, string stackTrace, LogType type);
+        public static event LogCallback logMessageReceivedThreaded;
+
+        public static void InvokeLogCallbackThreaded(string condition, string stackTrace, LogType type)
+        {
+            var handler = logMessageReceivedThreaded;
+            if (handler != null)
+            {
+                try { handler(condition, stackTrace, type); } catch { }
+            }
+        }
+
         /// <summary>
         /// Thực thi phương thức nghiệp vụ OpenURL.
         /// </summary>
@@ -436,6 +448,40 @@ namespace UnityEngine
             catch
             {
             }
+        }
+    }
+
+    public enum LogType
+    {
+        Error = 0,
+        Assert = 1,
+        Warning = 2,
+        Log = 3,
+        Exception = 4
+    }
+
+    public enum RuntimeInitializeLoadType
+    {
+        AfterSceneLoad = 0,
+        BeforeSceneLoad = 1,
+        AfterAssembliesLoaded = 2,
+        BeforeSplashScreen = 3,
+        SubsystemRegistration = 4
+    }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute
+    {
+        public RuntimeInitializeLoadType loadType { get; }
+
+        public RuntimeInitializeOnLoadMethodAttribute()
+        {
+            loadType = RuntimeInitializeLoadType.AfterSceneLoad;
+        }
+
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType loadType)
+        {
+            this.loadType = loadType;
         }
     }
 

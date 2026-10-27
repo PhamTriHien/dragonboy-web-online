@@ -378,6 +378,7 @@ public partial class Session_ME
 			{
 				return;
 			}
+			key = null;
 			timeConnected = currentTimeMillis();
 			connecting = false;
 			await WsSendRawMessageAsync(ws, new Message(-27), cts.Token);
@@ -545,16 +546,17 @@ public partial class Session_ME
 			curR = 0;
 			curW = 0;
 			getKeyComplete = true;
+			if (isMainSession)
+			{
+				ServerListScreen.testConnect = 2;
+			}
 			NotifyWsSendReady();
 			try
 			{
-				GameMidlet.IP2 = message.reader().readUTF();
-				GameMidlet.PORT2 = message.reader().readInt();
-				GameMidlet.isConnect2 = message.reader().readByte() != 0;
-				if (isMainSession && GameMidlet.isConnect2)
-				{
-					GameCanvas.connect2();
-				}
+				string requestedHost = message.reader().readUTF();
+				int requestedPort = message.reader().readInt();
+				bool serverRequestedSecondary = message.reader().readByte() != 0;
+				ServerListScreen.ApplySecondaryEndpointFromHandshake(requestedHost, requestedPort, serverRequestedSecondary, isMainSession);
 			}
 			catch { }
 		}

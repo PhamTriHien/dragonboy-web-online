@@ -890,6 +890,7 @@
                 loaded: false,
                 url: url,
                 isPixelArt: typeof url === "string" && url.toLowerCase().indexOf("/myfont/") >= 0,
+                isIosFont: typeof url === "string" && url.toLowerCase().indexOf("/ios_fonts/") >= 0,
                 pendingScales: []
             };
             const img = new Image();
@@ -1178,7 +1179,7 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             applyBaseTransform();
-            const smooth = (renderMode === 1);
+            const smooth = (renderMode !== 0);
             ctx.imageSmoothingEnabled = smooth;
             if (smooth) {
                 ctx.imageSmoothingQuality = "high";
@@ -1214,14 +1215,16 @@
             const absSrcW = Math.abs(srcW);
             const absSrcH = Math.abs(srcH);
 
-            const sx = Math.round(srcX * tw);
-            const sy = Math.round((1.0 - srcY - absSrcH) * th);
-            const sw = Math.round(absSrcW * tw);
-            const sh = Math.round(absSrcH * th);
-            dstX = Math.round(dstX);
-            dstY = Math.round(dstY);
-            dstW = Math.round(dstW);
-            dstH = Math.round(dstH);
+            const sx = entry.isIosFont ? (srcX * tw) : Math.round(srcX * tw);
+            const sy = entry.isIosFont ? ((1.0 - srcY - absSrcH) * th) : Math.round((1.0 - srcY - absSrcH) * th);
+            const sw = entry.isIosFont ? (absSrcW * tw) : Math.round(absSrcW * tw);
+            const sh = entry.isIosFont ? (absSrcH * th) : Math.round(absSrcH * th);
+            if (!entry.isIosFont) {
+                dstX = Math.round(dstX);
+                dstY = Math.round(dstY);
+                dstW = Math.round(dstW);
+                dstH = Math.round(dstH);
+            }
             if (sw <= 0 || sh <= 0 || dstW <= 0 || dstH <= 0) return;
 
             const prevAlpha = ctx.globalAlpha;

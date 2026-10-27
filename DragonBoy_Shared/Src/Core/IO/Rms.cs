@@ -34,6 +34,8 @@ public class Rms
 
 	private static readonly object rmsLock = new object();
 
+	public static System.Collections.Generic.Dictionary<string, sbyte[]> memCache = new System.Collections.Generic.Dictionary<string, sbyte[]>();
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ saveRMS.
 	/// </summary>
@@ -197,18 +199,34 @@ public class Rms
 			try
 			{
 				string text = GetiPhoneDocumentsPath() + "/" + filename;
+				sbyte[] cachedCopy = new sbyte[data.Length];
+				Buffer.BlockCopy(data, 0, cachedCopy, 0, data.Length);
+				memCache[text] = cachedCopy;
 				string dir = Path.GetDirectoryName(text);
 				if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
 				{
 					Directory.CreateDirectory(dir);
 				}
-				using (FileStream fileStream = new FileStream(text, FileMode.Create, FileAccess.Write, FileShare.None))
+				byte[] rawBytes = ArrayCast.cast(data);
+				for (int attempt = 0; attempt < 3; attempt++)
 				{
-					fileStream.Write(ArrayCast.cast(data), 0, data.Length);
-					fileStream.Flush();
+					try
+					{
+						using (FileStream fileStream = new FileStream(text, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+						{
+							fileStream.Write(rawBytes, 0, rawBytes.Length);
+							fileStream.Flush();
+						}
+						break;
+					}
+					catch (IOException)
+					{
+						if (attempt == 2) throw;
+						Thread.Sleep(20);
+					}
 				}
 #if BROWSER
-				if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileSaved(text, ArrayCast.cast(data));
+				if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileSaved(text, rawBytes);
 #endif
 				Main.setBackupIcloud(text);
 			}
@@ -246,10 +264,17 @@ public class Rms
 		if (string.IsNullOrEmpty(filename)) return null;
 		lock (rmsLock)
 		{
+			string docsPath = GetiPhoneDocumentsPath();
+			string cacheKey = docsPath + "/" + filename;
+			if (memCache.TryGetValue(cacheKey, out sbyte[] cached) && cached != null)
+			{
+				sbyte[] copy = new sbyte[cached.Length];
+				Buffer.BlockCopy(cached, 0, copy, 0, cached.Length);
+				return copy;
+			}
 			try
 			{
-				string docsPath = GetiPhoneDocumentsPath();
-				string fullPath = docsPath + "/" + filename;
+				string fullPath = cacheKey;
 				if (!File.Exists(fullPath) && !IsPerTabIsolatedFile(filename))
 				{
 					string rootDir = Path.GetDirectoryName(docsPath);
@@ -275,21 +300,36 @@ public class Rms
 				}
 				if (File.Exists(fullPath))
 				{
-					using (FileStream fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+					for (int attempt = 0; attempt < 3; attempt++)
 					{
-						byte[] array = new byte[fileStream.Length];
-#if NET8_0_OR_GREATER
-						fileStream.ReadExactly(array, 0, array.Length);
-#else
-						int offset = 0;
-						while (offset < array.Length)
+						try
 						{
-							int n = fileStream.Read(array, offset, array.Length - offset);
-							if (n <= 0) break;
-							offset += n;
-						}
+							using (FileStream fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+							{
+								byte[] array = new byte[fileStream.Length];
+#if NET8_0_OR_GREATER
+								fileStream.ReadExactly(array, 0, array.Length);
+#else
+								int offset = 0;
+								while (offset < array.Length)
+								{
+									int n = fileStream.Read(array, offset, array.Length - offset);
+									if (n <= 0) break;
+									offset += n;
+								}
 #endif
-						return ArrayCast.cast(array);
+								sbyte[] sbytes = ArrayCast.cast(array);
+								sbyte[] toCache = new sbyte[sbytes.Length];
+								Buffer.BlockCopy(sbytes, 0, toCache, 0, sbytes.Length);
+								memCache[cacheKey] = toCache;
+								return sbytes;
+							}
+						}
+						catch (IOException)
+						{
+							if (attempt == 2) throw;
+							Thread.Sleep(20);
+						}
 					}
 				}
 			}
@@ -303,7 +343,11 @@ public class Rms
 				var textAsset = Resources.Load("data/" + filename) as TextAsset;
 				if (textAsset != null && textAsset.bytes != null && textAsset.bytes.Length > 0)
 				{
-					return ArrayCast.cast(textAsset.bytes);
+					sbyte[] sbytes = ArrayCast.cast(textAsset.bytes);
+					sbyte[] toCache = new sbyte[sbytes.Length];
+					Buffer.BlockCopy(sbytes, 0, toCache, 0, sbytes.Length);
+					memCache[cacheKey] = toCache;
+					return sbytes;
 				}
 			}
 			catch (Exception)
@@ -324,7 +368,11 @@ public class Rms
 					if (File.Exists(p))
 					{
 						byte[] bytes = File.ReadAllBytes(p);
-						return ArrayCast.cast(bytes);
+						sbyte[] sbytes = ArrayCast.cast(bytes);
+						sbyte[] toCache = new sbyte[sbytes.Length];
+						Buffer.BlockCopy(sbytes, 0, toCache, 0, sbytes.Length);
+						memCache[cacheKey] = toCache;
+						return sbytes;
 					}
 				}
 			}
@@ -341,29 +389,33 @@ public class Rms
 	/// </summary>
 	public static void clearAll()
 	{
-		try
+		lock (rmsLock)
 		{
-			string dirPath = GetiPhoneDocumentsPath();
-			if (string.IsNullOrEmpty(dirPath) || !Directory.Exists(dirPath)) return;
-			DirectoryInfo di = new DirectoryInfo(dirPath);
-			FileInfo[] files = di.GetFiles();
-			foreach (FileInfo fileInfo in files)
+			try
 			{
-				if (!(fileInfo.Name == GameMidlet.VERSION) && !(fileInfo.Name == ServerListScreen.RMS_svselect) && !(fileInfo.Name == RMS_acc) && !(fileInfo.Name == RMS_pass) && !(fileInfo.Name == RMS_check))
+				string dirPath = GetiPhoneDocumentsPath();
+				if (string.IsNullOrEmpty(dirPath) || !Directory.Exists(dirPath)) return;
+				DirectoryInfo di = new DirectoryInfo(dirPath);
+				FileInfo[] files = di.GetFiles();
+				foreach (FileInfo fileInfo in files)
 				{
-					try
+					if (!(fileInfo.Name == GameMidlet.VERSION) && !(fileInfo.Name == ServerListScreen.RMS_svselect) && !(fileInfo.Name == RMS_acc) && !(fileInfo.Name == RMS_pass) && !(fileInfo.Name == RMS_check))
 					{
-						string fullName = fileInfo.FullName;
-						fileInfo.Delete();
+						try
+						{
+							memCache.Remove(dirPath + "/" + fileInfo.Name);
+							string fullName = fileInfo.FullName;
+							fileInfo.Delete();
 #if BROWSER
-						if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(fullName);
+							if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(fullName);
 #endif
+						}
+						catch { }
 					}
-					catch { }
 				}
 			}
+			catch { }
 		}
-		catch { }
 	}
 
 	/// <summary>
@@ -371,16 +423,20 @@ public class Rms
 	/// </summary>
 	public static void DeleteStorage(string path)
 	{
-		try
+		lock (rmsLock)
 		{
-			string fullPath = GetiPhoneDocumentsPath() + "/" + path;
-			File.Delete(fullPath);
+			try
+			{
+				string fullPath = GetiPhoneDocumentsPath() + "/" + path;
+				memCache.Remove(fullPath);
+				File.Delete(fullPath);
 #if BROWSER
-			if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(fullPath);
+				if (OperatingSystem.IsBrowser()) DragonBoy_Web_Host.WebStorageSync.OnFileDeleted(fullPath);
 #endif
-		}
-		catch (Exception)
-		{
+			}
+			catch (Exception)
+			{
+			}
 		}
 	}
 
@@ -419,6 +475,7 @@ public class Rms
 			{
 				PlayerPrefs.DeleteKey(name);
 				string text = GetiPhoneDocumentsPath() + "/" + name;
+				memCache.Remove(text);
 				if (File.Exists(text))
 				{
 					File.Delete(text);

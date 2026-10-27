@@ -260,15 +260,16 @@ public static class ModGraphics
 		SoundMn.gI().buttonClick();
 	}
 
-	// 2 chế độ đồ hoạ: 0: Đồ Hoạ Java (tài nguyên x1 + font bitmap từ src Java gốc), 1: Đồ Hoạ HD (tài nguyên x2 lọc Bilinear + font hệ thống)
+	// 3 chế độ đồ hoạ: 0: Đồ Hoạ Java (x1 + font bitmap Java), 1: Đồ Hoạ HD (x2 Bilinear + font TTF), 2: Đồ Hoạ iOS (Retina x4/x3 + BMFont gốc IPA iOS)
 	public static int renderMode = 0;
 	public static bool IsJavaGraphics => renderMode == 0;
-	public static readonly string[] renderModeNames = new string[2] { "Đồ Hoạ Java", "Đồ Hoạ HD" };
+	public static bool IsIosGraphics => renderMode == 2;
+	public static readonly string[] renderModeNames = new string[3] { "Đồ Hoạ Java", "Đồ Hoạ HD", "Đồ Hoạ iOS" };
 
 	public static int renderBitDepth
 	{
 		get => renderMode;
-		set => renderMode = (value >= 1) ? 1 : 0;
+		set => renderMode = (value < 0) ? 0 : ((value > 2) ? 2 : value);
 	}
 	public static string[] bitDepthNames => renderModeNames;
 
@@ -512,11 +513,11 @@ public static class ModGraphics
 	}
 
 	/// <summary>
-	/// Đổi chế độ đồ hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD), lưu cấu hình và nạp lại tài nguyên trực tiếp.
+	/// Đổi chế độ đồ hoạ (0: Đồ Hoạ Java, 1: Đồ Hoạ HD, 2: Đồ Hoạ iOS), lưu cấu hình và nạp lại tài nguyên trực tiếp.
 	/// </summary>
 	public static void SetRenderMode(int mode, bool refreshAssets = true)
 	{
-		int normalized = (mode >= 1) ? 1 : 0;
+		int normalized = (mode < 0) ? 0 : ((mode > 2) ? 2 : mode);
 		bool changed = (renderMode != normalized);
 		renderMode = normalized;
 		ApplyRenderMode();
@@ -542,10 +543,11 @@ public static class ModGraphics
 			}
 			if (mGraphics.cachedTextures != null)
 			{
-				mGraphics.cachedTextures.Clear();
+				mGraphics.clearCached();
 			}
 			mSystem.ClearImageCache();
 			mFont.ReloadJavaFontImages();
+			IosBitmapFont.ReloadTextures();
 			mFont.InvalidateFontMetrics();
 			Paint.loadbg();
 			Paint.imgCheck = GameCanvas.loadImage("/mainImage/myTexture2dcheck.png");

@@ -1214,17 +1214,22 @@ namespace UnityEngine
                 if (texture is Texture2D t2d && t2d.HasRaylibTexture)
                 {
                     bool isFontTex = !string.IsNullOrEmpty(t2d._sourceFilePath) && t2d._sourceFilePath.IndexOf("myfont", StringComparison.OrdinalIgnoreCase) >= 0;
-                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontTex) ? TextureFilter.Point : TextureFilter.Bilinear;
+                    bool isIosFontTex = !string.IsNullOrEmpty(t2d._sourceFilePath) && t2d._sourceFilePath.IndexOf("ios_fonts", StringComparison.OrdinalIgnoreCase) >= 0;
+                    TextureFilter desiredFilter = (ModGraphics.renderMode == 0 || isFontTex)
+                        ? TextureFilter.Point
+                        : ((t2d.RaylibTexture.Mipmaps > 1) ? TextureFilter.Trilinear : TextureFilter.Bilinear);
                     if (t2d.currentRaylibFilter != desiredFilter)
                     {
                         Raylib.SetTextureFilter(t2d.RaylibTexture, desiredFilter);
                         t2d.currentRaylibFilter = desiredFilter;
                     }
 
-                    float srcX = MathF.Round(sourceRect.x * texture.width);
-                    float srcY = MathF.Round((1f - sourceRect.y - sourceRect.height) * texture.height);
-                    float srcW = MathF.Round(sourceRect.width * texture.width);
-                    float srcH = MathF.Round(sourceRect.height * texture.height);
+                    float physW = (t2d.RaylibTexture.Width > 0) ? t2d.RaylibTexture.Width : texture.width;
+                    float physH = (t2d.RaylibTexture.Height > 0) ? t2d.RaylibTexture.Height : texture.height;
+                    float srcX = isIosFontTex ? (sourceRect.x * physW) : MathF.Round(sourceRect.x * physW);
+                    float srcY = isIosFontTex ? ((1f - sourceRect.y - sourceRect.height) * physH) : MathF.Round((1f - sourceRect.y - sourceRect.height) * physH);
+                    float srcW = isIosFontTex ? (sourceRect.width * physW) : MathF.Round(sourceRect.width * physW);
+                    float srcH = isIosFontTex ? (sourceRect.height * physH) : MathF.Round(sourceRect.height * physH);
 
                     if (destW < 0)
                     {
@@ -1239,10 +1244,13 @@ namespace UnityEngine
                         srcH = -srcH;
                     }
 
-                    destX = MathF.Round(destX);
-                    destY = MathF.Round(destY);
-                    destW = MathF.Round(destW);
-                    destH = MathF.Round(destH);
+                    if (!isIosFontTex)
+                    {
+                        destX = MathF.Round(destX);
+                        destY = MathF.Round(destY);
+                        destW = MathF.Round(destW);
+                        destH = MathF.Round(destH);
+                    }
 
                     Raylib_cs.Rectangle dest = new Raylib_cs.Rectangle(destX, destY, destW, destH);
                     Raylib_cs.Rectangle src = new Raylib_cs.Rectangle(srcX, srcY, srcW, srcH);

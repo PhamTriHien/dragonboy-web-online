@@ -7,6 +7,8 @@ using UnityEngine;
 /// </summary>
 public partial class Service
 {
+	private static long lastTimeSendPlayerAttack = 0L;
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ speacialSkill.
 	/// </summary>
@@ -143,6 +145,13 @@ public partial class Service
 		{
 			try
 			{
+				long now = mSystem.currentTimeMillis();
+				long elapsed = (lastTimeSendPlayerAttack != 0L) ? (now - lastTimeSendPlayerAttack) : 0L;
+				if (lastTimeSendPlayerAttack != 0L && elapsed < 500L)
+				{
+					return;
+				}
+				lastTimeSendPlayerAttack = now;
 				Res.outz(">>SEND ATTACT  vMob=" + vMob.size() + "  vChar=" + vChar.size());
 				Message message = null;
 				if (type == 0)

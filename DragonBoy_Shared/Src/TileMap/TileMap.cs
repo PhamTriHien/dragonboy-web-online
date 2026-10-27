@@ -304,13 +304,43 @@ public partial class TileMap
 			return false;
 		}
 
+	public static void cleanTile()
+		{
+			if (imgTile != null)
+			{
+				bool isCached = tileDataCache != null && tileDataCache.ContainsValue(imgTile);
+				if (!isCached)
+				{
+					for (int i = 0; i < imgTile.Length; i++)
+					{
+						if (imgTile[i] != null)
+						{
+							if (imgTile[i].texture != null)
+							{
+#if !ANDROID && !__ANDROID__ && !BROWSER
+								if (imgTile[i].texture.HasRaylibTexture && !imgTile[i].texture.IsSharedGpuTexture)
+								{
+									try { Raylib_cs.Raylib.UnloadTexture(imgTile[i].texture.RaylibTexture); } catch { }
+									imgTile[i].texture.HasRaylibTexture = false;
+								}
+#endif
+								imgTile[i].texture = null;
+							}
+							imgTile[i] = null;
+						}
+					}
+				}
+				imgTile = null;
+			}
+			mSystem.gcc();
+		}
+
 	/// <summary>
 	/// Thực thi phương thức nghiệp vụ freeTilemap.
 	/// </summary>
 	public static void freeTilemap()
 		{
-			imgTile = null;
-			mSystem.gcc();
+			cleanTile();
 		}
 
 	/// <summary>

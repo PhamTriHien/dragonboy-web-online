@@ -17,6 +17,54 @@ public partial class mFont
 			{
 				b = idFont;
 			}
+			if (ModGraphics.IsIosGraphics && IosBitmapFont.CanRender(id))
+			{
+				if (id > 24)
+				{
+					Color[] borderColors = new Color[7]
+					{
+						setColor(6029312),
+						setColor(7169025),
+						setColor(7680),
+						setColor(0),
+						setColor(9264),
+						setColor(6029312),
+						setColor(5197647)
+					};
+					int bIdx = System.Math.Clamp(id - 25, 0, borderColors.Length - 1);
+					Color bCol = (idFont > 0)
+						? ((b >= 25) ? bigColor(b) : setColor(colorJava[System.Math.Clamp((int)b, 0, colorJava.Length - 1)]))
+						: borderColors[bIdx];
+					if (IosBitmapFont.ContainsAllGlyphs(id, st))
+					{
+						if (idFont > 0)
+						{
+							IosBitmapFont.DrawString(g, id, bCol, st, x, y, align);
+							return;
+						}
+						IosBitmapFont.DrawString(g, id, bCol, st, x + 1, y, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x - 1, y, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x, y - 1, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x, y + 1, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x + 1, y + 1, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x + 1, y - 1, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x - 1, y - 1, align);
+						IosBitmapFont.DrawString(g, id, bCol, st, x - 1, y + 1, align);
+						IosBitmapFont.DrawString(g, id, bigColor(id), st, x, y, align);
+						return;
+					}
+				}
+				else
+				{
+					Color tintCol = (b >= 25)
+						? bigColor(b)
+						: setColor(colorJava[System.Math.Clamp((int)b, 0, colorJava.Length - 1)]);
+					if (IosBitmapFont.DrawString(g, id, tintCol, st, x, y, align))
+					{
+						return;
+					}
+				}
+			}
 			x--;
 			if (id > 24)
 			{
@@ -46,7 +94,15 @@ public partial class mFont
 			}
 			else
 			{
-				setColorByID(b);
+				if (b >= 25)
+				{
+					color1 = bigColor(b);
+					color2 = color1;
+				}
+				else
+				{
+					setColorByID(System.Math.Clamp((int)b, 0, colorJava.Length - 1));
+				}
 			}
 			_drawString(g, st, x, y - yAdd, align);
 		}

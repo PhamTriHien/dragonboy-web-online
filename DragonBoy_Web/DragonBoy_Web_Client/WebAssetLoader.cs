@@ -99,12 +99,18 @@ namespace DragonBoy_Web_Host
                 withoutZoom = withoutZoom.Substring(3);
             }
 
-            if (type == typeof(TextAsset) || cleanPath.StartsWith("data/", StringComparison.OrdinalIgnoreCase))
+            if (type == typeof(TextAsset) ||
+                cleanPath.StartsWith("data/", StringComparison.OrdinalIgnoreCase) ||
+                cleanPath.EndsWith(".fnt", StringComparison.OrdinalIgnoreCase))
             {
                 string[] textCandidates =
                 {
                     cleanPath,
+                    cleanPath + ".txt",
+                    cleanPath + ".fnt",
                     withoutRes,
+                    withoutRes + ".txt",
+                    withoutRes + ".fnt",
                     withoutZoom,
                     "x2/" + withoutZoom,
                     "x1/" + withoutZoom,
@@ -136,7 +142,8 @@ namespace DragonBoy_Web_Host
             }
 
             bool isJavaMode = ModGraphics.IsJavaGraphics || withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
-            string cacheKey = cleanPath + (isJavaMode ? "@java1" : ("@" + mGraphics.zoomLevel));
+            bool isIosMode = !isJavaMode && ModGraphics.IsIosGraphics;
+            string cacheKey = cleanPath + (isJavaMode ? "@java1" : (isIosMode ? "@ios4" : ("@" + mGraphics.zoomLevel)));
             if (_textureCache.TryGetValue(cacheKey, out Texture2D cachedTex))
             {
                 return cachedTex;
@@ -155,6 +162,18 @@ namespace DragonBoy_Web_Host
                     "x4/" + withoutZoom + ".png",
                     withoutZoom + ".png"
                 }
+                : (isIosMode
+                ? new[]
+                {
+                    "x4/" + withoutZoom + ".png",
+                    "x3/" + withoutZoom + ".png",
+                    "x2/" + withoutZoom + ".png",
+                    baseNoRes + ".png",
+                    baseClean + ".png",
+                    "res/" + baseNoRes + ".png",
+                    "x1/" + withoutZoom + ".png",
+                    withoutZoom + ".png"
+                }
                 : new[]
                 {
                     preferredZoom + withoutZoom + ".png",
@@ -166,7 +185,7 @@ namespace DragonBoy_Web_Host
                     "x3/" + withoutZoom + ".png",
                     "x1/" + withoutZoom + ".png",
                     withoutZoom + ".png"
-                };
+                });
 
             bool isFontAsset = withoutZoom.StartsWith("myfont/", StringComparison.OrdinalIgnoreCase);
             for (int i = 0; i < candidates.Length; i++)
